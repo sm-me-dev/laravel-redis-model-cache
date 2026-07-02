@@ -8,6 +8,3 @@ parameters:
     tmpDir: .phpstan.cache
     excludePaths:
         - tests/
-    scan:
-        paths:
-            - src/
