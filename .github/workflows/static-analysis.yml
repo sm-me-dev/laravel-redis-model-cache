@@ -23,4 +23,4 @@ jobs:
         run: composer update --prefer-dist --no-interaction
 
       - name: Run Larastan
-        run: vendor/bin/phpstan analyse --level=8 --error-format=github
+        run: vendor/bin/phpstan analyse --error-format=github
