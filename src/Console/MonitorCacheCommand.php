@@ -38,7 +38,7 @@ class MonitorCacheCommand extends Command
         }
     }
 
-    private function showInfo($redis): void
+    private function showInfo(mixed $redis): void
     {
         $this->info('Redis Cache Information');
         $this->newLine();
@@ -60,9 +60,9 @@ class MonitorCacheCommand extends Command
         );
     }
 
-    private function showKeys($redis): void
+    private function showKeys(mixed $redis): void
     {
-        $patterns = $this->option('pattern') ?: ['*'];
+        $patterns = (array) ($this->option('pattern') ?: ['*']);
 
         foreach ($patterns as $pattern) {
             $this->info("Keys matching pattern: {$pattern}");
@@ -112,9 +112,9 @@ class MonitorCacheCommand extends Command
         }
     }
 
-    private function checkTTL($redis): void
+    private function checkTTL(mixed $redis): void
     {
-        $patterns = $this->option('pattern') ?: ['*:hash', '*:index:*', '*:sorted:*', '*:custom:*'];
+        $patterns = (array) ($this->option('pattern') ?: ['*:hash', '*:index:*', '*:sorted:*', '*:custom:*']);
 
         $this->info('Checking TTL on cache keys');
         $this->newLine();
@@ -168,7 +168,7 @@ class MonitorCacheCommand extends Command
         );
     }
 
-    private function showMemory($redis): void
+    private function showMemory(mixed $redis): void
     {
         $this->info('Redis Memory Analysis');
         $this->newLine();
@@ -215,7 +215,7 @@ class MonitorCacheCommand extends Command
         }
     }
 
-    private function clearCache($redis): void
+    private function clearCache(mixed $redis): void
     {
         if (! $this->confirm('Are you sure you want to clear the Redis cache?')) {
             $this->info('Operation cancelled');
@@ -223,9 +223,9 @@ class MonitorCacheCommand extends Command
             return;
         }
 
-        $patterns = $this->option('pattern');
+        $patterns = (array) $this->option('pattern');
 
-        if (empty($patterns)) {
+        if ($patterns === []) {
             $redis->flushdb();
             $this->info('✅ All cache cleared');
         } else {
@@ -241,7 +241,7 @@ class MonitorCacheCommand extends Command
         }
     }
 
-    private function getTotalKeys($redis): int
+    private function getTotalKeys(mixed $redis): int
     {
         $info = $redis->info('keyspace');
 
@@ -256,12 +256,12 @@ class MonitorCacheCommand extends Command
         return 0;
     }
 
-    private function getKeySize($redis, string $key, string $type): string
+    private function getKeySize(mixed $redis, string $key, string $type): string
     {
         return $this->formatBytes($this->getKeySizeBytes($redis, $key, $type));
     }
 
-    private function getKeySizeBytes($redis, string $key, string $type): int
+    private function getKeySizeBytes(mixed $redis, string $key, string $type): int
     {
         return match ($type) {
             'string' => strlen($redis->get($key) ?? ''),

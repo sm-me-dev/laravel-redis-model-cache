@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Database\Eloquent\Model;
 use Sm_mE\RedisModelCache\Contracts\HashCacheService;
 use Sm_mE\RedisModelCache\Contracts\ModelCacheService;
 
@@ -13,6 +14,12 @@ if (! function_exists('redisHelper')) {
 }
 
 if (! function_exists('redisModelHelper')) {
+    /**
+     * @param  array<int, string>  $indexes
+     * @param  array<int, string>  $sorted
+     * @param  array<string, array<int, string>>  $custom_indexes
+     * @return ModelCacheService<int, Model>
+     */
     function redisModelHelper(
         string $model_class,
         array $indexes = [],

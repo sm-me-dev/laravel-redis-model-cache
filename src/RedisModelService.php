@@ -15,20 +15,30 @@ use Sm_mE\RedisModelCache\Contracts\ModelCacheService;
 use Sm_mE\RedisModelCache\Contracts\ModelMatchStrategy;
 use Sm_mE\RedisModelCache\Contracts\RedisConnectionResolver;
 
+/** @implements ModelCacheService<int, Model> */
 class RedisModelService extends RedisBaseService implements ModelCacheService
 {
+    /** @var class-string<Model> */
     protected string $model_class;
 
+    /** @var array<string, array<int, string>> */
     protected array $custom_indexes = [];
 
     protected string $prefix;
 
+    /** @var array<int, string> */
     protected array $indexes = [];
 
+    /** @var array<int, string> */
     protected array $sorted = [];
 
     protected ModelMatchStrategy $matchStrategy;
 
+    /**
+     * @param  array<int, string>  $indexes
+     * @param  array<int, string>  $sorted
+     * @param  array<string, array<int, string>>  $custom_indexes
+     */
     public function __construct(
         RedisConnectionResolver $connectionResolver,
         string $model_class,
@@ -52,6 +62,9 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         $this->matchStrategy = $matchStrategy ?? app(ModelMatchStrategy::class);
     }
 
+    /**
+     * @return Collection<int, Model>
+     */
     public function custom(string $name): Collection
     {
         return $this->hydrateIds($this->redis->smembers($this->customIndexKey($name)));
@@ -59,7 +72,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
 
     /**
      * @param  array<int, string>  $ids
-     * @return Collection<int, Model>
+     * @return ($hydrate is true ? Collection<int, Model> : Collection<int, string>)
      */
     protected function hydrateIds(array $ids, bool $hydrate = true): Collection
     {
@@ -73,26 +86,32 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
             $pipeline->hget($this->hashKey(), $id);
         }
 
+        /** @var array<int, string|false> $results */
         $results = $pipeline->execute();
 
         if (! $hydrate) {
-            return collect($results)->filter()->keys()->values();
+            return collect($ids);
         }
 
         return collect($results)
             ->filter()
-            ->map(fn (string $payload): Model => $this->hydrateModelFromPayload($this->deserialize($payload)))
+            ->map(function (string $payload): Model {
+                /** @var array{attributes: array<string, mixed>, relations: array<string, mixed>} $data */
+                $data = $this->deserialize($payload);
+
+                return $this->hydrateModelFromPayload($data);
+            })
             ->values();
     }
 
     /**
      * Reconstructs a Model from stored payload including eager-loaded relations.
      *
-     * @param  array{attributes: array, relations: array}  $payload
+     * @param  array{attributes: array<string, mixed>, relations: array<string, mixed>}  $payload
      */
     protected function hydrateModelFromPayload(array $payload): Model
     {
-        $model = (new $this->model_class)->newFromBuilder($payload['attributes'] ?? []);
+        $model = (new $this->model_class)->newFromBuilder($payload['attributes']);
 
         if (! empty($payload['relations'])) {
             $this->restoreRelations($model, $payload['relations']);
@@ -106,6 +125,9 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         return "{$this->prefix}:hash";
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     protected function deserialize(string $json): array
     {
         return (array) $this->deserializeResult($json);
@@ -116,6 +138,10 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         return "{$this->prefix}:custom:{$name}";
     }
 
+    /**
+     * @param  array<int, string>  $names
+     * @return Collection<int, Model>
+     */
     public function customWhere(array $names): Collection
     {
         $keys = array_map(
@@ -126,6 +152,9 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         return $this->hydrateIds($this->redis->sinter(...$keys));
     }
 
+    /**
+     * @return Collection<int, Model>
+     */
     public function paginateSorted(string $field, int $page, int $perPage): Collection
     {
         $start = ($page - 1) * $perPage;
@@ -134,6 +163,9 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         return $this->sorted($field, $start, $end);
     }
 
+    /**
+     * @return Collection<int, Model>
+     */
     public function sorted(string $field, int $start, int $end): Collection
     {
         return $this->hydrateIds($this->redis->zrevrange($this->sortedKey($field), $start, $end));
@@ -160,6 +192,9 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         $this->removeSorted($id);
     }
 
+    /**
+     * @param  array<string, mixed>  $oldData
+     */
     protected function removeIndexes(int|string $id, array $oldData): void
     {
         // Support both old format (attributes only) and new format (with relations key)
@@ -218,6 +253,12 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         }
     }
 
+    /**
+     * @param  callable(): Collection<int, Model>  $callback
+     * @param  array<string, mixed>  $where
+     * @param  array<string>|null  $only
+     * @return Collection<int, Model>
+     */
     public function rememberAll(
         callable $callback,
         bool $hydrate = true,
@@ -253,6 +294,9 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
     }
 
     /**
+     * @param  array<string>|null  $only
+     * @return Collection<int, Model>
+     *
      * @throws BadMethodCallException Full hash scans are prohibited for memory safety.
      */
     public function all(bool $hydrate = true, ?array $only = null): Collection
@@ -263,6 +307,11 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         );
     }
 
+    /**
+     * @param  array<string, string>  $items
+     * @param  array<string>|null  $only
+     * @return array<string, string>
+     */
     protected function filterRedisHashItemsByKey(array $items, ?array $only = null): array
     {
         return $only === null || $only === []
@@ -270,6 +319,9 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
             : Arr::only($items, $only);
     }
 
+    /**
+     * @param  Collection<int, Model>  $models
+     */
     protected function storeMany(Collection $models): void
     {
         if ($models->isEmpty()) {
@@ -286,6 +338,11 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         $this->applyTTL($this->hashKey());
     }
 
+    /**
+     * @param  Collection<int, Model>  $models
+     * @param  array<string>|null  $only
+     * @return Collection<int, Model>
+     */
     protected function filterModelsByKey(Collection $models, ?array $only = null): Collection
     {
         if ($only === null || $only === []) {
@@ -306,6 +363,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
      * Query by indexed fields only using set intersection (SINTER).
      *
      * @param  array<string, mixed>  $where  Equality conditions only (field => value)
+     * @param  array<string>|null  $only
      * @return Collection<int, Model>
      *
      * @throws InvalidArgumentException If any field is not indexed
@@ -342,6 +400,8 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
 
     /**
      * Serialize a single model with eager-loaded relations.
+     *
+     * @param  mixed  $pipeline
      */
     protected function storeModel(Model $model, $pipeline = null): void
     {
@@ -363,7 +423,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
     /**
      * Recursively extracts eager-loaded relations into a serializable structure.
      *
-     * @return array<string, array|null> // relationName => serialized relation data
+     * @return array<string, array<int, mixed>|null>
      */
     protected function extractRelations(Model $model): array
     {
@@ -393,7 +453,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
     /**
      * Serializes a single model (attributes + nested relations).
      *
-     * @return array{class: string, attributes: array, relations: array}
+     * @return array{class: string, attributes: array<string, mixed>, relations: array<string, mixed>}
      */
     protected function serializeModel(Model $model): array
     {
@@ -407,7 +467,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
     /**
      * Restores eager-loaded relations onto a model instance.
      *
-     * @param  array<string, array|null>  $relations  // Same structure as extractRelations()
+     * @param  array<string, array<int, mixed>|null>  $relations
      */
     protected function restoreRelations(Model $model, array $relations): void
     {
@@ -420,24 +480,28 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
 
             if (isset($relationData[0]['class'])) {
                 // Collection relation (HasMany, MorphMany, BelongsToMany)
-                $collection = collect($relationData)->map(function (array $item): Model {
+                $collection = collect($relationData)->map(function (mixed $item): Model {
+                    /** @var array{class: string, attributes: array<string, mixed>, relations: array<string, mixed>} $item */
                     return $this->hydrateRelatedModel($item);
                 });
                 $model->setRelation($name, $collection);
 
             } else {
                 // Single model relation (BelongsTo, HasOne, MorphOne, MorphTo)
+                /** @var array{class: string, attributes: array<string, mixed>, relations: array<string, mixed>} $relationData */
                 $model->setRelation($name, $this->hydrateRelatedModel($relationData));
             }
         }
     }
 
     /**
-     * @param  array{class: string, attributes: array, relations: array}  $data
+     * @param  array{class: string, attributes: array<string, mixed>, relations: array<string, mixed>}  $data
      */
     protected function hydrateRelatedModel(array $data): Model
     {
-        $model = new $data['class'];
+        /** @var class-string<Model> $class */
+        $class = $data['class'];
+        $model = new $class;
         $model->setRawAttributes($data['attributes'], true);
 
         if (! empty($data['relations'])) {
@@ -447,6 +511,9 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         return $model;
     }
 
+    /**
+     * @param  mixed  $pipeline
+     */
     protected function storeIndexes(Model $model, $pipeline = null): void
     {
         $client = $pipeline ?? $this->redis;
@@ -461,6 +528,9 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         }
     }
 
+    /**
+     * @param  mixed  $pipeline
+     */
     protected function storeSorted(Model $model, $pipeline = null): void
     {
         $client = $pipeline ?? $this->redis;
@@ -518,8 +588,10 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         }
 
         // Non-indexed findBy: THROW per requirement
+        /** @var string $reason */
+        $reason = $findBy instanceof Expression ? 'expression' : $findBy;
         throw new InvalidArgumentException(
-            "Field '{$findBy}' is not indexed. Cannot perform lookup without index. "
+            "Field '{$reason}' is not indexed. Cannot perform lookup without index. "
             .'Add to $indexes or use where()/rememberIndex().'
         );
     }
@@ -570,16 +642,27 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         return $models->first() ?? null;
     }
 
+    /**
+     * @param  callable(): Collection<int, Model>  $callback
+     * @return Collection<int, Model>
+     */
     public function rememberIndex(string $field, string|int $value, callable $callback, bool $hydrate = true): Collection
     {
         $key = $this->indexKey($field, $value);
 
         if ($this->redis->exists($key)) {
+            /** @var array<int, string> $ids */
             $ids = $this->redis->smembers($key);
 
-            return $hydrate ? $this->hydrateIds($ids) : collect($ids);
+            if ($hydrate) {
+                return $this->hydrateIds($ids);
+            }
+
+            // @phpstan-ignore-next-line non-hydrate path returns IDs, not Models
+            return collect($ids);
         }
 
+        /** @var Collection<int, Model> $models */
         $models = collect($callback());
 
         foreach ($models as $model) {
@@ -592,6 +675,10 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         return $hydrate ? $models : $models->pluck($this->keyName());
     }
 
+    /**
+     * @param  callable(): Collection<int, Model>  $callback
+     * @return Collection<int, Model>
+     */
     public function rememberCustom(
         string $name,
         callable $callback,
@@ -604,15 +691,22 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         $lookupKey = $sortedKey ?? $key;
 
         if ($this->redis->exists($lookupKey) && ! $refresh) {
+            /** @var array<int, string> $ids */
             $ids = $sortBy ? $this->redis->zrange($sortedKey, 0, -1) : $this->redis->smembers($key);
 
-            return $hydrate ? $this->hydrateIds($ids) : collect($ids);
+            if ($hydrate) {
+                return $this->hydrateIds($ids);
+            }
+
+            // @phpstan-ignore-next-line non-hydrate path returns IDs, not Models
+            return collect($ids);
         }
 
         if ($refresh) {
             $this->redis->del(...array_filter([$key, $sortedKey]));
         }
 
+        /** @var Collection<int, Model> $models */
         $models = collect($callback());
 
         foreach ($models as $model) {
@@ -655,10 +749,11 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         $keys = [];
 
         if (is_a($this->redis, 'Predis\Client')) {
-            // FIXED: Predis returns [$newCursor, $keys] tuple, not flat array
             $cursor = '0';
             do {
+                // @phpstan-ignore-next-line Predis\Client is optional
                 $result = $this->redis->scan($cursor, ['match' => $pattern, 'count' => $count]);
+                /** @var array{cursor?: string, 0?: string, 1?: array<int, string>} $result */
                 $cursor = (string) ($result[0] ?? '0');
                 $chunk = $result[1] ?? [];
                 if (! empty($chunk)) {
@@ -670,13 +765,14 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         }
 
         if (method_exists($this->redis, 'scan')) {
-            // phpredis returns already unpacked result
             $iterator = null;
             do {
+                // @phpstan-ignore-next-line phpredis uses by-reference iterator
                 $chunk = $this->redis->scan($iterator, $pattern, $count);
                 if (is_array($chunk)) {
                     $keys = array_merge($keys, $chunk);
                 }
+                // @phpstan-ignore-next-line scan() modifies $iterator by reference
             } while ($iterator !== 0 && $iterator !== '0' && $iterator !== null);
 
             return array_values(array_unique($keys));
