@@ -106,6 +106,11 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         return "{$this->prefix}:hash";
     }
 
+    protected function newModelFromCache(array $attributes): Model
+    {
+        return (new $this->model_class)->newFromBuilder($attributes);
+    }
+
     protected function deserialize(string $json): array
     {
         return (array) $this->deserializeResult($json);
@@ -228,14 +233,10 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         $hashExists = (bool) $this->redis->exists($this->hashKey());
 
         if ($hashExists && ! $refresh) {
-            if ($where === []) {
-                throw new BadMethodCallException(
-                    'Global unindexed cache fetches via rememberAll() are prohibited '
-                    .'for memory safety. Provide a $where clause with indexed fields or use a specialized index method.'
-                );
-            }
+            $result = $where === []
+                ? $this->all(hydrate: $hydrate, only: $only)
+                : $this->where($where, hydrate: $hydrate, only: $only);
 
-            $result = $this->where($where, hydrate: $hydrate, only: $only);
             if ($result->isNotEmpty()) {
                 return $result;
             }
@@ -340,8 +341,23 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         return $ids === [] ? collect() : $this->hydrateIds($ids, $hydrate);
     }
 
+    protected function matchesWhere(array $item, array $where): bool
+    {
+        foreach ($where as $field => $value) {
+            if (! array_key_exists($field, $item)) {
+                return false;
+            }
+
+            if (! $this->matchStrategy->matches($item[$field], $value, '=')) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     /**
-     * Serialize a single model with eager-loaded relations.
+     * Store a single model with optional pipeline for atomic batch operations.
      */
     protected function storeModel(Model $model, $pipeline = null): void
     {
@@ -655,22 +671,18 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         $keys = [];
 
         if (is_a($this->redis, 'Predis\Client')) {
-            // FIXED: Predis returns [$newCursor, $keys] tuple, not flat array
-            $cursor = '0';
+            $cursor = null;
             do {
-                $result = $this->redis->scan($cursor, ['match' => $pattern, 'count' => $count]);
-                $cursor = (string) ($result[0] ?? '0');
-                $chunk = $result[1] ?? [];
-                if (! empty($chunk)) {
+                $chunk = $this->redis->scan($cursor, ['match' => $pattern, 'count' => $count]);
+                if (is_array($chunk)) {
                     $keys = array_merge($keys, $chunk);
                 }
-            } while ($cursor !== '0');
+            } while ($cursor !== 0 && $cursor !== '0' && $cursor !== null);
 
             return array_values(array_unique($keys));
         }
 
         if (method_exists($this->redis, 'scan')) {
-            // phpredis returns already unpacked result
             $iterator = null;
             do {
                 $chunk = $this->redis->scan($iterator, $pattern, $count);

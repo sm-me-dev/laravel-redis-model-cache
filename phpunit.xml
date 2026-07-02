@@ -12,6 +12,10 @@
         <testsuite name="Feature">
             <directory>tests/Feature</directory>
         </testsuite>
+        <testsuite name="Redis Model Cache">
+            <directory>tests/RedisModelCache</directory>
+            <file>tests/RedisModelServiceTest.php</file>
+        </testsuite>
     </testsuites>
     <source>
         <include>

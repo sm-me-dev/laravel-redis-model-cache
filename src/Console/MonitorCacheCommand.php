@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Sm_mE\RedisModelCache\Console;
 
-use Sm_mE\RedisModelCache\Contracts\RedisConnectionResolver;
 use Illuminate\Console\Command;
+use Sm_mE\RedisModelCache\Contracts\RedisConnectionResolver;
 
 class MonitorCacheCommand extends Command
 {
@@ -32,7 +32,7 @@ class MonitorCacheCommand extends Command
 
             return self::SUCCESS;
         } catch (\Exception $e) {
-            $this->error('Redis connection failed: ' . $e->getMessage());
+            $this->error('Redis connection failed: '.$e->getMessage());
 
             return self::FAILURE;
         }
@@ -76,7 +76,7 @@ class MonitorCacheCommand extends Command
                 continue;
             }
 
-            $this->info('Found ' . count($keys) . ' keys');
+            $this->info('Found '.count($keys).' keys');
 
             if ($this->option('detailed')) {
                 $data = [];
@@ -88,7 +88,7 @@ class MonitorCacheCommand extends Command
                     $data[] = [
                         $key,
                         $type,
-                        $ttl === -1 ? 'No TTL' : ($ttl === -2 ? 'Expired' : $ttl . 's'),
+                        $ttl === -1 ? 'No TTL' : ($ttl === -2 ? 'Expired' : $ttl.'s'),
                         $size,
                     ];
                 }
@@ -142,7 +142,7 @@ class MonitorCacheCommand extends Command
                 $this->line("  ❌ {$key}");
             }
             if (count($noTTL) > 20) {
-                $this->warn('... and ' . (count($noTTL) - 20) . ' more');
+                $this->warn('... and '.(count($noTTL) - 20).' more');
             }
             $this->newLine();
         }
@@ -154,7 +154,7 @@ class MonitorCacheCommand extends Command
                 $this->line("  ✅ {$key} (expires in {$hours}h)");
             }
             if (count($withTTL) > 10) {
-                $this->info('... and ' . (count($withTTL) - 10) . ' more with TTL');
+                $this->info('... and '.(count($withTTL) - 10).' more with TTL');
             }
         }
 
@@ -283,6 +283,6 @@ class MonitorCacheCommand extends Command
             $i++;
         }
 
-        return round($bytes, 2) . ' ' . $units[$i];
+        return round($bytes, 2).' '.$units[$i];
     }
 }
