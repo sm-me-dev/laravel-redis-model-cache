@@ -8,3 +8,6 @@ composer.lock
 .DS_Store
 *.swp
 *.swo
+*.bak
+*.backup
+graphify-out/

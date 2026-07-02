@@ -17,14 +17,16 @@
     "packagist"
   ],
   "require": {
-    "php": "^8.2",
-    "illuminate/console": "^11.0|^12.0",
-    "illuminate/database": "^11.0|^12.0",
-    "illuminate/redis": "^11.0|^12.0",
-    "illuminate/support": "^11.0|^12.0"
+    "php": "^8.4",
+    "illuminate/console": "^12.0",
+    "illuminate/database": "^12.0",
+    "illuminate/redis": "^12.0",
+    "illuminate/support": "^12.0"
   },
   "require-dev": {
-    "orchestra/testbench": "^9.0|^10.0",
+    "laravel/pint": "^1.29",
+    "larastan/larastan": "^3.10",
+    "orchestra/testbench": "^10.0",
     "pestphp/pest": "^3.0"
   },
   "autoload": {

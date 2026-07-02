@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace Sm_mE\RedisModelCache;
 
+use BadMethodCallException;
 use Illuminate\Contracts\Database\Query\Expression;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use InvalidArgumentException;
+use RuntimeException;
 use Sm_mE\RedisModelCache\Contracts\ModelCacheService;
 use Sm_mE\RedisModelCache\Contracts\ModelMatchStrategy;
 use Sm_mE\RedisModelCache\Contracts\RedisConnectionResolver;
@@ -39,7 +41,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         parent::__construct($connectionResolver, $ttl);
 
         if (! is_subclass_of($model_class, Model::class)) {
-            throw new InvalidArgumentException('$model_class must extend ' . Model::class);
+            throw new InvalidArgumentException('$model_class must extend '.Model::class);
         }
 
         $this->model_class = $model_class;
@@ -55,7 +57,11 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         return $this->hydrateIds($this->redis->smembers($this->customIndexKey($name)));
     }
 
-    protected function hydrateIds(array $ids): Collection
+    /**
+     * @param  array<int, string>  $ids
+     * @return Collection<int, Model>
+     */
+    protected function hydrateIds(array $ids, bool $hydrate = true): Collection
     {
         if ($ids === []) {
             return collect();
@@ -69,20 +75,35 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
 
         $results = $pipeline->execute();
 
+        if (! $hydrate) {
+            return collect($results)->filter()->keys()->values();
+        }
+
         return collect($results)
             ->filter()
-            ->map(fn (mixed $item): Model => $this->newModelFromCache($this->deserialize((string) $item)))
+            ->map(fn (string $payload): Model => $this->hydrateModelFromPayload($this->deserialize($payload)))
             ->values();
+    }
+
+    /**
+     * Reconstructs a Model from stored payload including eager-loaded relations.
+     *
+     * @param  array{attributes: array, relations: array}  $payload
+     */
+    protected function hydrateModelFromPayload(array $payload): Model
+    {
+        $model = (new $this->model_class)->newFromBuilder($payload['attributes'] ?? []);
+
+        if (! empty($payload['relations'])) {
+            $this->restoreRelations($model, $payload['relations']);
+        }
+
+        return $model;
     }
 
     protected function hashKey(): string
     {
         return "{$this->prefix}:hash";
-    }
-
-    protected function newModelFromCache(array $attributes): Model
-    {
-        return (new $this->model_class)->newFromBuilder($attributes);
     }
 
     protected function deserialize(string $json): array
@@ -141,12 +162,15 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
 
     protected function removeIndexes(int|string $id, array $oldData): void
     {
+        // Support both old format (attributes only) and new format (with relations key)
+        $attributes = $oldData['attributes'] ?? $oldData;
+
         foreach ($this->indexes as $field) {
-            if (! array_key_exists($field, $oldData)) {
+            if (! array_key_exists($field, $attributes)) {
                 continue;
             }
 
-            $this->redis->srem($this->indexKey($field, $oldData[$field]), (string) $id);
+            $this->redis->srem($this->indexKey($field, $attributes[$field]), (string) $id);
         }
     }
 
@@ -204,10 +228,14 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         $hashExists = (bool) $this->redis->exists($this->hashKey());
 
         if ($hashExists && ! $refresh) {
-            $result = $where === []
-                ? $this->all(hydrate: $hydrate, only: $only)
-                : $this->where($where, hydrate: $hydrate, only: $only);
+            if ($where === []) {
+                throw new BadMethodCallException(
+                    'Global unindexed cache fetches via rememberAll() are prohibited '
+                    .'for memory safety. Provide a $where clause with indexed fields or use a specialized index method.'
+                );
+            }
 
+            $result = $this->where($where, hydrate: $hydrate, only: $only);
             if ($result->isNotEmpty()) {
                 return $result;
             }
@@ -224,20 +252,15 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         return $hydrate ? $models : $models->pluck($this->keyName());
     }
 
+    /**
+     * @throws BadMethodCallException Full hash scans are prohibited for memory safety.
+     */
     public function all(bool $hydrate = true, ?array $only = null): Collection
     {
-        $items = $this->filterRedisHashItemsByKey(
-            $this->redis->hgetall($this->hashKey()),
-            $only
+        throw new BadMethodCallException(
+            'all() is disabled. Use where() with indexed fields, rememberIndex(), or customWhere(). '
+            .'Full hash scans are prohibited for memory safety.'
         );
-
-        if (! $hydrate) {
-            return collect(array_keys($items));
-        }
-
-        return collect($items)
-            ->map(fn (string $item): Model => $this->newModelFromCache($this->deserialize($item)))
-            ->values();
     }
 
     protected function filterRedisHashItemsByKey(array $items, ?array $only = null): array
@@ -253,10 +276,13 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
             return;
         }
 
+        $pipeline = $this->redis->pipeline();
+
         foreach ($models as $model) {
-            $this->storeModel($model);
+            $this->storeModel($model, $pipeline);
         }
 
+        $pipeline->execute();
         $this->applyTTL($this->hashKey());
     }
 
@@ -276,84 +302,188 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         return (new $this->model_class)->getKeyName();
     }
 
+    /**
+     * Query by indexed fields only using set intersection (SINTER).
+     *
+     * @param  array<string, mixed>  $where  Equality conditions only (field => value)
+     * @return Collection<int, Model>
+     *
+     * @throws InvalidArgumentException If any field is not indexed
+     */
     public function where(array $where, bool $hydrate = true, ?array $only = null): Collection
     {
-        $items = $this->filterRedisHashItemsByKey(
-            $this->redis->hgetall($this->hashKey()),
-            $only
-        );
-
-        if (! $hydrate) {
-            return collect(array_keys($items))
-                ->filter(function (string $key) use ($where, $items): bool {
-                    return $this->matchesWhere($this->deserialize($items[$key]), $where);
-                })
-                ->values();
+        // Validate ALL query fields are indexed
+        foreach (array_keys($where) as $field) {
+            if (! in_array($field, $this->indexes, true)) {
+                throw new InvalidArgumentException(
+                    "Field '{$field}' is not indexed. Define it in \$indexes constructor arg. "
+                    .'Available: ['.implode(', ', $this->indexes).']'
+                );
+            }
         }
 
-        return collect($items)
-            ->filter(fn (string $item): bool => $this->matchesWhere($this->deserialize($item), $where))
-            ->map(fn (string $item): Model => $this->newModelFromCache($this->deserialize($item)))
-            ->values();
-    }
-
-    protected function matchesWhere(array $item, array $where): bool
-    {
+        // Build index keys for each equality condition
+        $indexKeys = [];
         foreach ($where as $field => $value) {
-            if (! array_key_exists($field, $item)) {
-                return false;
-            }
-
-            if (! $this->matchStrategy->matches($item[$field], $value, '=')) {
-                return false;
-            }
+            $indexKeys[] = $this->indexKey($field, $value);
         }
 
-        return true;
+        // Set intersection = AND logic
+        $ids = $indexKeys === [] ? [] : $this->redis->sinter(...$indexKeys);
+
+        // Optional $only filter (primary keys)
+        if ($only !== null && $only !== []) {
+            $ids = array_values(array_intersect($ids, $only));
+        }
+
+        // Batch hydrate (relation-aware)
+        return $ids === [] ? collect() : $this->hydrateIds($ids, $hydrate);
     }
 
-    protected function storeModel(Model $model): void
+    /**
+     * Serialize a single model with eager-loaded relations.
+     */
+    protected function storeModel(Model $model, $pipeline = null): void
     {
+        $client = $pipeline ?? $this->redis;
         $key = (string) $model->getKey();
-        $data = $model->getAttributes();
 
-        $this->redis->hset(
-            $this->hashKey(),
-            $key,
-            $this->serializeResult($data)
-        );
+        // Structured payload: attributes + eager-loaded relations
+        $payload = [
+            'attributes' => $model->getAttributes(),
+            'relations' => $this->extractRelations($model),
+        ];
 
-        $this->storeIndexes($model);
-        $this->storeSorted($model);
+        $client->hset($this->hashKey(), $key, $this->serializeResult($payload));
+
+        $this->storeIndexes($model, $pipeline);
+        $this->storeSorted($model, $pipeline);
     }
 
-    protected function storeIndexes(Model $model): void
+    /**
+     * Recursively extracts eager-loaded relations into a serializable structure.
+     *
+     * @return array<string, array|null> // relationName => serialized relation data
+     */
+    protected function extractRelations(Model $model): array
     {
+        $relations = [];
+
+        foreach ($model->getRelations() as $name => $relation) {
+            if ($relation instanceof Collection) {
+                // HasMany, MorphMany, BelongsToMany
+                $relations[$name] = $relation->map(function (Model $related): array {
+                    return $this->serializeModel($related);
+                })->toArray();
+
+            } elseif ($relation instanceof Model) {
+                // HasOne, BelongsTo, MorphOne, MorphTo
+                $relations[$name] = $this->serializeModel($relation);
+
+            } elseif ($relation === null) {
+                // Explicitly loaded null relation (e.g., BelongsTo with no parent)
+                $relations[$name] = null;
+            }
+            // Unloaded relations are NOT in getRelations() — correctly omitted
+        }
+
+        return $relations;
+    }
+
+    /**
+     * Serializes a single model (attributes + nested relations).
+     *
+     * @return array{class: string, attributes: array, relations: array}
+     */
+    protected function serializeModel(Model $model): array
+    {
+        return [
+            'class' => get_class($model),
+            'attributes' => $model->getAttributes(),
+            'relations' => $this->extractRelations($model),  // Recursive
+        ];
+    }
+
+    /**
+     * Restores eager-loaded relations onto a model instance.
+     *
+     * @param  array<string, array|null>  $relations  // Same structure as extractRelations()
+     */
+    protected function restoreRelations(Model $model, array $relations): void
+    {
+        foreach ($relations as $name => $relationData) {
+            if ($relationData === null) {
+                $model->setRelation($name, null);
+
+                continue;
+            }
+
+            if (isset($relationData[0]['class'])) {
+                // Collection relation (HasMany, MorphMany, BelongsToMany)
+                $collection = collect($relationData)->map(function (array $item): Model {
+                    return $this->hydrateRelatedModel($item);
+                });
+                $model->setRelation($name, $collection);
+
+            } else {
+                // Single model relation (BelongsTo, HasOne, MorphOne, MorphTo)
+                $model->setRelation($name, $this->hydrateRelatedModel($relationData));
+            }
+        }
+    }
+
+    /**
+     * @param  array{class: string, attributes: array, relations: array}  $data
+     */
+    protected function hydrateRelatedModel(array $data): Model
+    {
+        $model = new $data['class'];
+        $model->setRawAttributes($data['attributes'], true);
+
+        if (! empty($data['relations'])) {
+            $this->restoreRelations($model, $data['relations']);
+        }
+
+        return $model;
+    }
+
+    protected function storeIndexes(Model $model, $pipeline = null): void
+    {
+        $client = $pipeline ?? $this->redis;
+
         foreach ($this->indexes as $field) {
             $value = $model->{$field};
-
             if ($value === null) {
                 continue;
             }
 
-            $this->redis->sadd($this->indexKey($field, $value), (string) $model->getKey());
+            $client->sadd($this->indexKey($field, $value), (string) $model->getKey());
         }
     }
 
-    protected function storeSorted(Model $model): void
+    protected function storeSorted(Model $model, $pipeline = null): void
     {
+        $client = $pipeline ?? $this->redis;
+
         foreach ($this->sorted as $field) {
             $value = $model->{$field};
-
             if ($value === null) {
                 continue;
             }
 
-            $score = is_numeric($value) ? (float) $value : (float) (strtotime((string) $value) ?: 0);
-            $this->redis->zadd($this->sortedKey($field), $score, (string) $model->getKey());
+            $score = is_numeric($value)
+                ? (float) $value
+                : (float) (strtotime((string) $value) ?: 0);
+
+            $client->zadd($this->sortedKey($field), $score, (string) $model->getKey());
         }
     }
 
+    /**
+     * Index-first lookup. Throws if field is not indexed.
+     *
+     * @throws InvalidArgumentException If findBy field is not indexed
+     */
     public function remember(
         callable $callback,
         bool $refresh = false,
@@ -361,14 +491,17 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         mixed $findValue = null,
         string $findOperator = '='
     ): ?Model {
-        if (! $refresh && $this->redis->exists($this->hashKey())) {
-            $result = $this->findInCache($findBy, $findValue, $findOperator);
+        // Fast path: if findBy is indexed AND not refresh, try index lookup
+        if (! $refresh && $findBy !== null && $this->isIndexed($findBy)) {
+            $fieldName = $this->resolveFieldName($findBy);
+            $result = $this->findByIndex($fieldName, $findValue, $findOperator);
 
             if ($result !== null) {
                 return $result;
             }
         }
 
+        // Cache miss or non-indexed lookup: execute callback
         $models = collect($callback());
 
         if ($models->isEmpty()) {
@@ -377,49 +510,64 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
 
         $this->storeMany($models);
 
-        return $this->findInCache($findBy, $findValue, $findOperator);
+        // Post-store lookup (guaranteed to hit index if indexed)
+        if ($findBy !== null && $this->isIndexed($findBy)) {
+            $fieldName = $this->resolveFieldName($findBy);
+
+            return $this->findByIndex($fieldName, $findValue, $findOperator);
+        }
+
+        // Non-indexed findBy: THROW per requirement
+        throw new InvalidArgumentException(
+            "Field '{$findBy}' is not indexed. Cannot perform lookup without index. "
+            .'Add to $indexes or use where()/rememberIndex().'
+        );
     }
 
-    protected function findInCache(string|Expression|null $findBy, mixed $findValue, string $findOperator): ?Model
+    protected function isIndexed(string|Expression $field): bool
     {
-        foreach ($this->redis->hgetall($this->hashKey()) as $item) {
-            $data = $this->deserialize($item);
-            $model = $this->newModelFromCache($data);
-
-            if ($this->modelMatches($model, $findBy, $findValue, $findOperator)) {
-                return $model;
-            }
+        if ($field instanceof Expression) {
+            return false;  // Expressions cannot be indexed
         }
 
-        return null;
+        return in_array($field, $this->indexes, true);
     }
 
-    protected function modelMatches(Model $model, string|Expression|null $findBy, mixed $findValue, string $findOperator): bool
+    protected function resolveFieldName(string|Expression $field): string
     {
-        if ($findBy === null) {
-            return false;
+        if ($field instanceof Expression) {
+            $grammar = (new $this->model_class)->newQuery()->getGrammar();
+            $value = $field->getValue($grammar);
+            preg_match_all('/(\w+)/', (string) $value, $matches);
+            $fields = array_intersect($matches[1], array_keys((new $this->model_class)->getAttributes()));
+
+            return $fields[0] ?? '';
         }
 
-        $fieldName = $findBy instanceof Expression
-            ? $findBy->getValue($model->newQuery()->getGrammar())
-            : $findBy;
+        return $field;
+    }
 
-        if ($findBy instanceof Expression) {
-            preg_match_all('/(\w+)/', (string) $fieldName, $matches);
-            $fields = array_intersect($matches[1], array_keys($model->getAttributes()));
-
-            if ($fields !== []) {
-                $concatenated = implode('|', array_map(fn (string $field): string => (string) ($model->{$field} ?? ''), $fields));
-
-                return $this->matchStrategy->matches(
-                    $this->matchStrategy->normalize($concatenated),
-                    $findValue,
-                    $findOperator
-                );
-            }
+    /**
+     * Index-driven single model lookup (equality only).
+     */
+    protected function findByIndex(string $field, mixed $value, string $operator): ?Model
+    {
+        // Only equality supported for index lookups
+        if ($operator !== '=') {
+            return null;
         }
 
-        return $this->matchStrategy->matches($model->{$fieldName} ?? null, $findValue, $findOperator);
+        $key = $this->indexKey($field, $value);
+        $ids = $this->redis->smembers($key);
+
+        if ($ids === []) {
+            return null;
+        }
+
+        // Take first match (should be unique for PK lookups)
+        $models = $this->hydrateIds($ids, true);
+
+        return $models->first() ?? null;
     }
 
     public function rememberIndex(string $field, string|int $value, callable $callback, bool $hydrate = true): Collection
@@ -493,43 +641,39 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
 
     protected function sortedCustomKey(string $custom, string $field): string
     {
-        return $this->customIndexKey($custom) . ":sorted:{$field}";
+        return $this->customIndexKey($custom).":sorted:{$field}";
     }
 
     /**
      * @return array<int, string>
+     *
+     * @throws RuntimeException If SCAN command is not available
      */
     protected function collectKeysByPattern(string $pattern): array
     {
-        $strategy = (string) config('redis-model-cache.scan_strategy', 'scan');
         $count = (int) config('redis-model-cache.scan_count', 1000);
-
-        if ($strategy !== 'scan') {
-            return $this->redis->keys($pattern);
-        }
+        $keys = [];
 
         if (is_a($this->redis, 'Predis\Client')) {
-            $cursor = null;
-            $keys = [];
-
+            // FIXED: Predis returns [$newCursor, $keys] tuple, not flat array
+            $cursor = '0';
             do {
-                $chunk = $this->redis->scan($cursor, ['match' => $pattern, 'count' => $count]);
-
-                if (is_array($chunk)) {
+                $result = $this->redis->scan($cursor, ['match' => $pattern, 'count' => $count]);
+                $cursor = (string) ($result[0] ?? '0');
+                $chunk = $result[1] ?? [];
+                if (! empty($chunk)) {
                     $keys = array_merge($keys, $chunk);
                 }
-            } while ($cursor !== 0 && $cursor !== '0' && $cursor !== null);
+            } while ($cursor !== '0');
 
             return array_values(array_unique($keys));
         }
 
         if (method_exists($this->redis, 'scan')) {
+            // phpredis returns already unpacked result
             $iterator = null;
-            $keys = [];
-
             do {
                 $chunk = $this->redis->scan($iterator, $pattern, $count);
-
                 if (is_array($chunk)) {
                     $keys = array_merge($keys, $chunk);
                 }
@@ -538,6 +682,9 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
             return array_values(array_unique($keys));
         }
 
-        return $this->redis->keys($pattern);
+        throw new RuntimeException(
+            'SCAN command is not available. The Redis client must support SCAN for production use. '
+            .'Ensure phpredis extension is installed or use Predis.'
+        );
     }
 }

@@ -4,19 +4,19 @@ declare(strict_types=1);
 
 namespace Sm_mE\RedisModelCache;
 
+use Illuminate\Support\ServiceProvider;
 use Sm_mE\RedisModelCache\Contracts\HashCacheService;
 use Sm_mE\RedisModelCache\Contracts\ModelCacheService;
 use Sm_mE\RedisModelCache\Contracts\ModelMatchStrategy;
 use Sm_mE\RedisModelCache\Contracts\RedisConnectionResolver;
 use Sm_mE\RedisModelCache\Support\DefaultConnectionResolver;
 use Sm_mE\RedisModelCache\Support\DefaultModelMatchStrategy;
-use Illuminate\Support\ServiceProvider;
 
 class RedisModelCacheServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        $this->mergeConfigFrom(__DIR__ . '/../config/redis-model-cache.php', 'redis-model-cache');
+        $this->mergeConfigFrom(__DIR__.'/../config/redis-model-cache.php', 'redis-model-cache');
 
         $this->app->singleton(RedisConnectionResolver::class, function ($app) {
             return new DefaultConnectionResolver(
@@ -57,7 +57,7 @@ class RedisModelCacheServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->publishes([
-            __DIR__ . '/../config/redis-model-cache.php' => config_path('redis-model-cache.php'),
+            __DIR__.'/../config/redis-model-cache.php' => config_path('redis-model-cache.php'),
         ], 'redis-model-cache-config');
 
         if ($this->app->runningInConsole()) {

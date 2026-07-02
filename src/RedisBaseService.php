@@ -37,7 +37,7 @@ class RedisBaseService
     }
 
     /**
-     * @param array<int, string> $keys
+     * @param  array<int, string>  $keys
      */
     protected function applyTTLToKeys(array $keys): void
     {
