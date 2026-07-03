@@ -13,7 +13,7 @@
 
 ## 🌟 Overview
 
-**Version 1.1.0** | Requires **PHP ^8.4** and **Laravel ^12.0**
+**Version 1.1.1** | Requires **PHP ^8.4** and **Laravel ^12.0**
 
 The **Laravel Redis Model Cache** package seamlessly integrates a Redis caching layer natively tailored for your Laravel 12 application. This is not your typical `Cache::remember()` wrapper. Instead, it provides a highly optimized, index-aware caching structure for Eloquent models built on top of Redis Hash Sets and Sorted Sets, resulting in lightning-fast lookups without hitting the database for relational operations.
 
@@ -264,6 +264,106 @@ $data = redisHelper(ttl: 300)->rememberSet('app:settings', 'theme', fn () => 'da
 $service = redisModelHelper(User::class, indexes: ['department_id']);
 ```
 
+## 🧩 Eloquent Trait Auto-Sync
+
+Use the `HasRedisModelCache` trait on any Eloquent model for automatic cache lifecycle management:
+
+```php
+use Sm_mE\RedisModelCache\Concerns\HasRedisModelCache;
+use Illuminate\Database\Eloquent\Model;
+
+class User extends Model
+{
+    use HasRedisModelCache;
+
+    /**
+     * Optional: Configure indexes, sorted fields, TTL, and connection.
+     */
+    protected static function redisModelCacheConfig(): array
+    {
+        return [
+            'indexes' => ['role_id', 'status'],
+            'sorted' => ['created_at'],
+            'ttl' => 3600,
+            'connection' => null, // uses default config connection
+        ];
+    }
+
+    /**
+     * Optional: Define relations to touch on save/delete.
+     */
+    protected static array $redisModelCacheTouches = ['profile'];
+}
+```
+
+### Lifecycle Hooks
+
+The trait automatically syncs cache on Eloquent events:
+
+| Event | Action |
+|-------|--------|
+| `saved` | `storeModel()` — writes model with indexes, sorted sets, TTL |
+| `restored` | `storeModel()` — same as saved |
+| `deleted` | `delete()` — removes from hash, indexes, and sorted sets |
+
+### Stale Index Cleanup
+
+When an indexed attribute changes (e.g., `role_id` from `1` to `2`), the trait:
+
+1. Reads the old hash payload before writing
+2. Computes stale index keys that need cleanup
+3. Issues `SREM` on old index set keys within the same write batch
+4. Writes the new hash payload and `SADD`s new index entries
+5. Applies `EXPIRE` to all touched keys (hash, indexes, sorted sets)
+
+This prevents index pollution where stale set entries would return incorrect query results.
+
+### TTL Propagation
+
+When TTL is configured, every key touched during a write operation receives a matching `EXPIRE` command:
+
+- Main hash key (`{prefix}:hash`)
+- Index keys (`{prefix}:index:{field}:{value}`)
+- Sorted set keys (`{prefix}:sorted:{field}`)
+- Custom index keys (`{prefix}:custom:{name}`, `{prefix}:custom:{name}:sorted:{field}`)
+
+This ensures no orphaned index keys outlive the main hash.
+
+### Relation Touching with Recursion Guard
+
+Define relations to touch via `$redisModelCacheTouches` property:
+
+```php
+class Post extends Model
+{
+    use HasRedisModelCache;
+
+    protected static array $redisModelCacheTouches = ['author', 'category'];
+}
+```
+
+When a `Post` is saved or deleted, the trait:
+1. Stores/deletes the `Post` cache
+2. Resolves each touched relation (e.g., `$post->author`, `$post->category`)
+3. Re-stores the parent model's cache using its own `RedisModelService`
+4. Tracks in-progress models via `$redisModelCacheProcessing` to prevent infinite loops with bi-directional relationships
+
+### Connection Isolation
+
+Pass a `connection` value in `redisModelCacheConfig()` to use a different Redis connection:
+
+```php
+protected static function redisModelCacheConfig(): array
+{
+    return [
+        'connection' => 'cache',
+        'indexes' => ['role_id'],
+    ];
+}
+```
+
+The service will resolve the specified connection from `config/database.php` instead of the default.
+
 ## 📜 License
 
-The **Laravel Redis Model Cache** is open-sourced software licensed under the [MIT license](LICENSE). This package provides a memory-safe Redis caching architecture optimized for Laravel Eloquent models, with strict indexing requirements to prevent OOM risks and ensure atomic writes.
+The **Laravel Redis Model Cache** is open-sourced software licensed under the [MIT license](LICENSE). This package provides a memory-safe Redis caching architecture optimized for Laravel Eloquent models, with strict indexing requirements to prevent OOM risks and ensure atomic writes. Copyright © 2026 Sm_mE.

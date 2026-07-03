@@ -14,6 +14,7 @@ use RuntimeException;
 use Sm_mE\RedisModelCache\Contracts\ModelCacheService;
 use Sm_mE\RedisModelCache\Contracts\ModelMatchStrategy;
 use Sm_mE\RedisModelCache\Contracts\RedisConnectionResolver;
+use Sm_mE\RedisModelCache\Support\DefaultConnectionResolver;
 
 /** @implements ModelCacheService<int, Model> */
 class RedisModelService extends RedisBaseService implements ModelCacheService
@@ -46,8 +47,13 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         array $sorted = [],
         array $custom_indexes = [],
         ?int $ttl = null,
-        ?ModelMatchStrategy $matchStrategy = null
+        ?ModelMatchStrategy $matchStrategy = null,
+        ?string $connection = null
     ) {
+        if ($connection !== null) {
+            $connectionResolver = new DefaultConnectionResolver($connection);
+        }
+
         parent::__construct($connectionResolver, $ttl);
 
         if (! is_subclass_of($model_class, Model::class)) {
@@ -408,6 +414,9 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         $client = $pipeline ?? $this->redis;
         $key = (string) $model->getKey();
 
+        // Stale index cleanup: read old data directly (not through pipeline)
+        $staleSremKeys = $this->computeStaleIndexKeys($model);
+
         // Structured payload: attributes + eager-loaded relations
         $payload = [
             'attributes' => $model->getAttributes(),
@@ -416,8 +425,54 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
 
         $client->hset($this->hashKey(), $key, $this->serializeResult($payload));
 
+        if ($this->ttl) {
+            $this->queueExpire($client, $this->hashKey());
+        }
+
+        // Queue stale index cleanup within the same pipeline/write batch
+        foreach ($staleSremKeys as $staleKey) {
+            $client->srem($staleKey, $key);
+        }
+
         $this->storeIndexes($model, $pipeline);
         $this->storeSorted($model, $pipeline);
+    }
+
+    /**
+     * Read old hash data and compute stale index keys that need SREM.
+     *
+     * @return array<int, string>
+     */
+    protected function computeStaleIndexKeys(Model $model): array
+    {
+        $key = (string) $model->getKey();
+        $old = $this->redis->hget($this->hashKey(), $key);
+
+        if (! $old) {
+            return [];
+        }
+
+        $oldData = $this->deserialize($old);
+        $oldAttributes = $oldData['attributes'] ?? $oldData;
+        $staleKeys = [];
+
+        foreach ($this->indexes as $field) {
+            $oldValue = $oldAttributes[$field] ?? null;
+
+            if ($oldValue === null) {
+                continue;
+            }
+
+            $currentValue = $model->{$field};
+
+            if ((string) $oldValue === (string) $currentValue) {
+                continue;
+            }
+
+            $staleKeys[] = $this->indexKey($field, $oldValue);
+        }
+
+        return $staleKeys;
     }
 
     /**
@@ -512,6 +567,16 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
     }
 
     /**
+     * Queue an EXPIRE command within a pipeline or execute directly.
+     *
+     * @param  mixed  $client
+     */
+    protected function queueExpire($client, string $key): void
+    {
+        $client->expire($key, $this->ttl);
+    }
+
+    /**
      * @param  mixed  $pipeline
      */
     protected function storeIndexes(Model $model, $pipeline = null): void
@@ -524,7 +589,12 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
                 continue;
             }
 
-            $client->sadd($this->indexKey($field, $value), (string) $model->getKey());
+            $key = $this->indexKey($field, $value);
+            $client->sadd($key, (string) $model->getKey());
+
+            if ($this->ttl) {
+                $this->queueExpire($client, $key);
+            }
         }
     }
 
@@ -545,7 +615,12 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
                 ? (float) $value
                 : (float) (strtotime((string) $value) ?: 0);
 
-            $client->zadd($this->sortedKey($field), $score, (string) $model->getKey());
+            $key = $this->sortedKey($field);
+            $client->zadd($key, $score, (string) $model->getKey());
+
+            if ($this->ttl) {
+                $this->queueExpire($client, $key);
+            }
         }
     }
 

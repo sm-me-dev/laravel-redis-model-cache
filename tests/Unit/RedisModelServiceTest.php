@@ -84,10 +84,20 @@ class RedisModelServiceTest extends TestCase
         $pipelineMock = Mockery::mock('Illuminate\Redis\Connections\Pipeline');
         $this->redis->shouldReceive('pipeline')->andReturn($pipelineMock);
 
+        // Stale index check reads old data before pipeline
+        $this->redis->shouldReceive('hget')->with('test_models:hash', '1')->andReturn(false);
+        $this->redis->shouldReceive('hget')->with('test_models:hash', '2')->andReturn(false);
+
         $pipelineMock->shouldReceive('hset')->times(2);
+        $pipelineMock->shouldReceive('expire')->with('test_models:hash', 3600)->times(2);
         $pipelineMock->shouldReceive('sadd')->times(4);
+        $pipelineMock->shouldReceive('expire')->with('test_models:index:role_id:1', 3600)->once();
+        $pipelineMock->shouldReceive('expire')->with('test_models:index:role_id:2', 3600)->once();
+        $pipelineMock->shouldReceive('expire')->with('test_models:index:status:active', 3600)->once();
+        $pipelineMock->shouldReceive('expire')->with('test_models:index:status:inactive', 3600)->once();
         $pipelineMock->shouldReceive('zadd')->times(2);
-        $pipelineMock->shouldReceive('execute')->once()->andReturn([true, true, true, true, true, true, true, true]);
+        $pipelineMock->shouldReceive('expire')->with('test_models:sorted:created_at', 3600)->times(2);
+        $pipelineMock->shouldReceive('execute')->once()->andReturn(array_fill(0, 16, true));
 
         $this->redis->shouldReceive('ttl')->with('test_models:hash')->andReturn(-1);
         $this->redis->shouldReceive('expire')->with('test_models:hash', 3600)->andReturn(true);
@@ -269,11 +279,16 @@ class RedisModelServiceTest extends TestCase
 
         $this->redis->shouldReceive('exists')->with('test_models:hash')->andReturn(false);
 
+        // Stale index check
+        $this->redis->shouldReceive('hget')->with('test_models:hash', '1')->andReturn(false);
+
         $pipelineMock = Mockery::mock('Illuminate\Redis\Connections\Pipeline');
         $this->redis->shouldReceive('pipeline')->andReturn($pipelineMock);
         $pipelineMock->shouldReceive('hset')->once();
+        $pipelineMock->shouldReceive('expire')->with('test_models:hash', 3600)->once();
         $pipelineMock->shouldReceive('sadd')->once();
-        $pipelineMock->shouldReceive('execute')->andReturn([true, true]);
+        $pipelineMock->shouldReceive('expire')->with('test_models:index:role_id:1', 3600)->once();
+        $pipelineMock->shouldReceive('execute')->andReturn([true, true, true, true]);
         $this->redis->shouldReceive('ttl')->with('test_models:hash')->andReturn(-1);
         $this->redis->shouldReceive('expire')->with('test_models:hash', 3600)->andReturn(true);
 
@@ -333,11 +348,15 @@ class RedisModelServiceTest extends TestCase
 
         $parent->setRelation('children', new Collection([$child1, $child2]));
 
+        // Stale index check reads old data
+        $this->redis->shouldReceive('hget')->with('test_models:hash', '1')->andReturn(false);
+
         $pipelineMock = Mockery::mock('Illuminate\Redis\Connections\Pipeline');
 
         $pipelineMock->shouldReceive('hset')->once();
+        $pipelineMock->shouldReceive('expire')->times(3);
         $pipelineMock->shouldReceive('sadd')->times(2);
-        $pipelineMock->shouldReceive('execute')->andReturn([true, true, true]);
+        $pipelineMock->shouldReceive('execute')->andReturn([true, true, true, true, true, true]);
 
         $this->service->callStoreModel($parent, $pipelineMock);
     }
@@ -393,6 +412,268 @@ class RedisModelServiceTest extends TestCase
         $result = $this->service->remember(fn () => new Collection([]), findBy: 'role_id', findValue: 1);
 
         $this->assertNull($result);
+    }
+
+    public function test_store_model_prunes_stale_indexes_when_indexed_field_changes(): void
+    {
+        $model = new TestModel(['id' => 1, 'role_id' => 2, 'status' => 'active', 'created_at' => '2024-01-01']);
+
+        $oldPayload = json_encode([
+            'attributes' => ['id' => 1, 'role_id' => 1, 'status' => 'active', 'created_at' => '2024-01-01'],
+            'relations' => [],
+        ], JSON_THROW_ON_ERROR);
+
+        $this->redis->shouldReceive('hget')
+            ->with('test_models:hash', '1')
+            ->andReturn($oldPayload);
+
+        // Should SREM old role_id:1 index (role_id changed from 1 to 2)
+        $this->redis->shouldReceive('srem')
+            ->with('test_models:index:role_id:1', '1')
+            ->andReturn(1);
+
+        // Should NOT SREM status:active (status didn't change)
+        $this->redis->shouldReceive('hset')
+            ->with('test_models:hash', '1', Mockery::type('string'))
+            ->andReturn(1);
+
+        $this->redis->shouldReceive('expire')
+            ->with('test_models:hash', 3600)
+            ->andReturn(1);
+
+        // New index for role_id:2
+        $this->redis->shouldReceive('sadd')
+            ->with('test_models:index:role_id:2', '1')
+            ->andReturn(1);
+
+        $this->redis->shouldReceive('expire')
+            ->with('test_models:index:role_id:2', 3600)
+            ->andReturn(1);
+
+        // status:active index should still be added (unchanged)
+        $this->redis->shouldReceive('sadd')
+            ->with('test_models:index:status:active', '1')
+            ->andReturn(1);
+
+        $this->redis->shouldReceive('expire')
+            ->with('test_models:index:status:active', 3600)
+            ->andReturn(1);
+
+        // Sorted set for created_at
+        $this->redis->shouldReceive('zadd')
+            ->with('test_models:sorted:created_at', Mockery::type('float'), '1')
+            ->andReturn(1);
+
+        $this->redis->shouldReceive('expire')
+            ->with('test_models:sorted:created_at', 3600)
+            ->andReturn(1);
+
+        $this->service->callStoreModel($model);
+    }
+
+    public function test_store_model_applies_ttl_to_hash_index_and_sorted_keys(): void
+    {
+        $model = new TestModel(['id' => 1, 'role_id' => 1, 'status' => 'active', 'created_at' => '2024-01-01']);
+
+        // No old data
+        $this->redis->shouldReceive('hget')
+            ->with('test_models:hash', '1')
+            ->andReturn(false);
+
+        $this->redis->shouldReceive('hset')
+            ->with('test_models:hash', '1', Mockery::type('string'))
+            ->andReturn(1);
+
+        $this->redis->shouldReceive('expire')
+            ->with('test_models:hash', 3600)
+            ->andReturn(1);
+
+        $this->redis->shouldReceive('sadd')
+            ->with('test_models:index:role_id:1', '1')
+            ->andReturn(1);
+
+        $this->redis->shouldReceive('expire')
+            ->with('test_models:index:role_id:1', 3600)
+            ->andReturn(1);
+
+        $this->redis->shouldReceive('sadd')
+            ->with('test_models:index:status:active', '1')
+            ->andReturn(1);
+
+        $this->redis->shouldReceive('expire')
+            ->with('test_models:index:status:active', 3600)
+            ->andReturn(1);
+
+        $this->redis->shouldReceive('zadd')
+            ->with('test_models:sorted:created_at', Mockery::type('float'), '1')
+            ->andReturn(1);
+
+        $this->redis->shouldReceive('expire')
+            ->with('test_models:sorted:created_at', 3600)
+            ->andReturn(1);
+
+        $this->service->callStoreModel($model);
+    }
+
+    public function test_store_model_skips_stale_prune_when_no_old_data(): void
+    {
+        $model = new TestModel(['id' => 1, 'role_id' => 1, 'status' => 'active', 'created_at' => '2024-01-01']);
+
+        $this->redis->shouldReceive('hget')
+            ->with('test_models:hash', '1')
+            ->andReturn(false);
+
+        $this->redis->shouldReceive('hset')
+            ->with('test_models:hash', '1', Mockery::type('string'))
+            ->andReturn(1);
+
+        $this->redis->shouldReceive('expire')
+            ->with('test_models:hash', 3600)
+            ->andReturn(1);
+
+        $this->redis->shouldReceive('sadd')
+            ->with('test_models:index:role_id:1', '1')
+            ->andReturn(1);
+
+        $this->redis->shouldReceive('expire')
+            ->with('test_models:index:role_id:1', 3600)
+            ->andReturn(1);
+
+        $this->redis->shouldReceive('sadd')
+            ->with('test_models:index:status:active', '1')
+            ->andReturn(1);
+
+        $this->redis->shouldReceive('expire')
+            ->with('test_models:index:status:active', 3600)
+            ->andReturn(1);
+
+        $this->redis->shouldReceive('zadd')
+            ->with('test_models:sorted:created_at', Mockery::type('float'), '1')
+            ->andReturn(1);
+
+        $this->redis->shouldReceive('expire')
+            ->with('test_models:sorted:created_at', 3600)
+            ->andReturn(1);
+
+        $this->service->callStoreModel($model);
+    }
+
+    public function test_store_model_handles_old_format_payload_for_stale_index_prune(): void
+    {
+        $model = new TestModel(['id' => 1, 'role_id' => 2, 'status' => 'active', 'created_at' => '2024-01-01']);
+
+        // Old format: flat attributes without 'attributes' wrapper
+        $oldPayload = json_encode([
+            'id' => 1,
+            'role_id' => 1,
+            'status' => 'active',
+            'created_at' => '2024-01-01',
+        ], JSON_THROW_ON_ERROR);
+
+        $this->redis->shouldReceive('hget')
+            ->with('test_models:hash', '1')
+            ->andReturn($oldPayload);
+
+        $this->redis->shouldReceive('srem')
+            ->with('test_models:index:role_id:1', '1')
+            ->andReturn(1);
+
+        $this->redis->shouldReceive('hset')
+            ->with('test_models:hash', '1', Mockery::type('string'))
+            ->andReturn(1);
+
+        $this->redis->shouldReceive('expire')
+            ->with('test_models:hash', 3600)
+            ->andReturn(1);
+
+        $this->redis->shouldReceive('sadd')
+            ->with('test_models:index:role_id:2', '1')
+            ->andReturn(1);
+
+        $this->redis->shouldReceive('expire')
+            ->with('test_models:index:role_id:2', 3600)
+            ->andReturn(1);
+
+        $this->redis->shouldReceive('sadd')
+            ->with('test_models:index:status:active', '1')
+            ->andReturn(1);
+
+        $this->redis->shouldReceive('expire')
+            ->with('test_models:index:status:active', 3600)
+            ->andReturn(1);
+
+        $this->redis->shouldReceive('zadd')
+            ->with('test_models:sorted:created_at', Mockery::type('float'), '1')
+            ->andReturn(1);
+
+        $this->redis->shouldReceive('expire')
+            ->with('test_models:sorted:created_at', 3600)
+            ->andReturn(1);
+
+        $this->service->callStoreModel($model);
+    }
+
+    public function test_store_model_skips_stale_prune_when_indexed_value_unchanged(): void
+    {
+        $model = new TestModel(['id' => 1, 'role_id' => 1, 'status' => 'active', 'created_at' => '2024-01-01']);
+
+        $oldPayload = json_encode([
+            'attributes' => ['id' => 1, 'role_id' => 1, 'status' => 'active', 'created_at' => '2024-01-01'],
+            'relations' => [],
+        ], JSON_THROW_ON_ERROR);
+
+        $this->redis->shouldReceive('hget')
+            ->with('test_models:hash', '1')
+            ->andReturn($oldPayload);
+
+        // Should NOT call srem (no values changed)
+
+        $this->redis->shouldReceive('hset')
+            ->with('test_models:hash', '1', Mockery::type('string'))
+            ->andReturn(1);
+
+        $this->redis->shouldReceive('expire')
+            ->with('test_models:hash', 3600)
+            ->andReturn(1);
+
+        $this->redis->shouldReceive('sadd')
+            ->with('test_models:index:role_id:1', '1')
+            ->andReturn(1);
+
+        $this->redis->shouldReceive('expire')
+            ->with('test_models:index:role_id:1', 3600)
+            ->andReturn(1);
+
+        $this->redis->shouldReceive('sadd')
+            ->with('test_models:index:status:active', '1')
+            ->andReturn(1);
+
+        $this->redis->shouldReceive('expire')
+            ->with('test_models:index:status:active', 3600)
+            ->andReturn(1);
+
+        $this->redis->shouldReceive('zadd')
+            ->with('test_models:sorted:created_at', Mockery::type('float'), '1')
+            ->andReturn(1);
+
+        $this->redis->shouldReceive('expire')
+            ->with('test_models:sorted:created_at', 3600)
+            ->andReturn(1);
+
+        $this->service->callStoreModel($model);
+    }
+
+    public function test_delete_removed_from_hash_and_indexes_and_sorted(): void
+    {
+        $this->redis->shouldReceive('hget')->with('test_models:hash', '1')->andReturn(
+            json_encode(['attributes' => ['id' => 1, 'role_id' => 1, 'status' => 'active'], 'relations' => []], JSON_THROW_ON_ERROR)
+        );
+        $this->redis->shouldReceive('hdel')->with('test_models:hash', '1')->andReturn(1);
+        $this->redis->shouldReceive('srem')->with('test_models:index:role_id:1', '1')->andReturn(1);
+        $this->redis->shouldReceive('srem')->with('test_models:index:status:active', '1')->andReturn(1);
+        $this->redis->shouldReceive('zrem')->with('test_models:sorted:created_at', '1')->andReturn(1);
+
+        $this->service->delete(1);
     }
 }
 

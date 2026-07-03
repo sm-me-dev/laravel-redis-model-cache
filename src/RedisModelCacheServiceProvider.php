@@ -46,6 +46,7 @@ class RedisModelCacheServiceProvider extends ServiceProvider
                 custom_indexes: $params['custom_indexes'] ?? [],
                 ttl: $params['ttl'] ?? null,
                 matchStrategy: $app->make(ModelMatchStrategy::class),
+                connection: $params['connection'] ?? null,
             );
         });
 
