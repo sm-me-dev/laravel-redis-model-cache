@@ -4,9 +4,6 @@ includes:
 parameters:
     paths:
         - src/
+        - tests/Fixtures/
     level: 8
     tmpDir: .phpstan.cache
-    excludePaths:
-        - tests/
-    ignoreErrors:
-        - '#used zero times and is not analysed#'

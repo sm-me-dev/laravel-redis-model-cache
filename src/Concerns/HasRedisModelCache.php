@@ -10,14 +10,19 @@ use Sm_mE\RedisModelCache\RedisModelService;
 
 trait HasRedisModelCache
 {
+    /** @var array<class-string, list<mixed>> */
     protected static array $redisModelCacheProcessing = [];
 
+    /**
+     * Laravel Eloquent calls this via the booting trait convention.
+     */
     public static function bootHasRedisModelCache(): void
     {
         static::saved(function (Model $model) {
             static::processRedisModelCacheSaved($model);
         });
 
+        /** @phpstan-ignore-next-line Eloquent Model provides this static method via trait booting */
         static::restored(function (Model $model) {
             static::processRedisModelCacheSaved($model);
         });
@@ -47,7 +52,7 @@ trait HasRedisModelCache
         static::markRedisModelCacheProcessing($model);
 
         try {
-            static::resolveRedisModelCacheService()->storeModel($model);
+            static::resolveRedisModelCacheService()->store($model);
             static::touchRedisModelCacheParents($model);
         } finally {
             static::unmarkRedisModelCacheProcessing($model);
@@ -65,22 +70,19 @@ trait HasRedisModelCache
 
     protected static function markRedisModelCacheProcessing(Model $model): void
     {
-        static::$redisModelCacheProcessing[static::class][] = $model->getKey();
+        $ids = static::$redisModelCacheProcessing[static::class] ?? [];
+        $ids[] = $model->getKey();
+        static::$redisModelCacheProcessing[static::class] = $ids;
     }
 
     protected static function unmarkRedisModelCacheProcessing(Model $model): void
     {
-        $key = array_search(
-            $model->getKey(),
-            static::$redisModelCacheProcessing[static::class] ?? [],
-            true
-        );
+        $ids = static::$redisModelCacheProcessing[static::class] ?? [];
+        $key = array_search($model->getKey(), $ids, true);
 
         if ($key !== false) {
-            unset(static::$redisModelCacheProcessing[static::class][$key]);
-            static::$redisModelCacheProcessing[static::class] = array_values(
-                static::$redisModelCacheProcessing[static::class]
-            );
+            unset($ids[$key]);
+            static::$redisModelCacheProcessing[static::class] = array_values($ids);
         }
     }
 
@@ -131,7 +133,7 @@ trait HasRedisModelCache
     {
         if (in_array(HasRedisModelCache::class, class_uses_recursive($parent::class), true)) {
             $parentService = static::resolveRedisModelCacheServiceFor($parent::class);
-            $parentService->storeModel($parent);
+            $parentService->store($parent);
         }
     }
 

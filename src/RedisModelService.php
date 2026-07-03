@@ -405,6 +405,15 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
     }
 
     /**
+     * Public entry point for storing a single model in cache.
+     * Used by the HasRedisModelCache trait.
+     */
+    public function store(Model $model): void
+    {
+        $this->storeModel($model);
+    }
+
+    /**
      * Serialize a single model with eager-loaded relations.
      *
      * @param  mixed  $pipeline
