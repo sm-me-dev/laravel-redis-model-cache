@@ -8,3 +8,5 @@ parameters:
     tmpDir: .phpstan.cache
     excludePaths:
         - tests/
+    ignoreErrors:
+        - '#used zero times and is not analysed#'
