@@ -137,7 +137,7 @@ class RedisModelServiceTest extends TestCase
 
         $serialized = json_encode($payload, JSON_THROW_ON_ERROR);
 
-        $this->redis->shouldReceive('sinter')->with('{test_models}:index:role_id:1')->andReturn(['1']);
+        $this->redis->shouldReceive('smembers')->with('{test_models}:index:role_id:1')->andReturn(['1']);
         $this->redis->shouldReceive('pipeline')->andReturn(
             Mockery::mock('Illuminate\Redis\Connections\Pipeline')
                 ->shouldReceive('hget')->with('{test_models}:hash', '1')->andReturn($serialized)
@@ -178,7 +178,7 @@ class RedisModelServiceTest extends TestCase
 
     public function test_where_with_indexed_field_returns_models(): void
     {
-        $this->redis->shouldReceive('sinter')->with('{test_models}:index:role_id:1')->andReturn(['1', '2']);
+        $this->redis->shouldReceive('smembers')->with('{test_models}:index:role_id:1')->andReturn(['1', '2']);
 
         $pipelineMock = Mockery::mock('Illuminate\Redis\Connections\Pipeline');
         $this->redis->shouldReceive('pipeline')->andReturn($pipelineMock);
