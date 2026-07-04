@@ -9,8 +9,11 @@ use Sm_mE\RedisModelCache\Contracts\HashCacheService;
 use Sm_mE\RedisModelCache\Contracts\ModelCacheService;
 use Sm_mE\RedisModelCache\Contracts\ModelMatchStrategy;
 use Sm_mE\RedisModelCache\Contracts\RedisConnectionResolver;
+use Sm_mE\RedisModelCache\Listeners\ObservabilitySubscriber;
+use Sm_mE\RedisModelCache\Support\CacheManager;
 use Sm_mE\RedisModelCache\Support\DefaultConnectionResolver;
 use Sm_mE\RedisModelCache\Support\DefaultModelMatchStrategy;
+use Sm_mE\RedisModelCache\Support\Observability;
 
 class RedisModelCacheServiceProvider extends ServiceProvider
 {
@@ -21,6 +24,15 @@ class RedisModelCacheServiceProvider extends ServiceProvider
         $this->app->singleton(RedisConnectionResolver::class, function ($app) {
             return new DefaultConnectionResolver(
                 config('redis-model-cache.connection', 'cache')
+            );
+        });
+
+        $this->app->singleton(Observability::class);
+
+        $this->app->singleton(CacheManager::class, function ($app) {
+            return new CacheManager(
+                connectionResolver: $app->make(RedisConnectionResolver::class),
+                observability: $app->make(Observability::class),
             );
         });
 
@@ -64,21 +76,28 @@ class RedisModelCacheServiceProvider extends ServiceProvider
         if ($this->app->runningInConsole()) {
             $this->commands([
                 Console\MonitorCacheCommand::class,
+                Console\DebugCommand::class,
             ]);
         }
 
-        // Validate configuration
+        $this->registerEventSubscribers();
+
         $this->validateConfiguration();
     }
 
-    /**
-     * Validate the package configuration.
-     *
-     * @throws \InvalidArgumentException If configuration is invalid
-     */
+    protected function registerEventSubscribers(): void
+    {
+        if (! config('redis-model-cache.observability.dispatch_events', true)) {
+            return;
+        }
+
+        $this->app->make('events')->subscribe(
+            $this->app->make(ObservabilitySubscriber::class)
+        );
+    }
+
     protected function validateConfiguration(): void
     {
-        // Validate Redis connection exists
         $connection = config('redis-model-cache.connection');
         if (! config("database.redis.{$connection}")) {
             throw new \InvalidArgumentException(
@@ -87,7 +106,6 @@ class RedisModelCacheServiceProvider extends ServiceProvider
             );
         }
 
-        // Validate TTL
         $ttl = config('redis-model-cache.default_ttl');
         if ($ttl !== null && (! is_int($ttl) || $ttl < 0)) {
             throw new \InvalidArgumentException(
@@ -95,7 +113,6 @@ class RedisModelCacheServiceProvider extends ServiceProvider
             );
         }
 
-        // Validate scan strategy
         $scanStrategy = config('redis-model-cache.scan_strategy');
         if ($scanStrategy !== 'scan') {
             throw new \InvalidArgumentException(
@@ -103,7 +120,6 @@ class RedisModelCacheServiceProvider extends ServiceProvider
             );
         }
 
-        // Validate scan count
         $scanCount = config('redis-model-cache.scan_count');
         if (! is_int($scanCount) || $scanCount < 1) {
             throw new \InvalidArgumentException(
@@ -111,7 +127,6 @@ class RedisModelCacheServiceProvider extends ServiceProvider
             );
         }
 
-        // Validate stampede protection config
         if (config('redis-model-cache.stampede_protection.enabled')) {
             $lockTimeout = config('redis-model-cache.stampede_protection.lock_timeout');
             $waitTimeout = config('redis-model-cache.stampede_protection.wait_timeout');
@@ -136,7 +151,6 @@ class RedisModelCacheServiceProvider extends ServiceProvider
             }
         }
 
-        // Validate stale-while-revalidate config
         if (config('redis-model-cache.stale_while_revalidate.enabled')) {
             $gracePeriod = config('redis-model-cache.stale_while_revalidate.grace_period');
             $queue = config('redis-model-cache.stale_while_revalidate.queue');
