@@ -11,7 +11,7 @@
 
 ---
 
-**v1.2.0** | PHP ^8.4 | Laravel ^12.0
+**v2.0.0** | PHP ^8.4 | Laravel ^12.0
 
 ## Quick Start
 

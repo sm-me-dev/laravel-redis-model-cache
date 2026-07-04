@@ -14,12 +14,12 @@
 
 1. **Tag the release:**
    ```bash
-   git tag -a v1.2.0 -m "v1.2.0"
+   git tag -a v2.0.0 -m "v2.0.0"
    ```
 
 2. **Push the tag:**
    ```bash
-   git push origin v1.2.0
+   git push origin v2.0.0
    ```
 
 3. **GitHub Actions** will automatically:
@@ -41,9 +41,5 @@ No manual action required.
 
 ## Recent Releases
 
+- **v2.0.0** — Major expansion: stampede protection, SWR, query engine, incremental updates, background warmup, compression, Lua atomicity, observability, Telescope/Pulse integration, benchmarks (current)
 - **v1.1.0** — Memory-safe Redis model cache with indexed queries, eager-relation hydration, pipeline atomicity
-- **v1.2.0** — Stampede protection, explain mode, metrics & events
-- **v1.3.0** — Stale-while-revalidate, incremental updates
-- **v1.4.0** — Query engine enhancements (whereIn, whereBetween, orWhere, pluck)
-- **v1.5.0** — Background warmup, compression (gzip/zstd/lz4), multi-tenant namespacing
-- **v1.6.0** — Lua script atomicity, stampede CAS, atomic store (current)
