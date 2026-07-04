@@ -1,14 +1,73 @@
+# Dependencies
 /vendor/
 /node_modules/
+/workbench/node_modules/
+
+# Composer
 composer.lock
+
+# PHPUnit
 .phpunit.result.cache
 .phpunit.cache/
-.php-cs-fixer.cache
+
+# Static analysis
 .phpstan.cache/
+.php-cs-fixer.cache
+
+# Coverage
+coverage/
+coverage.xml
+
+# IDE
 .idea/
+.vscode/
+
+# OS
 .DS_Store
+Thumbs.db
+
+# Editor
 *.swp
 *.swo
 *.bak
 *.backup
+
+# Logs
+*.log
+
+# Testbench
+/workbench/.env
+/workbench/.env.*
+/workbench/bootstrap/cache/*
+!/workbench/bootstrap/cache/.gitignore
+
+/workbench/storage/*
+!/workbench/storage/.gitignore
+
+/workbench/public/build
+/workbench/public/hot
+
+/workbench/database/*.sqlite
+/workbench/database/*.sqlite-*
+
+# AI tooling (local only)
+.agents
+.codex
+.cursor
+.kiro
+.junie
+.opencode
+.zed
+
+# MCP (if machine-specific)
+.mcp.json
+
+# Temporary files
 graphify-out/
+project_structure.txt
+
+# Local tooling config
+/opencode.json
+
+# Testbench local config
+/testbench.yaml

@@ -1,60 +1,90 @@
 {
-  "name": "sm-me/laravel-redis-model-cache",
-  "description": "Optimized Redis model and hash-set caching service for Laravel Eloquent.",
-  "license": "MIT",
-  "authors": [
-    {
-      "name": "Sm_mE",
-      "email": "mohammad79eshrati@gmail.com"
-    }
-  ],
-  "keywords": [
-    "laravel",
-    "redis",
-    "cache",
-    "eloquent",
-    "model",
-    "packagist"
-  ],
-  "require": {
-    "php": "^8.4",
-    "illuminate/console": "^12.0",
-    "illuminate/database": "^12.0",
-    "illuminate/redis": "^12.0",
-    "illuminate/support": "^12.0"
-  },
-  "require-dev": {
-    "laravel/pint": "^1.29",
-    "larastan/larastan": "^3.10",
-    "orchestra/testbench": "^10.0",
-    "pestphp/pest": "^3.0"
-  },
-  "autoload": {
-    "psr-4": {
-      "Sm_mE\\RedisModelCache\\": "src/"
+    "name": "sm-me/laravel-redis-model-cache",
+    "description": "Optimized Redis model and hash-set caching service for Laravel Eloquent.",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Sm_mE",
+            "email": "mohammad79eshrati@gmail.com"
+        }
+    ],
+    "keywords": [
+        "laravel",
+        "redis",
+        "cache",
+        "eloquent",
+        "model",
+        "packagist"
+    ],
+    "require": {
+        "php": "^8.4",
+        "illuminate/console": "^12.0",
+        "illuminate/database": "^12.0",
+        "illuminate/redis": "^12.0",
+        "illuminate/support": "^12.0"
     },
-    "files": [
-      "src/Support/helpers.php"
-    ]
-  },
-  "autoload-dev": {
-    "psr-4": {
-      "Sm_mE\\RedisModelCache\\Tests\\": "tests/"
+    "require-dev": {
+        "larastan/larastan": "^3.10",
+        "laravel/boost": "^2.4",
+        "laravel/pint": "^1.29",
+        "orchestra/testbench": "^10.11",
+        "pestphp/pest": "^3.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Sm_mE\\RedisModelCache\\": "src/"
+        },
+        "files": [
+            "src/Support/helpers.php"
+        ]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Sm_mE\\RedisModelCache\\Tests\\": "tests/",
+            "Workbench\\App\\": "workbench/app/",
+            "Workbench\\Database\\Factories\\": "workbench/database/factories/",
+            "Workbench\\Database\\Seeders\\": "workbench/database/seeders/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Sm_mE\\RedisModelCache\\RedisModelCacheServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "suggest": {
+        "ext-zstd": "For Zstandard compression support (https://github.com/kjdev/php-ext-zstd)",
+        "ext-lz4": "For LZ4 compression support (https://github.com/kjdev/php-ext-lz4)"
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "scripts": {
+        "post-autoload-dump": [
+            "@clear",
+            "@prepare"
+        ],
+        "clear": "@php vendor/bin/testbench package:purge-skeleton --ansi",
+        "prepare": "@php vendor/bin/testbench package:discover --ansi",
+        "build": "@php vendor/bin/testbench workbench:build --ansi",
+        "serve": [
+            "Composer\\Config::disableProcessTimeout",
+            "@build",
+            "@php vendor/bin/testbench serve --ansi"
+        ],
+        "lint": [
+            "@php vendor/bin/pint --ansi",
+            "@php vendor/bin/phpstan analyse --verbose --ansi"
+        ],
+        "test": [
+            "@clear",
+            "@php vendor/bin/pest"
+        ]
     }
-  },
-  "extra": {
-    "laravel": {
-      "providers": [
-        "Sm_mE\\RedisModelCache\\RedisModelCacheServiceProvider"
-      ]
-    }
-  },
-  "minimum-stability": "stable",
-  "prefer-stable": true,
-  "config": {
-    "sort-packages": true,
-    "allow-plugins": {
-      "pestphp/pest-plugin": true
-    }
-  }
 }

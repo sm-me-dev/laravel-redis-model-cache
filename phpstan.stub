@@ -1,0 +1,21 @@
+<?php
+
+/**
+ * Stub file for optional Telescope/Pulse dependencies.
+ * These classes are available only when laravel/telescope or laravel/pulse is installed.
+ */
+
+namespace Laravel\Telescope;
+
+class Telescope
+{
+    public static function recordCache(mixed $entry): void {}
+}
+
+class IncomingEntry
+{
+    public static function make(mixed $data): static
+    {
+        return new static();
+    }
+}

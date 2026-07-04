@@ -7,3 +7,8 @@ parameters:
         - tests/Fixtures/
     level: 8
     tmpDir: .phpstan.cache
+    stubFiles:
+        - phpstan.stub
+    ignoreErrors:
+        - '#Call to static method make\(\) on an unknown class Laravel\\Telescope\\IncomingEntry#'
+        - '#Call to static method recordCache\(\) on an unknown class Laravel\\Telescope\\Telescope#'

@@ -10,8 +10,21 @@ use Sm_mE\RedisModelCache\RedisModelService;
 
 trait HasRedisModelCache
 {
+    protected static function redisModelCacheConfig(): array
+    {
+        return [];
+    }
+
     /** @var array<class-string, list<mixed>> */
     protected static array $redisModelCacheProcessing = [];
+
+    /**
+     * Tracks model keys deleted during current request cycle.
+     * Prevents the saved event (fired by forceDelete) from re-caching a deleted model.
+     *
+     * @var array<class-string, list<mixed>>
+     */
+    protected static array $redisModelCacheDeletedInCycle = [];
 
     /**
      * Laravel Eloquent calls this via the booting trait convention.
@@ -22,10 +35,12 @@ trait HasRedisModelCache
             static::processRedisModelCacheSaved($model);
         });
 
-        /** @phpstan-ignore-next-line Eloquent Model provides this static method via trait booting */
-        static::restored(function (Model $model) {
-            static::processRedisModelCacheSaved($model);
-        });
+        // Only register restored event if the model uses SoftDeletes trait
+        if (method_exists(static::class, 'restored')) {
+            static::restored(function (Model $model) {
+                static::processRedisModelCacheSaved($model);
+            });
+        }
 
         static::deleted(function (Model $model) {
             if (static::isRedisModelCacheProcessing($model)) {
@@ -36,16 +51,44 @@ trait HasRedisModelCache
 
             try {
                 static::resolveRedisModelCacheService()->delete($model->getKey());
+                static::markRedisModelCacheDeletedInCycle($model);
                 static::touchRedisModelCacheParents($model);
             } finally {
                 static::unmarkRedisModelCacheProcessing($model);
             }
         });
+
+        /**
+         * forceDelete fires forceDeleted → deleted → saved in a single cycle.
+         * We mark the model as deleted-in-cycle so the subsequent saved event
+         * does not re-cache the just-deleted model.
+         */
+        if (method_exists(static::class, 'forceDeleted')) {
+            static::forceDeleted(function (Model $model) {
+                if (static::isRedisModelCacheProcessing($model)) {
+                    return;
+                }
+
+                static::markRedisModelCacheProcessing($model);
+
+                try {
+                    static::resolveRedisModelCacheService()->delete($model->getKey());
+                    static::markRedisModelCacheDeletedInCycle($model);
+                    static::touchRedisModelCacheParents($model);
+                } finally {
+                    static::unmarkRedisModelCacheProcessing($model);
+                }
+            });
+        }
     }
 
     protected static function processRedisModelCacheSaved(Model $model): void
     {
         if (static::isRedisModelCacheProcessing($model)) {
+            return;
+        }
+
+        if (static::isRedisModelCacheDeletedInCycle($model)) {
             return;
         }
 
@@ -86,13 +129,27 @@ trait HasRedisModelCache
         }
     }
 
+    protected static function isRedisModelCacheDeletedInCycle(Model $model): bool
+    {
+        return in_array(
+            $model->getKey(),
+            static::$redisModelCacheDeletedInCycle[static::class] ?? [],
+            true
+        );
+    }
+
+    protected static function markRedisModelCacheDeletedInCycle(Model $model): void
+    {
+        $ids = static::$redisModelCacheDeletedInCycle[static::class] ?? [];
+        $ids[] = $model->getKey();
+        static::$redisModelCacheDeletedInCycle[static::class] = $ids;
+    }
+
     protected static function resolveRedisModelCacheService(): RedisModelService
     {
         $modelClass = static::class;
 
-        $config = method_exists($modelClass, 'redisModelCacheConfig')
-            ? $modelClass::redisModelCacheConfig()
-            : [];
+        $config = static::redisModelCacheConfig();
 
         $params = [
             'model_class' => $modelClass,

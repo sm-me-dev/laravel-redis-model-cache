@@ -42,4 +42,8 @@ No manual action required.
 ## Recent Releases
 
 - **v1.1.0** — Memory-safe Redis model cache with indexed queries, eager-relation hydration, pipeline atomicity
-- **v1.1.1** — (planned) Stale index cleanup, TTL propagation, Eloquent trait auto-sync
+- **v1.2.0** — Stampede protection, explain mode, metrics & events
+- **v1.3.0** — Stale-while-revalidate, incremental updates
+- **v1.4.0** — Query engine enhancements (whereIn, whereBetween, orWhere, pluck)
+- **v1.5.0** — Background warmup, compression (gzip/zstd/lz4), multi-tenant namespacing
+- **v1.6.0** — Lua script atomicity, stampede CAS, atomic store (current)
