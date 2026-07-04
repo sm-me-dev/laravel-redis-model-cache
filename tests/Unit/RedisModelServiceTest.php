@@ -66,7 +66,7 @@ class RedisModelServiceTest extends TestCase
         $this->expectException(BadMethodCallException::class);
         $this->expectExceptionMessage('Global unindexed cache fetches via rememberAll() are prohibited');
 
-        $this->redis->shouldReceive('exists')->with('test_models:hash')->andReturn(true);
+        $this->redis->shouldReceive('exists')->with('{test_models}:hash')->andReturn(true);
 
         $this->service->rememberAll(fn () => new Collection([]), where: []);
     }
@@ -84,23 +84,26 @@ class RedisModelServiceTest extends TestCase
         $pipelineMock = Mockery::mock('Illuminate\Redis\Connections\Pipeline');
         $this->redis->shouldReceive('pipeline')->andReturn($pipelineMock);
 
-        // Stale index check reads old data before pipeline
-        $this->redis->shouldReceive('hget')->with('test_models:hash', '1')->andReturn(false);
-        $this->redis->shouldReceive('hget')->with('test_models:hash', '2')->andReturn(false);
+        // Stale index check reads old data before pipeline (batched HMGET)
+        $this->redis->shouldReceive('hmget')->with('{test_models}:hash', Mockery::type('array'))->andReturn(['1' => false, '2' => false]);
 
         $pipelineMock->shouldReceive('hset')->times(2);
-        $pipelineMock->shouldReceive('expire')->with('test_models:hash', 3600)->times(2);
+        $pipelineMock->shouldReceive('expire')->with('{test_models}:hash', 3600)->times(2);
         $pipelineMock->shouldReceive('sadd')->times(4);
-        $pipelineMock->shouldReceive('expire')->with('test_models:index:role_id:1', 3600)->once();
-        $pipelineMock->shouldReceive('expire')->with('test_models:index:role_id:2', 3600)->once();
-        $pipelineMock->shouldReceive('expire')->with('test_models:index:status:active', 3600)->once();
-        $pipelineMock->shouldReceive('expire')->with('test_models:index:status:inactive', 3600)->once();
+        $pipelineMock->shouldReceive('expire')->with('{test_models}:index:role_id:1', 3600)->once();
+        $pipelineMock->shouldReceive('expire')->with('{test_models}:index:role_id:2', 3600)->once();
+        $pipelineMock->shouldReceive('expire')->with('{test_models}:index:status:active', 3600)->once();
+        $pipelineMock->shouldReceive('expire')->with('{test_models}:index:status:inactive', 3600)->once();
         $pipelineMock->shouldReceive('zadd')->times(2);
-        $pipelineMock->shouldReceive('expire')->with('test_models:sorted:created_at', 3600)->times(2);
+        $pipelineMock->shouldReceive('expire')->with('{test_models}:sorted:created_at', 3600)->times(2);
         $pipelineMock->shouldReceive('execute')->once()->andReturn(array_fill(0, 16, true));
 
-        $this->redis->shouldReceive('ttl')->with('test_models:hash')->andReturn(-1);
-        $this->redis->shouldReceive('expire')->with('test_models:hash', 3600)->andReturn(true);
+        $this->redis->shouldReceive('ttl')->with('{test_models}:hash')->andReturn(-1);
+        $this->redis->shouldReceive('expire')->with('{test_models}:hash', 3600)->andReturn(true);
+
+        // storeCacheMetadata() calls hset + expire on the meta key after pipeline
+        $this->redis->shouldReceive('hset')->with('{test_models}:meta', 'cached_at', Mockery::type('string'))->andReturn(1);
+        $this->redis->shouldReceive('expire')->with('{test_models}:meta', 3600)->andReturn(true);
 
         $models = new Collection([
             new TestModel(['id' => 1, 'role_id' => 1, 'status' => 'active', 'created_at' => '2024-01-01']),
@@ -108,6 +111,8 @@ class RedisModelServiceTest extends TestCase
         ]);
 
         $this->service->callStoreMany($models);
+
+        $this->addToAssertionCount(1);
     }
 
     public function test_has_many_relation_hydration_without_extra_queries(): void
@@ -132,10 +137,10 @@ class RedisModelServiceTest extends TestCase
 
         $serialized = json_encode($payload, JSON_THROW_ON_ERROR);
 
-        $this->redis->shouldReceive('sinter')->with('test_models:index:role_id:1')->andReturn(['1']);
+        $this->redis->shouldReceive('sinter')->with('{test_models}:index:role_id:1')->andReturn(['1']);
         $this->redis->shouldReceive('pipeline')->andReturn(
             Mockery::mock('Illuminate\Redis\Connections\Pipeline')
-                ->shouldReceive('hget')->with('test_models:hash', '1')->andReturn($serialized)
+                ->shouldReceive('hget')->with('{test_models}:hash', '1')->andReturn($serialized)
                 ->getMock()
                 ->shouldReceive('execute')->andReturn([$serialized])
                 ->getMock()
@@ -153,34 +158,34 @@ class RedisModelServiceTest extends TestCase
     public function test_collect_keys_by_pattern_returns_unique_keys(): void
     {
         $this->redis->shouldReceive('scan')
-            ->with('0', ['match' => 'test_models:*', 'count' => 1000])
-            ->andReturn(['100', ['test_models:hash', 'test_models:index:role_id:1']])
+            ->with('0', ['match' => '{test_models}:*', 'count' => 1000])
+            ->andReturn(['100', ['{test_models}:hash', '{test_models}:index:role_id:1']])
             ->once();
         $this->redis->shouldReceive('scan')
-            ->with('100', ['match' => 'test_models:*', 'count' => 1000])
-            ->andReturn(['0', ['test_models:index:status:active', 'test_models:hash']])
+            ->with('100', ['match' => '{test_models}:*', 'count' => 1000])
+            ->andReturn(['0', ['{test_models}:index:status:active', '{test_models}:hash']])
             ->once();
 
-        $keys = $this->service->callCollectKeysByPattern('test_models:*');
+        $keys = $this->service->callCollectKeysByPattern('{test_models}:*');
 
         $this->assertIsArray($keys);
         $this->assertCount(3, $keys);
         $this->assertEquals(
-            ['test_models:hash', 'test_models:index:role_id:1', 'test_models:index:status:active'],
+            ['{test_models}:hash', '{test_models}:index:role_id:1', '{test_models}:index:status:active'],
             array_values(array_unique($keys))
         );
     }
 
     public function test_where_with_indexed_field_returns_models(): void
     {
-        $this->redis->shouldReceive('sinter')->with('test_models:index:role_id:1')->andReturn(['1', '2']);
+        $this->redis->shouldReceive('sinter')->with('{test_models}:index:role_id:1')->andReturn(['1', '2']);
 
         $pipelineMock = Mockery::mock('Illuminate\Redis\Connections\Pipeline');
         $this->redis->shouldReceive('pipeline')->andReturn($pipelineMock);
-        $pipelineMock->shouldReceive('hget')->with('test_models:hash', '1')->andReturn(
+        $pipelineMock->shouldReceive('hget')->with('{test_models}:hash', '1')->andReturn(
             json_encode(['attributes' => ['id' => 1, 'role_id' => 1, 'status' => 'active'], 'relations' => []], JSON_THROW_ON_ERROR)
         );
-        $pipelineMock->shouldReceive('hget')->with('test_models:hash', '2')->andReturn(
+        $pipelineMock->shouldReceive('hget')->with('{test_models}:hash', '2')->andReturn(
             json_encode(['attributes' => ['id' => 2, 'role_id' => 1, 'status' => 'inactive'], 'relations' => []], JSON_THROW_ON_ERROR)
         );
         $pipelineMock->shouldReceive('execute')->andReturn([
@@ -199,19 +204,19 @@ class RedisModelServiceTest extends TestCase
         $this->expectException(BadMethodCallException::class);
         $this->expectExceptionMessage('Global unindexed cache fetches via rememberAll() are prohibited');
 
-        $this->redis->shouldReceive('exists')->with('test_models:hash')->andReturn(true);
+        $this->redis->shouldReceive('exists')->with('{test_models}:hash')->andReturn(true);
 
         $this->service->rememberAll(fn () => new Collection([]), where: []);
     }
 
     public function test_remember_index_uses_index_lookup(): void
     {
-        $this->redis->shouldReceive('exists')->with('test_models:index:role_id:1')->andReturn(true);
-        $this->redis->shouldReceive('smembers')->with('test_models:index:role_id:1')->andReturn(['1']);
+        $this->redis->shouldReceive('exists')->with('{test_models}:index:role_id:1')->andReturn(true);
+        $this->redis->shouldReceive('smembers')->with('{test_models}:index:role_id:1')->andReturn(['1']);
 
         $this->redis->shouldReceive('pipeline')->andReturn(
             Mockery::mock('Illuminate\Redis\Connections\Pipeline')
-                ->shouldReceive('hget')->with('test_models:hash', '1')->andReturn(
+                ->shouldReceive('hget')->with('{test_models}:hash', '1')->andReturn(
                     json_encode(['attributes' => ['id' => 1, 'role_id' => 1, 'status' => 'active'], 'relations' => []], JSON_THROW_ON_ERROR)
                 )
                 ->getMock()
@@ -228,14 +233,14 @@ class RedisModelServiceTest extends TestCase
 
     public function test_custom_where_uses_intersection(): void
     {
-        $this->redis->shouldReceive('sinter')->with('test_models:custom:active_admins')->andReturn(['1', '2']);
+        $this->redis->shouldReceive('sinter')->with('{test_models}:custom:active_admins')->andReturn(['1', '2']);
 
         $pipelineMock = Mockery::mock('Illuminate\Redis\Connections\Pipeline');
         $this->redis->shouldReceive('pipeline')->andReturn($pipelineMock);
-        $pipelineMock->shouldReceive('hget')->with('test_models:hash', '1')->andReturn(
+        $pipelineMock->shouldReceive('hget')->with('{test_models}:hash', '1')->andReturn(
             json_encode(['attributes' => ['id' => 1, 'role_id' => 1, 'status' => 'active'], 'relations' => []], JSON_THROW_ON_ERROR)
         );
-        $pipelineMock->shouldReceive('hget')->with('test_models:hash', '2')->andReturn(
+        $pipelineMock->shouldReceive('hget')->with('{test_models}:hash', '2')->andReturn(
             json_encode(['attributes' => ['id' => 2, 'role_id' => 1, 'status' => 'active'], 'relations' => []], JSON_THROW_ON_ERROR)
         );
         $pipelineMock->shouldReceive('execute')->andReturn([
@@ -250,26 +255,30 @@ class RedisModelServiceTest extends TestCase
 
     public function test_delete_removes_from_hash_and_indexes(): void
     {
-        $this->redis->shouldReceive('hget')->with('test_models:hash', '1')->andReturn(
+        $this->redis->shouldReceive('hget')->with('{test_models}:hash', '1')->andReturn(
             json_encode(['attributes' => ['id' => 1, 'role_id' => 1, 'status' => 'active'], 'relations' => []], JSON_THROW_ON_ERROR)
         );
-        $this->redis->shouldReceive('hdel')->with('test_models:hash', '1')->andReturn(1);
-        $this->redis->shouldReceive('srem')->with('test_models:index:role_id:1', '1')->andReturn(1);
-        $this->redis->shouldReceive('srem')->with('test_models:index:status:active', '1')->andReturn(1);
-        $this->redis->shouldReceive('zrem')->with('test_models:sorted:created_at', '1')->andReturn(1);
+        $this->redis->shouldReceive('hdel')->with('{test_models}:hash', '1')->andReturn(1);
+        $this->redis->shouldReceive('srem')->with('{test_models}:index:role_id:1', '1')->andReturn(1);
+        $this->redis->shouldReceive('srem')->with('{test_models}:index:status:active', '1')->andReturn(1);
+        $this->redis->shouldReceive('zrem')->with('{test_models}:sorted:created_at', '1')->andReturn(1);
 
         $this->service->delete(1);
+
+        $this->addToAssertionCount(1);
     }
 
     public function test_clear_all_uses_collect_keys_by_pattern(): void
     {
         $this->redis->shouldReceive('scan')
-            ->with('0', ['match' => 'test_models:*', 'count' => 1000])
-            ->andReturn(['0', ['test_models:hash', 'test_models:index:role_id:1']])
+            ->with('0', ['match' => '{test_models}:*', 'count' => 1000])
+            ->andReturn(['0', ['{test_models}:hash', '{test_models}:index:role_id:1']])
             ->once();
-        $this->redis->shouldReceive('del')->with('test_models:hash', 'test_models:index:role_id:1')->andReturn(2);
+        $this->redis->shouldReceive('del')->with('{test_models}:hash', '{test_models}:index:role_id:1')->andReturn(2);
 
         $this->service->clearAll();
+
+        $this->addToAssertionCount(1);
     }
 
     public function test_remember_throws_on_non_indexed_find_by(): void
@@ -277,20 +286,22 @@ class RedisModelServiceTest extends TestCase
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage('not indexed');
 
-        $this->redis->shouldReceive('exists')->with('test_models:hash')->andReturn(false);
+        $this->redis->shouldReceive('exists')->with('{test_models}:hash')->andReturn(false);
 
-        // Stale index check
-        $this->redis->shouldReceive('hget')->with('test_models:hash', '1')->andReturn(false);
+        // Stale index check (batched HMGET)
+        $this->redis->shouldReceive('hmget')->with('{test_models}:hash', Mockery::type('array'))->andReturn(['1' => false]);
 
         $pipelineMock = Mockery::mock('Illuminate\Redis\Connections\Pipeline');
         $this->redis->shouldReceive('pipeline')->andReturn($pipelineMock);
         $pipelineMock->shouldReceive('hset')->once();
-        $pipelineMock->shouldReceive('expire')->with('test_models:hash', 3600)->once();
+        $pipelineMock->shouldReceive('expire')->with('{test_models}:hash', 3600)->once();
         $pipelineMock->shouldReceive('sadd')->once();
-        $pipelineMock->shouldReceive('expire')->with('test_models:index:role_id:1', 3600)->once();
+        $pipelineMock->shouldReceive('expire')->with('{test_models}:index:role_id:1', 3600)->once();
         $pipelineMock->shouldReceive('execute')->andReturn([true, true, true, true]);
-        $this->redis->shouldReceive('ttl')->with('test_models:hash')->andReturn(-1);
-        $this->redis->shouldReceive('expire')->with('test_models:hash', 3600)->andReturn(true);
+        $this->redis->shouldReceive('ttl')->with('{test_models}:hash')->andReturn(-1);
+        $this->redis->shouldReceive('expire')->with('{test_models}:hash', 3600)->andReturn(true);
+        $this->redis->shouldReceive('hset')->with('{test_models}:meta', 'cached_at', Mockery::type('string'))->andReturn(1);
+        $this->redis->shouldReceive('expire')->with('{test_models}:meta', 3600)->andReturn(true);
 
         $this->service->remember(
             fn () => new Collection([new TestModel(['id' => 1, 'role_id' => 1])]),
@@ -301,14 +312,14 @@ class RedisModelServiceTest extends TestCase
 
     public function test_sorted_returns_models_in_order(): void
     {
-        $this->redis->shouldReceive('zrevrange')->with('test_models:sorted:created_at', 0, 9)->andReturn(['2', '1']);
+        $this->redis->shouldReceive('zrevrange')->with('{test_models}:sorted:created_at', 0, 9)->andReturn(['2', '1']);
 
         $pipelineMock = Mockery::mock('Illuminate\Redis\Connections\Pipeline');
         $this->redis->shouldReceive('pipeline')->andReturn($pipelineMock);
-        $pipelineMock->shouldReceive('hget')->with('test_models:hash', '2')->andReturn(
+        $pipelineMock->shouldReceive('hget')->with('{test_models}:hash', '2')->andReturn(
             json_encode(['attributes' => ['id' => 2, 'role_id' => 1, 'status' => 'active', 'created_at' => '2024-01-02'], 'relations' => []], JSON_THROW_ON_ERROR)
         );
-        $pipelineMock->shouldReceive('hget')->with('test_models:hash', '1')->andReturn(
+        $pipelineMock->shouldReceive('hget')->with('{test_models}:hash', '1')->andReturn(
             json_encode(['attributes' => ['id' => 1, 'role_id' => 1, 'status' => 'active', 'created_at' => '2024-01-01'], 'relations' => []], JSON_THROW_ON_ERROR)
         );
         $pipelineMock->shouldReceive('execute')->andReturn([
@@ -324,11 +335,11 @@ class RedisModelServiceTest extends TestCase
 
     public function test_paginate_sorted_calls_sorted_with_correct_range(): void
     {
-        $this->redis->shouldReceive('zrevrange')->with('test_models:sorted:created_at', 10, 19)->andReturn(['3']);
+        $this->redis->shouldReceive('zrevrange')->with('{test_models}:sorted:created_at', 10, 19)->andReturn(['3']);
 
         $pipelineMock = Mockery::mock('Illuminate\Redis\Connections\Pipeline');
         $this->redis->shouldReceive('pipeline')->andReturn($pipelineMock);
-        $pipelineMock->shouldReceive('hget')->with('test_models:hash', '3')->andReturn(
+        $pipelineMock->shouldReceive('hget')->with('{test_models}:hash', '3')->andReturn(
             json_encode(['attributes' => ['id' => 3, 'role_id' => 1, 'status' => 'active', 'created_at' => '2024-01-03'], 'relations' => []], JSON_THROW_ON_ERROR)
         );
         $pipelineMock->shouldReceive('execute')->andReturn([
@@ -349,7 +360,7 @@ class RedisModelServiceTest extends TestCase
         $parent->setRelation('children', new Collection([$child1, $child2]));
 
         // Stale index check reads old data
-        $this->redis->shouldReceive('hget')->with('test_models:hash', '1')->andReturn(false);
+        $this->redis->shouldReceive('hget')->with('{test_models}:hash', '1')->andReturn(false);
 
         $pipelineMock = Mockery::mock('Illuminate\Redis\Connections\Pipeline');
 
@@ -359,18 +370,20 @@ class RedisModelServiceTest extends TestCase
         $pipelineMock->shouldReceive('execute')->andReturn([true, true, true, true, true, true]);
 
         $this->service->callStoreModel($parent, $pipelineMock);
+
+        $this->addToAssertionCount(1);
     }
 
     public function test_scan_handles_predis_client_format(): void
     {
         $predisClient = Mockery::mock('Predis\Client');
         $predisClient->shouldReceive('scan')
-            ->with('0', ['match' => 'test_models:*', 'count' => 1000])
-            ->andReturn(['100', ['test_models:hash', 'test_models:index:role_id:1']])
+            ->with('0', ['match' => '{test_models}:*', 'count' => 1000])
+            ->andReturn(['100', ['{test_models}:hash', '{test_models}:index:role_id:1']])
             ->once();
         $predisClient->shouldReceive('scan')
-            ->with('100', ['match' => 'test_models:*', 'count' => 1000])
-            ->andReturn(['0', ['test_models:index:status:active']])
+            ->with('100', ['match' => '{test_models}:*', 'count' => 1000])
+            ->andReturn(['0', ['{test_models}:index:status:active']])
             ->once();
 
         $resolver = Mockery::mock(RedisConnectionResolver::class);
@@ -389,25 +402,25 @@ class RedisModelServiceTest extends TestCase
             matchStrategy: $matchStrategy
         );
 
-        $keys = $service->callCollectKeysByPattern('test_models:*');
+        $keys = $service->callCollectKeysByPattern('{test_models}:*');
 
         $this->assertCount(3, $keys);
         $this->assertEquals(
-            ['test_models:hash', 'test_models:index:role_id:1', 'test_models:index:status:active'],
+            ['{test_models}:hash', '{test_models}:index:role_id:1', '{test_models}:index:status:active'],
             array_values(array_unique($keys))
         );
     }
 
     public function test_remember_uses_index_lookup_when_field_indexed(): void
     {
-        $this->redis->shouldReceive('exists')->with('test_models:hash')->andReturn(false);
+        $this->redis->shouldReceive('exists')->with('{test_models}:hash')->andReturn(false);
         $this->redis->shouldReceive('pipeline')->andReturn(
             Mockery::mock('Illuminate\Redis\Connections\Pipeline')
                 ->shouldReceive('execute')->andReturn([])
                 ->getMock()
         );
 
-        $this->redis->shouldReceive('smembers')->with('test_models:index:role_id:1')->andReturn([]);
+        $this->redis->shouldReceive('smembers')->with('{test_models}:index:role_id:1')->andReturn([]);
 
         $result = $this->service->remember(fn () => new Collection([]), findBy: 'role_id', findValue: 1);
 
@@ -424,51 +437,53 @@ class RedisModelServiceTest extends TestCase
         ], JSON_THROW_ON_ERROR);
 
         $this->redis->shouldReceive('hget')
-            ->with('test_models:hash', '1')
+            ->with('{test_models}:hash', '1')
             ->andReturn($oldPayload);
 
         // Should SREM old role_id:1 index (role_id changed from 1 to 2)
         $this->redis->shouldReceive('srem')
-            ->with('test_models:index:role_id:1', '1')
+            ->with('{test_models}:index:role_id:1', '1')
             ->andReturn(1);
 
         // Should NOT SREM status:active (status didn't change)
         $this->redis->shouldReceive('hset')
-            ->with('test_models:hash', '1', Mockery::type('string'))
+            ->with('{test_models}:hash', '1', Mockery::type('string'))
             ->andReturn(1);
 
         $this->redis->shouldReceive('expire')
-            ->with('test_models:hash', 3600)
+            ->with('{test_models}:hash', 3600)
             ->andReturn(1);
 
         // New index for role_id:2
         $this->redis->shouldReceive('sadd')
-            ->with('test_models:index:role_id:2', '1')
+            ->with('{test_models}:index:role_id:2', '1')
             ->andReturn(1);
 
         $this->redis->shouldReceive('expire')
-            ->with('test_models:index:role_id:2', 3600)
+            ->with('{test_models}:index:role_id:2', 3600)
             ->andReturn(1);
 
         // status:active index should still be added (unchanged)
         $this->redis->shouldReceive('sadd')
-            ->with('test_models:index:status:active', '1')
+            ->with('{test_models}:index:status:active', '1')
             ->andReturn(1);
 
         $this->redis->shouldReceive('expire')
-            ->with('test_models:index:status:active', 3600)
+            ->with('{test_models}:index:status:active', 3600)
             ->andReturn(1);
 
         // Sorted set for created_at
         $this->redis->shouldReceive('zadd')
-            ->with('test_models:sorted:created_at', Mockery::type('float'), '1')
+            ->with('{test_models}:sorted:created_at', Mockery::type('float'), '1')
             ->andReturn(1);
 
         $this->redis->shouldReceive('expire')
-            ->with('test_models:sorted:created_at', 3600)
+            ->with('{test_models}:sorted:created_at', 3600)
             ->andReturn(1);
 
         $this->service->callStoreModel($model);
+
+        $this->addToAssertionCount(1);
     }
 
     public function test_store_model_applies_ttl_to_hash_index_and_sorted_keys(): void
@@ -477,42 +492,44 @@ class RedisModelServiceTest extends TestCase
 
         // No old data
         $this->redis->shouldReceive('hget')
-            ->with('test_models:hash', '1')
+            ->with('{test_models}:hash', '1')
             ->andReturn(false);
 
         $this->redis->shouldReceive('hset')
-            ->with('test_models:hash', '1', Mockery::type('string'))
+            ->with('{test_models}:hash', '1', Mockery::type('string'))
             ->andReturn(1);
 
         $this->redis->shouldReceive('expire')
-            ->with('test_models:hash', 3600)
+            ->with('{test_models}:hash', 3600)
             ->andReturn(1);
 
         $this->redis->shouldReceive('sadd')
-            ->with('test_models:index:role_id:1', '1')
+            ->with('{test_models}:index:role_id:1', '1')
             ->andReturn(1);
 
         $this->redis->shouldReceive('expire')
-            ->with('test_models:index:role_id:1', 3600)
+            ->with('{test_models}:index:role_id:1', 3600)
             ->andReturn(1);
 
         $this->redis->shouldReceive('sadd')
-            ->with('test_models:index:status:active', '1')
+            ->with('{test_models}:index:status:active', '1')
             ->andReturn(1);
 
         $this->redis->shouldReceive('expire')
-            ->with('test_models:index:status:active', 3600)
+            ->with('{test_models}:index:status:active', 3600)
             ->andReturn(1);
 
         $this->redis->shouldReceive('zadd')
-            ->with('test_models:sorted:created_at', Mockery::type('float'), '1')
+            ->with('{test_models}:sorted:created_at', Mockery::type('float'), '1')
             ->andReturn(1);
 
         $this->redis->shouldReceive('expire')
-            ->with('test_models:sorted:created_at', 3600)
+            ->with('{test_models}:sorted:created_at', 3600)
             ->andReturn(1);
 
         $this->service->callStoreModel($model);
+
+        $this->addToAssertionCount(1);
     }
 
     public function test_store_model_skips_stale_prune_when_no_old_data(): void
@@ -520,42 +537,44 @@ class RedisModelServiceTest extends TestCase
         $model = new TestModel(['id' => 1, 'role_id' => 1, 'status' => 'active', 'created_at' => '2024-01-01']);
 
         $this->redis->shouldReceive('hget')
-            ->with('test_models:hash', '1')
+            ->with('{test_models}:hash', '1')
             ->andReturn(false);
 
         $this->redis->shouldReceive('hset')
-            ->with('test_models:hash', '1', Mockery::type('string'))
+            ->with('{test_models}:hash', '1', Mockery::type('string'))
             ->andReturn(1);
 
         $this->redis->shouldReceive('expire')
-            ->with('test_models:hash', 3600)
+            ->with('{test_models}:hash', 3600)
             ->andReturn(1);
 
         $this->redis->shouldReceive('sadd')
-            ->with('test_models:index:role_id:1', '1')
+            ->with('{test_models}:index:role_id:1', '1')
             ->andReturn(1);
 
         $this->redis->shouldReceive('expire')
-            ->with('test_models:index:role_id:1', 3600)
+            ->with('{test_models}:index:role_id:1', 3600)
             ->andReturn(1);
 
         $this->redis->shouldReceive('sadd')
-            ->with('test_models:index:status:active', '1')
+            ->with('{test_models}:index:status:active', '1')
             ->andReturn(1);
 
         $this->redis->shouldReceive('expire')
-            ->with('test_models:index:status:active', 3600)
+            ->with('{test_models}:index:status:active', 3600)
             ->andReturn(1);
 
         $this->redis->shouldReceive('zadd')
-            ->with('test_models:sorted:created_at', Mockery::type('float'), '1')
+            ->with('{test_models}:sorted:created_at', Mockery::type('float'), '1')
             ->andReturn(1);
 
         $this->redis->shouldReceive('expire')
-            ->with('test_models:sorted:created_at', 3600)
+            ->with('{test_models}:sorted:created_at', 3600)
             ->andReturn(1);
 
         $this->service->callStoreModel($model);
+
+        $this->addToAssertionCount(1);
     }
 
     public function test_store_model_handles_old_format_payload_for_stale_index_prune(): void
@@ -571,46 +590,48 @@ class RedisModelServiceTest extends TestCase
         ], JSON_THROW_ON_ERROR);
 
         $this->redis->shouldReceive('hget')
-            ->with('test_models:hash', '1')
+            ->with('{test_models}:hash', '1')
             ->andReturn($oldPayload);
 
         $this->redis->shouldReceive('srem')
-            ->with('test_models:index:role_id:1', '1')
+            ->with('{test_models}:index:role_id:1', '1')
             ->andReturn(1);
 
         $this->redis->shouldReceive('hset')
-            ->with('test_models:hash', '1', Mockery::type('string'))
+            ->with('{test_models}:hash', '1', Mockery::type('string'))
             ->andReturn(1);
 
         $this->redis->shouldReceive('expire')
-            ->with('test_models:hash', 3600)
+            ->with('{test_models}:hash', 3600)
             ->andReturn(1);
 
         $this->redis->shouldReceive('sadd')
-            ->with('test_models:index:role_id:2', '1')
+            ->with('{test_models}:index:role_id:2', '1')
             ->andReturn(1);
 
         $this->redis->shouldReceive('expire')
-            ->with('test_models:index:role_id:2', 3600)
+            ->with('{test_models}:index:role_id:2', 3600)
             ->andReturn(1);
 
         $this->redis->shouldReceive('sadd')
-            ->with('test_models:index:status:active', '1')
+            ->with('{test_models}:index:status:active', '1')
             ->andReturn(1);
 
         $this->redis->shouldReceive('expire')
-            ->with('test_models:index:status:active', 3600)
+            ->with('{test_models}:index:status:active', 3600)
             ->andReturn(1);
 
         $this->redis->shouldReceive('zadd')
-            ->with('test_models:sorted:created_at', Mockery::type('float'), '1')
+            ->with('{test_models}:sorted:created_at', Mockery::type('float'), '1')
             ->andReturn(1);
 
         $this->redis->shouldReceive('expire')
-            ->with('test_models:sorted:created_at', 3600)
+            ->with('{test_models}:sorted:created_at', 3600)
             ->andReturn(1);
 
         $this->service->callStoreModel($model);
+
+        $this->addToAssertionCount(1);
     }
 
     public function test_store_model_skips_stale_prune_when_indexed_value_unchanged(): void
@@ -623,57 +644,235 @@ class RedisModelServiceTest extends TestCase
         ], JSON_THROW_ON_ERROR);
 
         $this->redis->shouldReceive('hget')
-            ->with('test_models:hash', '1')
+            ->with('{test_models}:hash', '1')
             ->andReturn($oldPayload);
 
         // Should NOT call srem (no values changed)
 
         $this->redis->shouldReceive('hset')
-            ->with('test_models:hash', '1', Mockery::type('string'))
+            ->with('{test_models}:hash', '1', Mockery::type('string'))
             ->andReturn(1);
 
         $this->redis->shouldReceive('expire')
-            ->with('test_models:hash', 3600)
+            ->with('{test_models}:hash', 3600)
             ->andReturn(1);
 
         $this->redis->shouldReceive('sadd')
-            ->with('test_models:index:role_id:1', '1')
+            ->with('{test_models}:index:role_id:1', '1')
             ->andReturn(1);
 
         $this->redis->shouldReceive('expire')
-            ->with('test_models:index:role_id:1', 3600)
+            ->with('{test_models}:index:role_id:1', 3600)
             ->andReturn(1);
 
         $this->redis->shouldReceive('sadd')
-            ->with('test_models:index:status:active', '1')
+            ->with('{test_models}:index:status:active', '1')
             ->andReturn(1);
 
         $this->redis->shouldReceive('expire')
-            ->with('test_models:index:status:active', 3600)
+            ->with('{test_models}:index:status:active', 3600)
             ->andReturn(1);
 
         $this->redis->shouldReceive('zadd')
-            ->with('test_models:sorted:created_at', Mockery::type('float'), '1')
+            ->with('{test_models}:sorted:created_at', Mockery::type('float'), '1')
             ->andReturn(1);
 
         $this->redis->shouldReceive('expire')
-            ->with('test_models:sorted:created_at', 3600)
+            ->with('{test_models}:sorted:created_at', 3600)
             ->andReturn(1);
 
         $this->service->callStoreModel($model);
+
+        $this->addToAssertionCount(1);
     }
 
     public function test_delete_removed_from_hash_and_indexes_and_sorted(): void
     {
-        $this->redis->shouldReceive('hget')->with('test_models:hash', '1')->andReturn(
+        $this->redis->shouldReceive('hget')->with('{test_models}:hash', '1')->andReturn(
             json_encode(['attributes' => ['id' => 1, 'role_id' => 1, 'status' => 'active'], 'relations' => []], JSON_THROW_ON_ERROR)
         );
-        $this->redis->shouldReceive('hdel')->with('test_models:hash', '1')->andReturn(1);
-        $this->redis->shouldReceive('srem')->with('test_models:index:role_id:1', '1')->andReturn(1);
-        $this->redis->shouldReceive('srem')->with('test_models:index:status:active', '1')->andReturn(1);
-        $this->redis->shouldReceive('zrem')->with('test_models:sorted:created_at', '1')->andReturn(1);
+        $this->redis->shouldReceive('hdel')->with('{test_models}:hash', '1')->andReturn(1);
+        $this->redis->shouldReceive('srem')->with('{test_models}:index:role_id:1', '1')->andReturn(1);
+        $this->redis->shouldReceive('srem')->with('{test_models}:index:status:active', '1')->andReturn(1);
+        $this->redis->shouldReceive('zrem')->with('{test_models}:sorted:created_at', '1')->andReturn(1);
 
         $this->service->delete(1);
+
+        $this->addToAssertionCount(1);
+    }
+
+    public function test_custom_returns_models_from_custom_index(): void
+    {
+        $this->redis->shouldReceive('smembers')->with('{test_models}:custom:active_admins')->andReturn(['1', '2']);
+
+        $pipelineMock = Mockery::mock('Illuminate\Redis\Connections\Pipeline');
+        $this->redis->shouldReceive('pipeline')->andReturn($pipelineMock);
+        $pipelineMock->shouldReceive('hget')->with('{test_models}:hash', '1')->andReturn(
+            json_encode(['attributes' => ['id' => 1, 'role_id' => 1, 'status' => 'active'], 'relations' => []], JSON_THROW_ON_ERROR)
+        );
+        $pipelineMock->shouldReceive('hget')->with('{test_models}:hash', '2')->andReturn(
+            json_encode(['attributes' => ['id' => 2, 'role_id' => 1, 'status' => 'active'], 'relations' => []], JSON_THROW_ON_ERROR)
+        );
+        $pipelineMock->shouldReceive('execute')->andReturn([
+            json_encode(['attributes' => ['id' => 1, 'role_id' => 1, 'status' => 'active'], 'relations' => []], JSON_THROW_ON_ERROR),
+            json_encode(['attributes' => ['id' => 2, 'role_id' => 1, 'status' => 'active'], 'relations' => []], JSON_THROW_ON_ERROR),
+        ]);
+
+        $result = $this->service->custom('active_admins');
+
+        $this->assertCount(2, $result);
+        $this->assertEquals(1, $result->first()->getKey());
+    }
+
+    public function test_custom_returns_empty_collection_when_no_ids(): void
+    {
+        $this->redis->shouldReceive('smembers')->with('{test_models}:custom:active_admins')->andReturn([]);
+
+        $result = $this->service->custom('active_admins');
+
+        $this->assertCount(0, $result);
+    }
+
+    public function test_remember_custom_uses_index_lookup_when_exists(): void
+    {
+        $this->redis->shouldReceive('exists')->with('{test_models}:custom:active_admins')->andReturn(true);
+        $this->redis->shouldReceive('smembers')->with('{test_models}:custom:active_admins')->andReturn(['1']);
+
+        $pipelineMock = Mockery::mock('Illuminate\Redis\Connections\Pipeline');
+        $this->redis->shouldReceive('pipeline')->andReturn($pipelineMock);
+        $pipelineMock->shouldReceive('hget')->with('{test_models}:hash', '1')->andReturn(
+            json_encode(['attributes' => ['id' => 1, 'role_id' => 1, 'status' => 'active'], 'relations' => []], JSON_THROW_ON_ERROR)
+        );
+        $pipelineMock->shouldReceive('execute')->andReturn([
+            json_encode(['attributes' => ['id' => 1, 'role_id' => 1, 'status' => 'active'], 'relations' => []], JSON_THROW_ON_ERROR),
+        ]);
+
+        $result = $this->service->rememberCustom('active_admins', fn () => new Collection([]));
+
+        $this->assertCount(1, $result);
+        $this->assertEquals(1, $result->first()->getKey());
+    }
+
+    public function test_remember_custom_populates_index_when_missing(): void
+    {
+        $this->redis->shouldReceive('exists')->with('{test_models}:custom:active_admins')->andReturn(false);
+
+        // storeModel calls: hget for stale check, hset, expire, sadd (×2), expire (×2), zadd, expire
+        $this->redis->shouldReceive('hget')
+            ->with('{test_models}:hash', '1')
+            ->andReturn(false);
+
+        $this->redis->shouldReceive('hset')
+            ->with('{test_models}:hash', '1', Mockery::type('string'))
+            ->andReturn(1);
+
+        $this->redis->shouldReceive('expire')
+            ->with('{test_models}:hash', 3600)
+            ->andReturn(1);
+
+        $this->redis->shouldReceive('sadd')
+            ->with('{test_models}:index:role_id:1', '1')
+            ->andReturn(1);
+
+        $this->redis->shouldReceive('expire')
+            ->with('{test_models}:index:role_id:1', 3600)
+            ->andReturn(1);
+
+        $this->redis->shouldReceive('sadd')
+            ->with('{test_models}:index:status:active', '1')
+            ->andReturn(1);
+
+        $this->redis->shouldReceive('expire')
+            ->with('{test_models}:index:status:active', 3600)
+            ->andReturn(1);
+
+        $this->redis->shouldReceive('zadd')
+            ->with('{test_models}:sorted:created_at', Mockery::type('float'), '1')
+            ->andReturn(1);
+
+        $this->redis->shouldReceive('expire')
+            ->with('{test_models}:sorted:created_at', 3600)
+            ->andReturn(1);
+
+        // Custom index sadd after storeModel
+        $this->redis->shouldReceive('sadd')
+            ->with('{test_models}:custom:active_admins', '1')
+            ->andReturn(1);
+
+        // applyTTL for custom key
+        $this->redis->shouldReceive('ttl')->with('{test_models}:custom:active_admins')->andReturn(-1);
+        $this->redis->shouldReceive('expire')->with('{test_models}:custom:active_admins', 3600)->andReturn(1);
+
+        $model = new TestModel(['id' => 1, 'role_id' => 1, 'status' => 'active']);
+        $result = $this->service->rememberCustom('active_admins', fn () => new Collection([$model]));
+
+        $this->assertCount(1, $result);
+    }
+
+    public function test_remember_custom_with_sort_by_uses_sorted_set(): void
+    {
+        $this->redis->shouldReceive('exists')->with('{test_models}:custom:active_admins:sorted:created_at')->andReturn(true);
+        $this->redis->shouldReceive('zrange')->with('{test_models}:custom:active_admins:sorted:created_at', 0, -1)->andReturn(['2', '1']);
+
+        $pipelineMock = Mockery::mock('Illuminate\Redis\Connections\Pipeline');
+        $this->redis->shouldReceive('pipeline')->andReturn($pipelineMock);
+        $pipelineMock->shouldReceive('hget')->with('{test_models}:hash', '2')->andReturn(
+            json_encode(['attributes' => ['id' => 2, 'role_id' => 1, 'status' => 'active', 'created_at' => '2024-01-02'], 'relations' => []], JSON_THROW_ON_ERROR)
+        );
+        $pipelineMock->shouldReceive('hget')->with('{test_models}:hash', '1')->andReturn(
+            json_encode(['attributes' => ['id' => 1, 'role_id' => 1, 'status' => 'active', 'created_at' => '2024-01-01'], 'relations' => []], JSON_THROW_ON_ERROR)
+        );
+        $pipelineMock->shouldReceive('execute')->andReturn([
+            json_encode(['attributes' => ['id' => 2, 'role_id' => 1, 'status' => 'active', 'created_at' => '2024-01-02'], 'relations' => []], JSON_THROW_ON_ERROR),
+            json_encode(['attributes' => ['id' => 1, 'role_id' => 1, 'status' => 'active', 'created_at' => '2024-01-01'], 'relations' => []], JSON_THROW_ON_ERROR),
+        ]);
+
+        $result = $this->service->rememberCustom('active_admins', fn () => new Collection([]), sortBy: 'created_at');
+
+        $this->assertCount(2, $result);
+        $this->assertEquals(2, $result->first()->getKey()); // Sorted by created_at DESC
+    }
+
+    public function test_sorted_returns_models_in_reverse_score_order(): void
+    {
+        $this->redis->shouldReceive('zrevrange')->with('{test_models}:sorted:created_at', 0, 9)->andReturn(['2', '1']);
+
+        $pipelineMock = Mockery::mock('Illuminate\Redis\Connections\Pipeline');
+        $this->redis->shouldReceive('pipeline')->andReturn($pipelineMock);
+        $pipelineMock->shouldReceive('hget')->with('{test_models}:hash', '2')->andReturn(
+            json_encode(['attributes' => ['id' => 2, 'created_at' => '2024-01-02'], 'relations' => []], JSON_THROW_ON_ERROR)
+        );
+        $pipelineMock->shouldReceive('hget')->with('{test_models}:hash', '1')->andReturn(
+            json_encode(['attributes' => ['id' => 1, 'created_at' => '2024-01-01'], 'relations' => []], JSON_THROW_ON_ERROR)
+        );
+        $pipelineMock->shouldReceive('execute')->andReturn([
+            json_encode(['attributes' => ['id' => 2, 'created_at' => '2024-01-02'], 'relations' => []], JSON_THROW_ON_ERROR),
+            json_encode(['attributes' => ['id' => 1, 'created_at' => '2024-01-01'], 'relations' => []], JSON_THROW_ON_ERROR),
+        ]);
+
+        $result = $this->service->sorted('created_at', 0, 9);
+
+        $this->assertCount(2, $result);
+        $this->assertEquals(2, $result->first()->getKey());
+    }
+
+    public function test_paginate_sorted_calculates_correct_range(): void
+    {
+        $this->redis->shouldReceive('zrevrange')->with('{test_models}:sorted:created_at', 10, 19)->andReturn(['3']);
+
+        $pipelineMock = Mockery::mock('Illuminate\Redis\Connections\Pipeline');
+        $this->redis->shouldReceive('pipeline')->andReturn($pipelineMock);
+        $pipelineMock->shouldReceive('hget')->with('{test_models}:hash', '3')->andReturn(
+            json_encode(['attributes' => ['id' => 3, 'created_at' => '2024-01-03'], 'relations' => []], JSON_THROW_ON_ERROR)
+        );
+        $pipelineMock->shouldReceive('execute')->andReturn([
+            json_encode(['attributes' => ['id' => 3, 'created_at' => '2024-01-03'], 'relations' => []], JSON_THROW_ON_ERROR),
+        ]);
+
+        $result = $this->service->paginateSorted('created_at', 2, 10);
+
+        $this->assertCount(1, $result);
+        $this->assertEquals(3, $result->first()->getKey());
     }
 }
 
