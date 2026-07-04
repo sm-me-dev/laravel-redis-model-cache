@@ -1,0 +1,45 @@
+# Configuration
+
+Publish: `php artisan vendor:publish --tag=redis-model-cache-config`
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `connection` | `'cache'` | Redis connection from `config/database.php` |
+| `default_ttl` | `86400` | Default cache TTL in seconds (null = no expiry) |
+| `hydrate_batch_size` | `5000` | Models per pipeline batch for hydrate/pluck |
+| `scan_strategy` | `'scan'` | Deletion key discovery strategy |
+| `stampede_protection.enabled` | `false` | Enable stampede prevention |
+| `stampede_protection.lock_timeout` | `10` | Lock expiry (seconds) |
+| `stampede_protection.wait_timeout` | `5` | Max wait for lock release (seconds) |
+| `stampede_protection.wait_interval` | `100` | Poll interval (ms) |
+| `stale_while_revalidate.enabled` | `false` | Enable SWR pattern |
+| `stale_while_revalidate.grace_period` | `300` | SWR grace period (seconds) |
+| `stale_while_revalidate.queue` | `'default'` | Queue for background jobs |
+| `lua_scripting.enabled` | `true` | Use Lua for atomic stores |
+| `compression.enabled` | `false` | Enable payload compression |
+| `compression.algorithm` | `'gzip'` | `gzip`, `zstd`, or `lz4` |
+| `compression.level` | `6` | Compression level (1-9) |
+| `multi_tenant.enabled` | `false` | Enable tenant namespacing |
+| `multi_tenant.resolver` | `null` | Tenant resolver class |
+| `observability.enabled` | `true` | Enable metrics collection |
+| `observability.dispatch_events` | `true` | Dispatch cache events |
+| `observability.telescope` | `true` | Telescope integration |
+| `observability.pulse` | `true` | Pulse integration |
+| `observability.debug` | `false` | Debug logging |
+
+## Model-level configuration
+
+Via `redisModelCacheConfig()` on the Eloquent trait:
+
+```php
+protected static function redisModelCacheConfig(): array
+{
+    return [
+        'indexes' => ['role_id', 'status'],
+        'sorted' => ['created_at'],
+        'custom_indexes' => ['active_admins' => ['role_id' => 1, 'status' => 'active']],
+        'ttl' => 3600,
+        'connection' => null,
+    ];
+}
+```

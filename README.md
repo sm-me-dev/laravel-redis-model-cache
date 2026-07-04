@@ -1,6 +1,6 @@
 <p align="center">
     <h1 align="center">Laravel Redis Model Cache</h1>
-    <p align="center">Optimized, high-performance Redis model and hash-set caching service for Laravel Eloquent.</p>
+    <p align="center">High-performance Redis model caching for Laravel Eloquent — hash-based, index-aware, production-tested.</p>
 </p>
 
 <p align="center">
@@ -11,359 +11,76 @@
 
 ---
 
-## 🌟 Overview
+**v1.2.0** | PHP ^8.4 | Laravel ^12.0
 
-**Version 1.1.1** | Requires **PHP ^8.4** and **Laravel ^12.0**
-
-The **Laravel Redis Model Cache** package seamlessly integrates a Redis caching layer natively tailored for your Laravel 12 application. This is not your typical `Cache::remember()` wrapper. Instead, it provides a highly optimized, index-aware caching structure for Eloquent models built on top of Redis Hash Sets and Sorted Sets, resulting in lightning-fast lookups without hitting the database for relational operations.
-
-### Key Features:
-- 🚀 **High Performance:** Uses Redis pipelining and native hashes (`HSET`, `HGETALL`) for bulk serialization and deserialization.
-- 🔍 **Advanced Indexing:** Build and query dynamic custom indexes, regular indexes (`SADD`), and sorted score sets (`ZADD`).
-- 🛠️ **Seamless Integration:** Zero-configuration dependency injection via `RedisConnectionResolver`.
-- 🌐 **Pluggable Match Strategy:** Flexible string matching interface. Customize text normalizations natively (e.g. Arabic/Farsi translations).
-- 🧑‍💻 **Dev-Friendly Console:** Built-in Artisan commands to monitor cache memory, keys, and TTL thresholds.
-- 🔒 **Memory Safety:** Eliminates OOM risks by requiring indexed queries only.
-- ⚡ **Atomic Writes:** All writes are fully transactional with pipeline batching.
-- 🌐 **Eager-Relation Support:** Caches eager-loaded relationships to eliminate N+1 query problems.
-
-## Memory Safety Architecture
-
-### Key Requirements
-
-**1. Index-Driven Queries**
-
-All `where()` queries must use indexed fields. Unindexed queries are blocked to prevent full hash scans:
-
-```php
-// ✅ Works - field is indexed
-$results = $cacheService->where(['role_id' => 1]);
-
-// ❌ Throws InvalidArgumentException - field not indexed
-$results = $cacheService->where(['email' => 'test@example.com']); // Error!
-```
-
-**2. No Global Unindexed Access**
-
-The `all()` method now throws `BadMethodCallException` to prevent full hash scans:
-
-```php
-// ❌ Throws BadMethodCallException
-$allModels = $cacheService->all(); // No longer returns all cached records
-
-// ✅ Works - indexed query only
-$activeUsers = $cacheService->where(['active' => true]);
-```
-
-**3. remember() Restriction**
-
-The `remember()` method only performs index lookups:
-
-```php
-// ✅ Works - indexed field
-$user = $cacheService->remember(fn() => [], findBy: 'id', findValue: 42);
-
-// ❌ Throws InvalidArgumentException - field not indexed
-$user = $cacheService->remember(fn() => [], findBy: 'email', findValue: 'test@example.com');
-```
-
-### Migration Guide
-
-#### From: Full Hash Scans
-
-```php
-// Before: Loaded ALL records into memory, then filtered in PHP
-$records = $cacheService->all()->filter(fn($r) => $r->name === 'Alice');
-```
-
-#### To: Indexed Queries
-
-```php
-// After: Requires indexed field, uses SINTER for fast intersection
-$records = $cacheService->where(['name' => 'Alice']);
-```
-
-#### From: Any Field Lookup
-
-```php
-// Before: Any field could be used for lookups
-$records = $cacheService->remember(fn() => [], findBy: 'email', findValue: 'test@example.com');
-```
-
-#### To: Index-Required Lookups
-
-```php
-// After: Only indexed fields allowed
-$records = $cacheService->remember(fn() => [], findBy: 'email', findValue: 'test@example.com');
-// Throws: Field 'email' is not indexed. Define it in \$indexes constructor arg.
-```
-
-#### From: Global Cache Access
-
-```php
-// Before: Could retrieve all models from cache
-$allModels = $cacheService->all();
-```
-
-#### To: Query-Specific Access
-
-```php
-// After: Only specific indexed queries work
-$activeUsers = $cacheService->where(['active' => true]);
-```
-
-## 📌 Breaking Changes Notice
-
-This version introduces **critical memory-safety changes** that will break existing code. Please update your applications:
-
-### 1. `all()` Method - No Longer Available
-
-**Before:**
-```php
-$allModels = $cacheService->all(); // Returns all cached records
-```
-
-**After:**
-```php
-$allModels = $cacheService->all(); // Throws BadMethodCallException
-```
-
-**Solution:** Use indexed queries:
-```php
-$activeUsers = $cacheService->where(['active' => true]);
-```
-
-### 2. `where()` Method - Requires Indexed Fields
-
-**Before:**
-```php
-// Any field could be used - performed full hash scans
-$records = $cacheService->where(['email' => 'test@example.com']);
-```
-
-**After:**
-```php
-// Error: Field 'email' is not indexed
-$records = $cacheService
-    ->where(['email' => 'test@example.com'])
-    ->catch(InvalidArgumentException, function ($e) {
-        // Fallback to database query or use indexed field instead
-    });
-```
-
-**Solution:** Add fields to the `$indexes` array in your service constructor:
-```php
-$cacheService = app(RedisModelService::class, [
-    'model_class' => User::class,
-    'indexes' => ['email', 'role_id'],  // Add 'email' here
-    'sorted' => ['created_at'],
-    'ttl' => 3600,
-]);
-```
-
-### 3. `remember()` Method - Index-Required Lookups
-
-**Before:**
-```php
-// Any field could be used
-$user = $cacheService->remember(fn() => [], findBy: 'email', findValue: 'test@example.com');
-```
-
-**/`After:**
-```php
-$user = $cacheService->remember(fn() => [], findBy: 'email', findValue: 'test@example.com');
-// Throws: Field 'email' is not indexed. Define it in \$indexes.
-```
-
-**Solution:** Use indexed fields for lookups:
-```php
-$user = $cacheService->remember(fn() => [], findBy: 'id', findValue: 42);
-```
-
-### Migration Tools
-
-The package provides these utilities to help with migration:
-
-1. **Memory Usage Statistics:** Monitor hash set sizes to identify safe replacements for `all()`
-2. **Index Auditor:** Script to analyze existing code and identify fields used in `where()` and `remember()` that need to be indexed
-3. **Backward Compatibility Wrapper:** Optional compatibility layer for gradual migration
-
-## 📦 Installation
-
-This package is a standalone Packagist-ready module. Install it into your Laravel application using Composer:
+## Quick Start
 
 ```bash
 composer require sm-me/laravel-redis-model-cache
-```
-
-The package supports **Laravel Auto-Discovery**, so the `RedisModelCacheServiceProvider` will be registered automatically.
-
-## ⚙️ Configuration
-
-Publish the configuration file using Artisan:
-
-```bash
 php artisan vendor:publish --tag=redis-model-cache-config
 ```
 
-This will create a `config/redis-model-cache.php` file where you can define:
-- Your target Redis connection (defined in `config/database.php`).
-- Global Time-to-Live (TTL) behaviors.
-- Deletion scan strategies (`scan` only - no `keys` fallback).
-
-## 🛠️ Usage
-
-### Basic Dependency Injection
-
-You can inject the core `RedisModelService` directly or construct it on the fly:
-
 ```php
 use Sm_mE\RedisModelCache\RedisModelService;
-use App\Models\User;
 
-$cacheService = app(RedisModelService::class, [
+$cache = app(RedisModelService::class, [
     'model_class' => User::class,
-    'indexes' => ['role_id'],
+    'indexes' => ['role_id', 'status'],
     'sorted' => ['created_at'],
-    'ttl' => 3600 // 1 hour TTL
+    'ttl' => 3600,
 ]);
 
-// Fetch and Cache your query
-$users = $cacheService->rememberAll(function () {
-    return User::where('active', true)->get();
-});
+// Cache and retrieve
+$users = $cache->rememberAll(
+    callback: fn() => User::where('active', true)->get(),
+    where: ['active' => true],
+);
+
+// Index lookup (no DB hit when warm)
+$admins = $cache->where(['role_id' => 1]);
 ```
 
-### Advanced Querying (Where)
+## Eloquent Trait
 
-When data exists in the hash set, the package simulates Eloquent filtering entirely within Redis memory:
-
-```php
-// Queries Redis memory directly if cache is warm
-$activeAdmins = $cacheService->where(['role_id' => 1, 'active' => true]);
-```
-
-### Sorted Sets Pagination
-
-Need to paginate cached data natively via Redis ZSets? Easy:
-
-```php
-// Retrieve page 1 (first 10 records) sorted by 'created_at' index.
-$latestUsers = $cacheService->paginateSorted('created_at', page: 1, perPage: 10);
-```
-
-### Global Helper Functions
-
-For quick operations anywhere in your app, use the built-in global helper methods:
-
-```php
-// Resolves RedisHelperService for generic hash sets
-$data = redisHelper(ttl: 300)->rememberSet('app:settings', 'theme', fn () => 'dark');
-
-// Resolves RedisModelService for Eloquent operations
-$service = redisModelHelper(User::class, indexes: ['department_id']);
-```
-
-## 🧩 Eloquent Trait Auto-Sync
-
-Use the `HasRedisModelCache` trait on any Eloquent model for automatic cache lifecycle management:
+Enable auto-sync on save/delete:
 
 ```php
 use Sm_mE\RedisModelCache\Concerns\HasRedisModelCache;
-use Illuminate\Database\Eloquent\Model;
 
 class User extends Model
 {
     use HasRedisModelCache;
 
-    /**
-     * Optional: Configure indexes, sorted fields, TTL, and connection.
-     */
     protected static function redisModelCacheConfig(): array
     {
         return [
             'indexes' => ['role_id', 'status'],
             'sorted' => ['created_at'],
             'ttl' => 3600,
-            'connection' => null, // uses default config connection
         ];
     }
-
-    /**
-     * Optional: Define relations to touch on save/delete.
-     */
-    protected static array $redisModelCacheTouches = ['profile'];
 }
 ```
 
-### Lifecycle Hooks
+Relations are automatically touched; stale indexes cleaned on attribute changes.
 
-The trait automatically syncs cache on Eloquent events:
+## Table of Contents
 
-| Event | Action |
-|-------|--------|
-| `saved` | `storeModel()` — writes model with indexes, sorted sets, TTL |
-| `restored` | `storeModel()` — same as saved |
-| `deleted` | `delete()` — removes from hash, indexes, and sorted sets |
+| Document | What's Inside |
+|----------|---------------|
+| [`docs/features.md`](docs/features.md) | Stampede protection, SWR, incremental updates, Lua atomicity, compression, multi-tenant, explain mode, warmup |
+| [`docs/querying.md`](docs/querying.md) | `where`, `whereIn`, `whereBetween`, `orWhere`, `pluck`, sorted sets, pagination, custom indexes |
+| [`docs/observability.md`](docs/observability.md) | Events, metrics collector, debug mode, inspect, Telescope/Pulse integration |
+| [`docs/configuration.md`](docs/configuration.md) | Full config reference with defaults |
+| [`docs/benchmarks.md`](docs/benchmarks.md) | Throughput, latency, memory benchmarks (up to 21k models/s, 57% memory reduction with compression) |
 
-### Stale Index Cleanup
+## Key Concepts
 
-When an indexed attribute changes (e.g., `role_id` from `1` to `2`), the trait:
+- **Index-driven queries** — all lookups go through Redis sets; full hash scans are blocked to prevent OOM
+- **Stale index cleanup** — when an indexed attribute changes, old set entries are atomically removed
+- **TTL propagation** — every key (hash, indexes, sorted sets) receives the same expire time
+- **Cluster-safe** — hash tags (`{table}`) keep all keys for a model on the same cluster node
 
-1. Reads the old hash payload before writing
-2. Computes stale index keys that need cleanup
-3. Issues `SREM` on old index set keys within the same write batch
-4. Writes the new hash payload and `SADD`s new index entries
-5. Applies `EXPIRE` to all touched keys (hash, indexes, sorted sets)
+## License
 
-This prevents index pollution where stale set entries would return incorrect query results.
-
-### TTL Propagation
-
-When TTL is configured, every key touched during a write operation receives a matching `EXPIRE` command:
-
-- Main hash key (`{prefix}:hash`)
-- Index keys (`{prefix}:index:{field}:{value}`)
-- Sorted set keys (`{prefix}:sorted:{field}`)
-- Custom index keys (`{prefix}:custom:{name}`, `{prefix}:custom:{name}:sorted:{field}`)
-
-This ensures no orphaned index keys outlive the main hash.
-
-### Relation Touching with Recursion Guard
-
-Define relations to touch via `$redisModelCacheTouches` property:
-
-```php
-class Post extends Model
-{
-    use HasRedisModelCache;
-
-    protected static array $redisModelCacheTouches = ['author', 'category'];
-}
-```
-
-When a `Post` is saved or deleted, the trait:
-1. Stores/deletes the `Post` cache
-2. Resolves each touched relation (e.g., `$post->author`, `$post->category`)
-3. Re-stores the parent model's cache using its own `RedisModelService`
-4. Tracks in-progress models via `$redisModelCacheProcessing` to prevent infinite loops with bi-directional relationships
-
-### Connection Isolation
-
-Pass a `connection` value in `redisModelCacheConfig()` to use a different Redis connection:
-
-```php
-protected static function redisModelCacheConfig(): array
-{
-    return [
-        'connection' => 'cache',
-        'indexes' => ['role_id'],
-    ];
-}
-```
-
-The service will resolve the specified connection from `config/database.php` instead of the default.
-
-## 📜 License
-
-The **Laravel Redis Model Cache** is open-sourced software licensed under the [MIT license](LICENSE). This package provides a memory-safe Redis caching architecture optimized for Laravel Eloquent models, with strict indexing requirements to prevent OOM risks and ensure atomic writes. Copyright © 2026 Sm_mE.
+MIT. See [LICENSE](LICENSE).
