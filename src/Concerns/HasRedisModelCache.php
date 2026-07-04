@@ -6,6 +6,7 @@ namespace Sm_mE\RedisModelCache\Concerns;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
+use Sm_mE\RedisModelCache\Invalidation\InvalidationManager;
 use Sm_mE\RedisModelCache\RedisModelService;
 
 trait HasRedisModelCache
@@ -50,7 +51,7 @@ trait HasRedisModelCache
             static::markRedisModelCacheProcessing($model);
 
             try {
-                static::resolveRedisModelCacheService()->delete($model->getKey());
+                static::resolveInvalidationManager()->handle('deleted', $model);
                 static::markRedisModelCacheDeletedInCycle($model);
                 static::touchRedisModelCacheParents($model);
             } finally {
@@ -59,7 +60,7 @@ trait HasRedisModelCache
         });
 
         /**
-         * forceDelete fires forceDeleted → deleted → saved in a single cycle.
+         * forceDelete fires forceDeleted -> deleted -> saved in a single cycle.
          * We mark the model as deleted-in-cycle so the subsequent saved event
          * does not re-cache the just-deleted model.
          */
@@ -72,7 +73,7 @@ trait HasRedisModelCache
                 static::markRedisModelCacheProcessing($model);
 
                 try {
-                    static::resolveRedisModelCacheService()->delete($model->getKey());
+                    static::resolveInvalidationManager()->handle('deleted', $model);
                     static::markRedisModelCacheDeletedInCycle($model);
                     static::touchRedisModelCacheParents($model);
                 } finally {
@@ -96,6 +97,7 @@ trait HasRedisModelCache
 
         try {
             static::resolveRedisModelCacheService()->store($model);
+            static::resolveInvalidationManager()->handle('saved', $model);
             static::touchRedisModelCacheParents($model);
         } finally {
             static::unmarkRedisModelCacheProcessing($model);
@@ -161,6 +163,20 @@ trait HasRedisModelCache
         ];
 
         return app(RedisModelService::class, $params);
+    }
+
+    protected static function resolveInvalidationManager(): InvalidationManager
+    {
+        $service = static::resolveRedisModelCacheService();
+        $config = static::redisModelCacheConfig();
+        $invalidationConfig = config('redis-model-cache.invalidation', []);
+
+        return new InvalidationManager(
+            service: $service,
+            strategy: $invalidationConfig['strategy'] ?? 'sync',
+            versioned: $invalidationConfig['versioned'] ?? false,
+            queue: $invalidationConfig['queue'] ?? 'default',
+        );
     }
 
     protected static function touchRedisModelCacheParents(Model $model): void

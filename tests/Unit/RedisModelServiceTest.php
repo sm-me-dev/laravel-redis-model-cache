@@ -701,6 +701,25 @@ class RedisModelServiceTest extends TestCase
         $this->addToAssertionCount(1);
     }
 
+    public function test_remove_custom_indexes_cleans_all_custom_sets(): void
+    {
+        $this->redis->shouldReceive('srem')->with('{test_models}:custom:active_admins', '1')->andReturn(1);
+
+        $this->service->removeCustomIndexes(1, []);
+
+        $this->addToAssertionCount(1);
+    }
+
+    public function test_bust_version_increments_meta_hash_and_sets_ttl(): void
+    {
+        $this->redis->shouldReceive('hincrby')->with('{test_models}:meta', 'version', 1)->andReturn(2);
+        $this->redis->shouldReceive('expire')->with('{test_models}:meta', 3600)->andReturn(true);
+
+        $this->service->bustVersion();
+
+        $this->addToAssertionCount(1);
+    }
+
     public function test_custom_returns_models_from_custom_index(): void
     {
         $this->redis->shouldReceive('smembers')->with('{test_models}:custom:active_admins')->andReturn(['1', '2']);

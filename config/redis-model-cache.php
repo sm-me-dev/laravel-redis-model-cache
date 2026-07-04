@@ -162,4 +162,23 @@ return [
     'lua_scripting' => [
         'enabled' => env('REDIS_MODEL_CACHE_LUA', true),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Invalidation
+    |--------------------------------------------------------------------------
+    |
+    | Deterministic cache invalidation on model lifecycle events.
+    | No auto-inference — every cleanup step is explicit.
+    |
+    | - strategy: 'sync' (immediate Redis ops) or 'async' (queue job)
+    | - versioned: When true, increments a version counter in {table}:meta
+    |              on each save/delete. External systems can poll for changes.
+    | - queue: Queue name for async invalidation jobs
+    */
+    'invalidation' => [
+        'strategy' => env('REDIS_MODEL_CACHE_INVALIDATION_STRATEGY', 'sync'),
+        'versioned' => env('REDIS_MODEL_CACHE_VERSIONED', false),
+        'queue' => env('REDIS_MODEL_CACHE_INVALIDATION_QUEUE', 'default'),
+    ],
 ];

@@ -406,6 +406,32 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         }
     }
 
+    /**
+     * Remove model ID from all custom index sets on delete.
+     *
+     * @param  int|string  $id  Model primary key
+     * @param  array<string, mixed>  $attributes  Model attributes (unused, kept for signature stability)
+     */
+    public function removeCustomIndexes(int|string $id, array $attributes = []): void
+    {
+        foreach (array_keys($this->custom_indexes) as $name) {
+            $this->redis->srem($this->customIndexKey((string) $name), (string) $id);
+        }
+    }
+
+    /**
+     * Atomically increment the version counter in meta hash.
+     * Used by versioned invalidation to signal cache staleness.
+     */
+    public function bustVersion(): void
+    {
+        $this->redis->hincrby($this->metaKey(), 'version', 1);
+
+        if ($this->ttl) {
+            $this->redis->expire($this->metaKey(), $this->ttl);
+        }
+    }
+
     public function clearAll(): void
     {
         $keys = $this->collectKeysByPattern("{$this->prefix}:*");
