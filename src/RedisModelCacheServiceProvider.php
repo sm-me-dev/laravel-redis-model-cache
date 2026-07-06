@@ -9,11 +9,13 @@ use Sm_mE\RedisModelCache\Contracts\HashCacheService;
 use Sm_mE\RedisModelCache\Contracts\ModelCacheService;
 use Sm_mE\RedisModelCache\Contracts\ModelMatchStrategy;
 use Sm_mE\RedisModelCache\Contracts\RedisConnectionResolver;
+use Sm_mE\RedisModelCache\Contracts\TenantResolverInterface;
 use Sm_mE\RedisModelCache\Listeners\ObservabilitySubscriber;
 use Sm_mE\RedisModelCache\Support\CacheManager;
 use Sm_mE\RedisModelCache\Support\DefaultConnectionResolver;
 use Sm_mE\RedisModelCache\Support\DefaultModelMatchStrategy;
 use Sm_mE\RedisModelCache\Support\Observability;
+use Sm_mE\RedisModelCache\Support\TenantResolvers\RequestTenantResolver;
 
 class RedisModelCacheServiceProvider extends ServiceProvider
 {
@@ -25,6 +27,19 @@ class RedisModelCacheServiceProvider extends ServiceProvider
             return new DefaultConnectionResolver(
                 config('redis-model-cache.connection', 'cache')
             );
+        });
+
+        $this->app->bind(TenantResolverInterface::class, function ($app) {
+            $resolverClass = config('redis-model-cache.multi_tenant.resolver');
+
+            if ($resolverClass !== null && class_exists($resolverClass)) {
+                return $app->make($resolverClass);
+            }
+
+            $strategy = config('redis-model-cache.multi_tenant.strategy', 'header');
+            $key = config('redis-model-cache.multi_tenant.key', 'X-Tenant-ID');
+
+            return new RequestTenantResolver(strategy: $strategy, key: $key);
         });
 
         $this->app->singleton(Observability::class);
