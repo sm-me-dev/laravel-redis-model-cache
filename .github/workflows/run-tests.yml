@@ -54,8 +54,8 @@ jobs:
       - name: Install dependencies
         run: |
           TESTBENCH_VERSION="${{ matrix.laravel == '11.*' && '^9.0' || '^10.11' }}"
-          composer require "orchestra/testbench:${TESTBENCH_VERSION}" --no-interaction --no-update
-          composer update --${{ matrix.stability }} --prefer-dist --no-interaction
+          composer require --dev "orchestra/testbench:${TESTBENCH_VERSION}" --no-interaction --no-update
+          composer update --${{ matrix.stability }} --prefer-dist --no-interaction --no-audit
 
       - name: Run Pint (Code Style Check)
         run: vendor/bin/pint --test

@@ -38,7 +38,7 @@ jobs:
         run: bash scripts/run-benchmarks.sh
 
       - name: Upload benchmark report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: benchmark-report
           path: docs/benchmarks/report.md
