@@ -7,7 +7,6 @@ namespace Sm_mE\RedisModelCache;
 use BadMethodCallException;
 use Illuminate\Contracts\Database\Query\Expression;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use InvalidArgumentException;
 use RuntimeException;

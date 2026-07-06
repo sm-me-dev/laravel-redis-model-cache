@@ -53,8 +53,9 @@ jobs:
 
       - name: Install dependencies
         run: |
+          TESTBENCH_VERSION="${{ matrix.laravel == '11.*' && '^9.0' || '^10.11' }}"
+          composer require "orchestra/testbench:${TESTBENCH_VERSION}" --no-interaction --no-update
           composer update --${{ matrix.stability }} --prefer-dist --no-interaction
-          composer require "illuminate/console:${{ matrix.laravel }}" "illuminate/database:${{ matrix.laravel }}" "illuminate/redis:${{ matrix.laravel }}" "illuminate/support:${{ matrix.laravel }}" --no-interaction -W
 
       - name: Run Pint (Code Style Check)
         run: vendor/bin/pint --test
@@ -72,7 +73,9 @@ jobs:
       - name: Run PHPStan
         if: matrix.php == '8.3' && matrix.laravel == '12.*'
         run: |
-          if [ -f phpstan.neon ]; then
+          if [ -f phpstan.neon.dist ]; then
+            vendor/bin/phpstan analyse --memory-limit=1G -c phpstan.neon.dist
+          elif [ -f phpstan.neon ]; then
             vendor/bin/phpstan analyse --memory-limit=1G
           else
             echo "No phpstan configuration found, skipping."
