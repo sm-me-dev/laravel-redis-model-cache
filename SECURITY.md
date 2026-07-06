@@ -49,6 +49,17 @@ When `multi_tenant.enabled` is `true`, the tenant ID from the resolver is used i
 
 Use a dedicated Redis database or namespace for model cache data. The package uses the `cache` connection by default — ensure this connection uses appropriate auth credentials and network isolation.
 
+### Octane / Long-Running Worker Memory Isolation
+
+In v2.2, the package uses bounded ring buffers and explicit lifecycle hooks to prevent state bleed between requests in long-lived worker processes (Octane, RoadRunner):
+
+- `Observability::latencySamples[]` — bounded ring buffer at 1000 entries
+- `Observability::pipelineSizes[]` — bounded ring buffer at 1000 entries
+- `HasRedisModelCache` static arrays — flushed on `App::terminating` and Octane `WorkerTickStarting`
+- `Observability::reset()` — called on `WorkerTickStarting` when Octane is detected
+
+If a custom service extends or wraps these components, ensure equivalent isolation is maintained. Unbounded static arrays in long-lived workers can cause OOM or request-state leaks.
+
 ### Compression
 
 The package supports gzip, zstd, and lz4 compression. These decompress on read. If an attacker can write arbitrary compressed data to Redis (e.g., through a misconfigured Redis ACL), decompression bombs are possible. Limit Redis access to trusted services only.

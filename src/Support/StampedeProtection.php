@@ -119,26 +119,39 @@ LUA;
     /**
      * Wait for lock to be released or timeout.
      *
+     * Uses exponential backoff with random jitter to desynchronize
+     * concurrent waiters and avoid thundering herd on lock release.
+     * Fails fast once the deadline is exceeded.
+     *
      * @param  mixed  $redis  Redis connection instance
      * @param  string  $lockKey  The lock key
      * @param  int  $waitTimeout  Maximum time to wait in seconds
-     * @param  int  $waitInterval  Sleep interval in milliseconds
+     * @param  int  $waitInterval  Base sleep interval in milliseconds (doubles each attempt)
      * @return bool True if lock was released, false if timed out
      */
     public static function waitForLock($redis, string $lockKey, int $waitTimeout, int $waitInterval = 100): bool
     {
-        $startTime = microtime(true);
-        $waitTimeoutMs = $waitTimeout * 1000;
+        $deadline = microtime(true) + $waitTimeout;
+        $base = max(10, $waitInterval);
+        $maxSleep = 1000;
+        $attempt = 0;
 
-        while ((microtime(true) - $startTime) * 1000 < $waitTimeoutMs) {
+        // Initial random jitter to de-synchronise first poll across concurrent workers
+        usleep(random_int(0, min($base, $maxSleep)) * 100);
+
+        while (microtime(true) < $deadline) {
             if (! $redis->exists($lockKey)) {
-                return true; // Lock released
+                return true;
             }
 
-            usleep($waitInterval * 1000); // Convert ms to microseconds
+            $sleepMs = min($maxSleep, $base * (2 ** $attempt));
+            $jitter = random_int(0, (int) ($sleepMs / 2));
+            usleep(($sleepMs + $jitter) * 1000);
+
+            $attempt++;
         }
 
-        return false; // Timeout
+        return false;
     }
 
     /**

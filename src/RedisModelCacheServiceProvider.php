@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace Sm_mE\RedisModelCache;
 
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\ServiceProvider;
+use Laravel\Octane\Events\WorkerTickStarting;
+use Sm_mE\RedisModelCache\Concerns\HasRedisModelCache;
 use Sm_mE\RedisModelCache\Contracts\HashCacheService;
 use Sm_mE\RedisModelCache\Contracts\ModelCacheService;
 use Sm_mE\RedisModelCache\Contracts\ModelMatchStrategy;
@@ -96,8 +99,33 @@ class RedisModelCacheServiceProvider extends ServiceProvider
         }
 
         $this->registerEventSubscribers();
-
+        $this->registerLifecycleHooks();
         $this->validateConfiguration();
+    }
+
+    /**
+     * Register request/worker lifecycle hooks for state cleanup.
+     *
+     * Prevents static state bleed across requests in long-lived
+     * Octane workers and ensures Observability ring buffers are
+     * bounded per-request in non-Octane environments.
+     */
+    protected function registerLifecycleHooks(): void
+    {
+        App::terminating(function (): void {
+            HasRedisModelCache::flushRedisModelCacheProcessing();
+        });
+
+        // Octane worker lifecycle: flush between requests
+        if (class_exists(WorkerTickStarting::class)) {
+            $this->app->make('events')->listen(
+                WorkerTickStarting::class,
+                function (): void {
+                    HasRedisModelCache::flushRedisModelCacheProcessing();
+                    $this->app->make(Observability::class)->reset();
+                }
+            );
+        }
     }
 
     protected function registerEventSubscribers(): void

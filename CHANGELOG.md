@@ -5,6 +5,34 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [v2.2.0] — 2026-07-06
+
+### Added
+
+- **Lua atomic store: zero string parsing** — `LUA_ATOMIC_STORE` script rewritten to use mathematical offset indexing with discrete `ARGV[4..7]` counts and individual `ARGV[8+Q]` score entries. Eliminates `string.gmatch` parsing and Lua GC pressure under high-throughput stores.
+- **Batch EVALSHA pipelining** — `storeMany()` pipelines EVALSHA commands with explicit `SCRIPT LOAD` priming before pipeline entry. Guarantees atomic batch writes without NOSCRIPT fallback within the batch.
+- **Explicit script priming** — `primeAtomicStoreScript()` loads `LUA_ATOMIC_STORE` into Redis cache before pipeline enters, ensuring all EVALSHA calls within the batch succeed on first attempt.
+- **Client-agnostic EVALSHA dispatch** — `queueLuaAtomicStoreOnClient()` handles both phpredis and Predis eval/evalSha signatures on direct connections and pipeline objects.
+
+### Changed
+
+- **`storeModel()`** — now uses Lua atomic store in all execution paths (direct AND pipeline), not only when `$pipeline === null`. This extends atomicity guarantees to the batch write path.
+- **`storeModelAtomic()`** — accepts optional `$pipeline` and `$precomputedStaleKeys` parameters for pipeline-mode execution.
+- **`StampedeProtection::waitForLock()`** — exponential backoff with randomized jitter (`base * 2^attempt` ms, `random_int(0, sleepMs/2)` jitter). Initial de-synchronization jitter prevents thundering herd on first poll.
+- **`Observability` ring buffers** — `latencySamples` and `pipelineSizes` converted to bounded ring buffers (1000 items each) with modulo-based circular indexing. `flattenRingBuffer()` handles wraparound correctly for percentile calculations.
+- **Lifecycle hooks** — `registerLifecycleHooks()` hooks `flushRedisModelCacheProcessing()` into `App::terminating` and Octane `WorkerTickStarting` events. Prevents static state bleed between requests.
+- **`MonitorCacheCommand` production safety** — all `KEYS` calls replaced with cursor-based `SCAN` via `scanKeys()`. Supports both phpredis and Predis clients.
+
+### Removed
+
+- **String parsing in Lua** — `string.gmatch` and comma-split score parsing removed from `LUA_ATOMIC_STORE`.
+
+### Fixed
+
+- **Pipeline Lua bypass** — `storeModel()` no longer skips Lua when a pipeline is provided. Previously the batch path fell back to individual Redis commands even when Lua scripting was enabled.
+- **Observability ring buffer access** — `latencySamples()` and statistical methods now use `flattenRingBuffer()` so partially filled or wrapped buffers report correct values.
+- **Monitor command emoji output** — replaced platform-dependent emoji indicators with ASCII-compatible markers.
+
 ## [v2.1.0] — 2026-07-06
 
 ### Added

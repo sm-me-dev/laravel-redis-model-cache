@@ -38,6 +38,28 @@ $report = $metrics->snapshot();
 
 Plus per-metric methods: `hitRate()`, `missRate()`, `averageLatency()`, `latencyPercentile(95)`, etc.
 
+## Octane / Long-Running Worker Safety (v2.2)
+
+In v2.2, all internal sample arrays use bounded ring buffers to prevent memory growth
+in long-lived worker processes:
+
+| Sample Store | Type | Capacity | Overflow Behavior |
+|-------------|------|----------|-------------------|
+| `$latencySamples` | Ring buffer | 1000 | Overwrites oldest, modulo index |
+| `$pipelineSizes` | Ring buffer | 1000 | Overwrites oldest, modulo index |
+
+**Ring buffer flattening**: `flattenRingBuffer()` returns samples in insertion order
+regardless of wrap state. `latencyPercentile()`, `averageLatency()`, and all
+statistical methods always operate on the correctly-ordered flattened set.
+
+**Lifecycle reset**: `Observability::reset()` is called automatically on Octane
+`WorkerTickStarting` events. This preserves the ring buffers but resets counters
+(hits, misses, contention) to prevent them from overflowing uint64 after months of
+uptime.
+
+For FPM (non-Octane) environments, `Observability` is a singleton so sample data
+spans the request lifetime only — no accumulation between requests.
+
 ## Debug Mode
 
 Log all Redis operations per service instance:

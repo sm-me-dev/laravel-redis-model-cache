@@ -147,6 +147,18 @@ trait HasRedisModelCache
         static::$redisModelCacheDeletedInCycle[static::class] = $ids;
     }
 
+    /**
+     * Flush all per-request static processing state.
+     *
+     * Call this at the end of each request lifecycle to prevent state
+     * bleed across requests in long-running workers (Octane).
+     */
+    public static function flushRedisModelCacheProcessing(): void
+    {
+        static::$redisModelCacheProcessing = [];
+        static::$redisModelCacheDeletedInCycle = [];
+    }
+
     protected static function resolveRedisModelCacheService(): RedisModelService
     {
         $modelClass = static::class;

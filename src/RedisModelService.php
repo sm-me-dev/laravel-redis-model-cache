@@ -668,6 +668,11 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
             }
         }
 
+        // Prime Lua script cache before entering pipeline (avoids NOSCRIPT in batch EVALSHA)
+        if ($this->luaEnabled()) {
+            $this->primeAtomicStoreScript();
+        }
+
         // Start pipeline
         $pipeline = $this->redis->pipeline();
 
@@ -1198,11 +1203,17 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
      *
      * Combines HSET, stale-index SREM, new-index SADD, sorted-set ZADD,
      * and TTL application into a single atomic Lua call.
+     *
+     * When $pipeline is provided, queues an EVALSHA (or EVAL) in the pipeline
+     * instead of executing directly, enabling atomic batch writes.
+     *
+     * @param  mixed  $pipeline  Pipeline client or null for direct execution
+     * @param  array<int, string>|null  $precomputedStaleKeys  Pre-computed stale SREM keys (avoids extra HGET)
      */
-    protected function storeModelAtomic(Model $model): void
+    protected function storeModelAtomic(Model $model, $pipeline = null, ?array $precomputedStaleKeys = null): void
     {
         $key = (string) $model->getKey();
-        $staleSremKeys = $this->computeStaleIndexKeys($model);
+        $staleSremKeys = $precomputedStaleKeys ?? $this->computeStaleIndexKeys($model);
 
         $payload = [
             'attributes' => $model->getAttributes(),
@@ -1212,7 +1223,6 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         $hashKey = $this->hashKey();
         $ttl = $this->ttl ?? 0;
 
-        $staleSrem = $staleSremKeys;
         $newSadd = [];
         $staleZrem = [];
         $newZadd = [];
@@ -1234,48 +1244,95 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
             }
         }
 
-        // All key names go to KEYS for prefix compatibility
         $keys = [$hashKey];
-        $keys = array_merge($keys, $staleSrem);
+        $keys = array_merge($keys, $staleSremKeys);
         $keys = array_merge($keys, $newSadd);
         $keys = array_merge($keys, $staleZrem);
         $keys = array_merge($keys, $newZadd);
-
-        $countStr = implode(' ', [
-            count($staleSrem),
-            count($newSadd),
-            count($staleZrem),
-            count($newZadd),
-        ]);
-        $scoresStr = implode(',', $zaddScores);
 
         $args = [
             $key,
             $serialized,
             (string) $ttl,
-            $countStr,
-            $scoresStr,
+            (string) count($staleSremKeys),
+            (string) count($newSadd),
+            (string) count($staleZrem),
+            (string) count($newZadd),
         ];
 
-        $fallback = function () use ($model, $staleSremKeys, $serialized, $hashKey, $key): void {
-            $this->redis->hset($hashKey, $key, $serialized);
-            if ($this->ttl) {
-                $this->redis->expire($hashKey, $this->ttl);
-            }
-            foreach ($staleSremKeys as $staleKey) {
-                $this->redis->srem($staleKey, $key);
-            }
-            $this->storeIndexes($model);
-            $this->storeSorted($model);
-        };
+        foreach ($zaddScores as $score) {
+            $args[] = $score;
+        }
 
-        $this->evaluateLuaOrPipeline(
-            self::LUA_ATOMIC_STORE,
-            $keys,
-            $args,
-            $this->luaAtomicStoreSha,
-            $fallback
-        );
+        if ($pipeline !== null) {
+            $this->queueLuaAtomicStoreOnClient($pipeline, $keys, $args);
+        } else {
+            $fallback = function () use ($model, $staleSremKeys, $serialized, $hashKey, $key): void {
+                $this->redis->hset($hashKey, $key, $serialized);
+                if ($this->ttl) {
+                    $this->redis->expire($hashKey, $this->ttl);
+                }
+                foreach ($staleSremKeys as $staleKey) {
+                    $this->redis->srem($staleKey, $key);
+                }
+                $this->storeIndexes($model);
+                $this->storeSorted($model);
+            };
+
+            $this->evaluateLuaOrPipeline(
+                self::LUA_ATOMIC_STORE,
+                $keys,
+                $args,
+                $this->luaAtomicStoreSha,
+                $fallback
+            );
+        }
+    }
+
+    /**
+     * Queue an EVALSHA (or EVAL) on a pipeline/client for the atomic store script.
+     * Client-agnostic: handles phpredis vs Predis differences.
+     *
+     * @param  mixed  $client  Redis client or pipeline
+     * @param  array<int, string>  $keys  KEYS for the Lua script
+     * @param  array<int, string>  $args  ARGV for the Lua script
+     */
+    protected function queueLuaAtomicStoreOnClient(mixed $client, array $keys, array $args): void
+    {
+        $numKeys = count($keys);
+        $allArgs = array_merge($keys, $args);
+
+        if ($this->luaAtomicStoreSha !== null) {
+            if ($client instanceof \Redis) {
+                $client->evalSha($this->luaAtomicStoreSha, $allArgs, $numKeys);
+            } else {
+                $client->evalSha($this->luaAtomicStoreSha, $numKeys, ...$allArgs);
+            }
+        } else {
+            if ($client instanceof \Redis) {
+                $client->eval(self::LUA_ATOMIC_STORE, $allArgs, $numKeys);
+            } else {
+                $client->eval(self::LUA_ATOMIC_STORE, $numKeys, ...$allArgs);
+            }
+        }
+    }
+
+    /**
+     * Prime the atomic store Lua script in Redis (SCRIPT LOAD).
+     * After this, $this->luaAtomicStoreSha is populated and
+     * EVALSHA can be used without NOSCRIPT fallback.
+     */
+    protected function primeAtomicStoreScript(): void
+    {
+        if ($this->luaAtomicStoreSha !== null) {
+            return;
+        }
+
+        try {
+            $this->luaAtomicStoreSha = $this->loadScript(self::LUA_ATOMIC_STORE);
+        } catch (\Exception $e) {
+            $this->luaAtomicStoreSha = null;
+        }
     }
 
     /**
@@ -1289,8 +1346,8 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
      */
     protected function storeModel(Model $model, $pipeline = null, ?array $precomputedStaleKeys = null): void
     {
-        if ($pipeline === null && $this->luaEnabled()) {
-            $this->storeModelAtomic($model);
+        if ($this->luaEnabled()) {
+            $this->storeModelAtomic($model, $pipeline, $precomputedStaleKeys);
 
             return;
         }

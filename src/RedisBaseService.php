@@ -33,8 +33,11 @@ class RedisBaseService
      * ARGV[1] = modelId
      * ARGV[2] = serialized payload
      * ARGV[3] = ttl (0 = no expiry)
-     * ARGV[4] = "N M P Q" (space-separated count of keys in each category)
-     * ARGV[5] = "score1,score2,..." (comma-separated scores for ZADD entries)
+     * ARGV[4] = N (count of stale SREM keys)
+     * ARGV[5] = M (count of new SADD keys)
+     * ARGV[6] = P (count of stale ZREM keys)
+     * ARGV[7] = Q (count of new ZADD keys)
+     * ARGV[8..7+Q] = individual scores for ZADD entries
      */
     protected const LUA_ATOMIC_STORE = <<<'LUA'
 local hashKey = KEYS[1]
@@ -42,25 +45,10 @@ local modelId = ARGV[1]
 local payload = ARGV[2]
 local ttl = tonumber(ARGV[3])
 
-local counts = {}
-local idx = 1
-for token in string.gmatch(ARGV[4], "%S+") do
-    counts[idx] = tonumber(token)
-    idx = idx + 1
-end
-local numStaleSrem = counts[1] or 0
-local numNewSadd   = counts[2] or 0
-local numStaleZrem = counts[3] or 0
-local numNewZadd   = counts[4] or 0
-
-local scores = {}
-if numNewZadd > 0 then
-    idx = 1
-    for token in string.gmatch(ARGV[5], "[^,]+") do
-        scores[idx] = tonumber(token)
-        idx = idx + 1
-    end
-end
+local numStaleSrem = tonumber(ARGV[4]) or 0
+local numNewSadd   = tonumber(ARGV[5]) or 0
+local numStaleZrem = tonumber(ARGV[6]) or 0
+local numNewZadd   = tonumber(ARGV[7]) or 0
 
 redis.call('HSET', hashKey, modelId, payload)
 
@@ -85,7 +73,7 @@ for i = 1, numStaleZrem do
 end
 
 for i = 1, numNewZadd do
-    redis.call('ZADD', KEYS[ki], scores[i], modelId)
+    redis.call('ZADD', KEYS[ki], tonumber(ARGV[7 + i]), modelId)
     if ttl > 0 then
         redis.call('EXPIRE', KEYS[ki], ttl)
     end

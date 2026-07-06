@@ -33,4 +33,6 @@ assignees: ''
 - Does it happen with a specific query pattern?
 - Does it reproduce on a fresh install?
 - Did you check Redis logs?
+- Does it happen in Octane/RoadRunner or FPM?
+- Are you using stampede protection, SWR, compression, multi-tenant?
 -->

@@ -1,6 +1,6 @@
-# Architecture — Redis Model Cache v2.1
+# Architecture — Redis Model Cache v2.2
 
-## System Boundaries (Frozen)
+## System Boundaries (Frozen at v2.2.0)
 
 ### 1. Query Layer
 **File:** `src/RedisModelService.php`
@@ -56,8 +56,8 @@ Storage, serialization, compression, TTL, stampede protection, and SWR.
 |---|---|
 | `rememberAll(callable, $where, $stampede, $swr)` | Full-set cache with stampede/SWR |
 | `remember(callable, $findBy, $findValue)` | Single-model cache with index-fast-path |
-| `store(Model $model)` | Single model write |
-| `storeMany(Collection $models)` | Batch write (bulk HMGET + pipeline) |
+| `store(Model $model)` | Single model write (Lua EVALSHA or pipeline) |
+| `storeMany(Collection $models)` | Batch write (HMGET + EVALSHA pipeline with script priming) |
 | `RedisHelperService::rememberSet(...)` | Generic hash-set cache |
 
 **Invariants:**
@@ -142,29 +142,34 @@ With multi-tenant enabled:
 │    │   │   └─ beyond_grace → fall through to rebuild        │
 │    │   ├─ NO → acquire stampede lock                        │
 │    │   │   ├─ acquired → execute callback → storeMany       │
-│    │   │   └─ waited → re-check EXISTS                      │
+│    │   │   └─ waited → poll with backoff + jitter           │
+│    │   │       ├─ lock released → re-check EXISTS           │
+│    │   │       └─ deadline exceeded → return false (fail-fast)│
 │    │   └─ REFRESH → skip checks, execute callback           │
 │    └─ where() → return hydrated models                      │
 │                                                             │
 └────────────────────────────────────────────────────────────┘
 
-┌─ Write Flow ────────────────────────────────────────────────┐
-│                                                              │
-│  storeMany(Collection $models)                               │
-│    │                                                         │
-│    ├─ HMGET {users}:hash [id1, id2, ...] (old data)         │
-│    ├─ Compute stale index keys per model                    │
-│    ├─ Pipeline:                                              │
-│    │   HSET {users}:hash id → {attrs+relations}             │
-│    │   SREM old-index-key id (× stale)                     │
-│    │   SADD new-index-key id (× indexes)                   │
-│    │   ZADD {users}:sorted:created_at score id (× sorted)  │
-│    │   EXPIRE {users}:hash TTL                              │
-│    │   EXPIRE each index key TTL                             │
-│    └─ HSET {users}:meta cached_at → now                     │
-│                                                              │
-│  (Lua atomic path: single EVALSHA with KEYS + ARGV)         │
-│                                                              │
+┌─ Write Flow ─────────────────────────────────────────────────┐
+│                                                               │
+│  storeMany(Collection $models)                                │
+│    │                                                          │
+│    ├─ HMGET {users}:hash [id1, id2, ...] (old data)          │
+│    ├─ Compute stale index keys per model                     │
+│    ├─ If Lua enabled: SCRIPT LOAD LUA_ATOMIC_STORE (prime)   │
+│    ├─ Pipeline:                                               │
+│    │   (Lua path) EVALSHA sha 2 KEYS[1..2] ARGV[1..7+Q]     │
+│    │   (    × N models, each via EVALSHA)                    │
+│    │                                                          │
+│    │   (Fallback path) HSET + SREM + SADD + ZADD + EXPIRE    │
+│    │   (    × N models, individual commands)                 │
+│    │                                                          │
+│    │   EXPIRE each index key TTL                              │
+│    └─ HSET {users}:meta cached_at → now                      │
+│                                                               │
+│  (v2.2 Lua path: mathematical ARGV offset indexing,          │
+│   no string.gmatch, no comma-split parsing)                   │
+│                                                               │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -174,7 +179,7 @@ With multi-tenant enabled:
 
 | Principle | Status | Details |
 |---|---|---|
-| **SRP** | ❌ Violation | `RedisModelService` (2084 lines) handles querying, indexing, caching, invalidation, serialization, compression, observability, debug, explain |
+| **SRP** | ❌ Violation | `RedisModelService` (~2100 lines) handles querying, indexing, caching, invalidation, serialization, compression, observability, debug, explain |
 | **OCP** | ✅ Good | `ModelMatchStrategy`, `RedisConnectionResolver` interfaces enable extension |
 | **LSP** | ✅ Clean | Implementations (`DefaultConnectionResolver`, `DefaultModelMatchStrategy`) satisfy contracts |
 | **ISP** | ✅ Good | Contracts are granular (`ModelCacheService`, `HashCacheService`, `RedisConnectionResolver`, `ModelMatchStrategy`, `TenantResolverInterface`) |

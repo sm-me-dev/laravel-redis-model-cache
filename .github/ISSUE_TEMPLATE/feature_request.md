@@ -28,4 +28,7 @@ assignees: ''
 - Does this add Redis commands?
 - Does it affect the frozen API surface?
 - Does it change complexity guarantees?
+- Does it add unbounded memory growth (risk for Octane workers)?
+- Does it introduce string parsing in Lua scripts?
+- Does it use KEYS instead of SCAN for pattern matching?
 -->

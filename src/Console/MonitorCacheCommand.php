@@ -60,6 +60,36 @@ class MonitorCacheCommand extends Command
         );
     }
 
+    /**
+     * @return array<int, string>
+     */
+    private function scanKeys(mixed $redis, string $pattern, int $count = 500): array
+    {
+        $keys = [];
+
+        if ($redis instanceof \Redis) {
+            $iterator = null;
+            do {
+                $chunk = $redis->scan($iterator, $pattern, $count);
+                if (is_array($chunk)) {
+                    array_push($keys, ...$chunk);
+                }
+            } while ($iterator !== 0 && $iterator !== null);
+        } else {
+            $cursor = '0';
+            do {
+                $result = $redis->scan($cursor, ['match' => $pattern, 'count' => $count]);
+                $cursor = (string) ($result[0] ?? '0');
+                $chunk = $result[1] ?? [];
+                if (! empty($chunk)) {
+                    array_push($keys, ...$chunk);
+                }
+            } while ($cursor !== '0');
+        }
+
+        return array_values(array_unique($keys));
+    }
+
     private function showKeys(mixed $redis): void
     {
         $patterns = (array) ($this->option('pattern') ?: ['*']);
@@ -68,7 +98,7 @@ class MonitorCacheCommand extends Command
             $this->info("Keys matching pattern: {$pattern}");
             $this->newLine();
 
-            $keys = $redis->keys($pattern);
+            $keys = $this->scanKeys($redis, $pattern);
 
             if (empty($keys)) {
                 $this->warn('No keys found');
@@ -123,7 +153,7 @@ class MonitorCacheCommand extends Command
         $withTTL = [];
 
         foreach ($patterns as $pattern) {
-            $keys = $redis->keys($pattern);
+            $keys = $this->scanKeys($redis, $pattern);
 
             foreach ($keys as $key) {
                 $ttl = $redis->ttl($key);
@@ -139,7 +169,7 @@ class MonitorCacheCommand extends Command
         if (! empty($noTTL)) {
             $this->error('Keys WITHOUT TTL (Memory Leak Risk):');
             foreach (array_slice($noTTL, 0, 20) as $key) {
-                $this->line("  ❌ {$key}");
+                $this->line("  - {$key}");
             }
             if (count($noTTL) > 20) {
                 $this->warn('... and '.(count($noTTL) - 20).' more');
@@ -151,7 +181,7 @@ class MonitorCacheCommand extends Command
             $this->info('Keys WITH TTL (Healthy):');
             foreach (array_slice($withTTL, 0, 10) as [$key, $ttl]) {
                 $hours = round($ttl / 3600, 1);
-                $this->line("  ✅ {$key} (expires in {$hours}h)");
+                $this->line("  + {$key} (expires in {$hours}h)");
             }
             if (count($withTTL) > 10) {
                 $this->info('... and '.(count($withTTL) - 10).' more with TTL');
@@ -193,7 +223,7 @@ class MonitorCacheCommand extends Command
         $memoryData = [];
 
         foreach ($patterns as $pattern) {
-            $keys = $redis->keys($pattern);
+            $keys = $this->scanKeys($redis, $pattern);
             $totalSize = 0;
 
             foreach ($keys as $key) {
@@ -227,17 +257,17 @@ class MonitorCacheCommand extends Command
 
         if ($patterns === []) {
             $redis->flushdb();
-            $this->info('✅ All cache cleared');
+            $this->info('All cache cleared');
         } else {
             $totalDeleted = 0;
             foreach ($patterns as $pattern) {
-                $keys = $redis->keys($pattern);
+                $keys = $this->scanKeys($redis, $pattern);
                 if (! empty($keys)) {
                     $redis->del(...$keys);
                     $totalDeleted += count($keys);
                 }
             }
-            $this->info("✅ Deleted {$totalDeleted} keys");
+            $this->info("Deleted {$totalDeleted} keys");
         }
     }
 

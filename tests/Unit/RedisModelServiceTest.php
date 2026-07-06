@@ -27,6 +27,11 @@ class RedisModelServiceTest extends TestCase
     {
         parent::setUp();
 
+        // Disable Lua scripting for unit tests — pipeline tests verify individual
+        // Redis commands directly. Lua-level atomicity is integration-tested
+        // separately via the feature tests.
+        config()->set('redis-model-cache.lua_scripting.enabled', false);
+
         $this->redis = Mockery::mock('Illuminate\Redis\Connections\Connection');
         $this->connectionResolver = Mockery::mock(RedisConnectionResolver::class);
         $this->connectionResolver->shouldReceive('resolve')->andReturn($this->redis);

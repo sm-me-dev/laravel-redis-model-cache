@@ -44,6 +44,10 @@ Before submitting:
 6. [ ] No `all()` calls or unindexed queries in new code
 7. [ ] No `KEYS` commands — always use `SCAN`
 8. [ ] New config keys have env var support with defaults
+9. [ ] Lua scripts use mathematical offset indexing (no `string.gmatch`)
+10. [ ] Batch operations prime scripts before pipeline entry (`primeAtomicStoreScript()`)
+11. [ ] Static arrays use bounded ring buffers (not unbounded array append)
+12. [ ] Octane lifecycle hooks registered for any new static state
 
 ## Code Conventions
 
@@ -54,6 +58,8 @@ Before submitting:
 - Deterministic behavior over "smart" behavior
 - Document tradeoffs explicitly
 - No hidden O(N) logic
+- No unbounded static array growth — always cap with ring buffer or flush hook
+- Lua scripts must use ARGV count offsets, never string parsing
 
 ## Commit Convention
 

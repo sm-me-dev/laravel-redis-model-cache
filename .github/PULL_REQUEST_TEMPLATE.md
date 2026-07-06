@@ -21,6 +21,9 @@
 - [ ] Pint passes: `vendor/bin/pint --test`
 - [ ] No `KEYS` commands introduced — uses `SCAN`
 - [ ] No hidden O(N) logic introduced
+- [ ] Lua scripts use mathematical offset indexing (not `string.gmatch`)
+- [ ] Batch operations prime scripts before pipeline entry
+- [ ] Static arrays are bounded (ring buffer or flush hook)
 - [ ] Public API changes are reflected in `ARCHITECTURE.md` (frozen API surface)
 - [ ] CHANGELOG.md updated
 

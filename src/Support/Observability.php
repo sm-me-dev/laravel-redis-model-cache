@@ -6,15 +6,23 @@ namespace Sm_mE\RedisModelCache\Support;
 
 class Observability
 {
+    private const MAX_LATENCY = 1000;
+
+    private const MAX_PIPELINE = 1000;
+
     private int $hits = 0;
 
     private int $misses = 0;
 
-    /** @var array<int, float> */
+    /** @var array<int, float> Ring buffer for latency samples */
     private array $latencySamples = [];
 
-    /** @var array<int, int> */
+    private int $latIdx = 0;
+
+    /** @var array<int, int> Ring buffer for pipeline sizes */
     private array $pipelineSizes = [];
+
+    private int $pipeIdx = 0;
 
     private int $staleCleanupCount = 0;
 
@@ -34,12 +42,14 @@ class Observability
 
     public function recordLatency(float $milliseconds): void
     {
-        $this->latencySamples[] = $milliseconds;
+        $this->latencySamples[$this->latIdx % self::MAX_LATENCY] = $milliseconds;
+        $this->latIdx++;
     }
 
     public function recordPipelineSize(int $size): void
     {
-        $this->pipelineSizes[] = $size;
+        $this->pipelineSizes[$this->pipeIdx % self::MAX_PIPELINE] = $size;
+        $this->pipeIdx++;
     }
 
     public function recordStaleCleanup(int $keysRemoved = 0): void
@@ -90,9 +100,44 @@ class Observability
         return round(($this->misses / $total) * 100, 2);
     }
 
+    /**
+     * Flatten a ring buffer into insertion-order linear array.
+     *
+     * @template T of int|float
+     *
+     * @param  array<int, T>  $buffer
+     * @return list<T>
+     */
+    private function flattenRingBuffer(array $buffer, int $idx, int $max): array
+    {
+        $count = min($idx, $max);
+
+        if ($count === 0) {
+            return [];
+        }
+
+        $result = [];
+
+        if ($idx <= $max) {
+            for ($i = 0; $i < $count; $i++) {
+                $result[] = $buffer[$i];
+            }
+        } else {
+            $start = $idx % $max;
+            for ($i = $start; $i < $max; $i++) {
+                $result[] = $buffer[$i];
+            }
+            for ($i = 0; $i < $start; $i++) {
+                $result[] = $buffer[$i];
+            }
+        }
+
+        return $result;
+    }
+
     public function latencyPercentile(int $percentile): ?float
     {
-        $samples = $this->latencySamples;
+        $samples = $this->flattenRingBuffer($this->latencySamples, $this->latIdx, self::MAX_LATENCY);
 
         if ($samples === []) {
             return null;
@@ -108,7 +153,7 @@ class Observability
 
     public function averageLatency(): ?float
     {
-        $samples = $this->latencySamples;
+        $samples = $this->flattenRingBuffer($this->latencySamples, $this->latIdx, self::MAX_LATENCY);
 
         if ($samples === []) {
             return null;
@@ -119,7 +164,7 @@ class Observability
 
     public function maxLatency(): ?float
     {
-        $samples = $this->latencySamples;
+        $samples = $this->flattenRingBuffer($this->latencySamples, $this->latIdx, self::MAX_LATENCY);
 
         if ($samples === []) {
             return null;
@@ -130,7 +175,7 @@ class Observability
 
     public function minLatency(): ?float
     {
-        $samples = $this->latencySamples;
+        $samples = $this->flattenRingBuffer($this->latencySamples, $this->latIdx, self::MAX_LATENCY);
 
         if ($samples === []) {
             return null;
@@ -144,7 +189,7 @@ class Observability
      */
     public function latencySamples(): array
     {
-        return $this->latencySamples;
+        return $this->flattenRingBuffer($this->latencySamples, $this->latIdx, self::MAX_LATENCY);
     }
 
     /**
@@ -152,7 +197,7 @@ class Observability
      */
     public function pipelineSizeDistribution(): array
     {
-        $sizes = $this->pipelineSizes;
+        $sizes = $this->flattenRingBuffer($this->pipelineSizes, $this->pipeIdx, self::MAX_PIPELINE);
 
         if ($sizes === []) {
             return [
@@ -200,7 +245,9 @@ class Observability
         $this->hits = 0;
         $this->misses = 0;
         $this->latencySamples = [];
+        $this->latIdx = 0;
         $this->pipelineSizes = [];
+        $this->pipeIdx = 0;
         $this->staleCleanupCount = 0;
         $this->lockContentionCount = 0;
         $this->staleCleanupKeysRemoved = 0;
@@ -224,7 +271,7 @@ class Observability
                 'average' => $this->averageLatency(),
                 'min' => $this->minLatency(),
                 'max' => $this->maxLatency(),
-                'samples' => count($this->latencySamples),
+                'samples' => min($this->latIdx, self::MAX_LATENCY),
             ],
             'pipeline_size' => $this->pipelineSizeDistribution(),
             'stale_cleanup' => [
