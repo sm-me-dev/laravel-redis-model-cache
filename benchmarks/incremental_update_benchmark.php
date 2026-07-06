@@ -13,16 +13,11 @@ declare(strict_types=1);
  * Run: php benchmarks/incremental_update_benchmark.php
  */
 
-require __DIR__.'/../vendor/autoload.php';
+require __DIR__.'/bootstrap.php';
 
-use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Redis;
 use Sm_mE\RedisModelCache\RedisModelService;
-
-// Bootstrap minimal Laravel app
-$app = require_once __DIR__.'/../workbench/bootstrap/app.php';
-$app->make(Kernel::class)->bootstrap();
 
 // Create test model class
 class BenchmarkModel extends Model

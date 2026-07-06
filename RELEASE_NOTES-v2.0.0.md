@@ -50,6 +50,6 @@
 
 - Restructured `README.md` from 965 lines → ~90-line landing page with `docs/` sub-documents
 - Added `phpstan.stub` for optional Telescope/Pulse dependencies
-- Added `MILESTONE_ROADMAP.md` with all 8 milestone definitions
-- Added `PERFORMANCE.md` with full benchmark results and tuning guide
+- Added `docs/roadmap.md` with all 8 milestone definitions
+- Added `docs/performance.md` with full benchmark results and tuning guide
 - Added `.github/workflows/benchmarks.yml` for CI benchmark regression detection

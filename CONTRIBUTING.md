@@ -40,7 +40,7 @@ Before submitting:
 2. [ ] All tests pass: `vendor/bin/phpunit`
 3. [ ] PHPStan passes at level 8: `vendor/bin/phpstan analyse --no-progress`
 4. [ ] Pint passes: `vendor/bin/pint --test`
-5. [ ] Public API changes are reflected in the README, ARCHITECTURE.md, and CHANGELOG.md
+5. [ ] Public API changes are reflected in the README, docs/architecture.md, and CHANGELOG.md
 6. [ ] No `all()` calls or unindexed queries in new code
 7. [ ] No `KEYS` commands — always use `SCAN`
 8. [ ] New config keys have env var support with defaults
@@ -77,4 +77,4 @@ Examples:
 
 ## Architecture
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) and [INVALIDATION.md](INVALIDATION.md) for detailed design documentation.
+See [docs/architecture.md](docs/architecture.md) and [docs/invalidation.md](docs/invalidation.md) for detailed design documentation.

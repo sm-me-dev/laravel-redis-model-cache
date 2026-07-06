@@ -12,10 +12,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php: ['8.4', '8.5']
+        php: ['8.3', '8.4', '8.5']
+        laravel: ['11.*', '12.*']
         stability: ['prefer-lowest', 'prefer-stable']
+        exclude:
+          - php: '8.5'
+            laravel: '11.*'
+          - php: '8.3'
+            stability: 'prefer-lowest'
 
-    name: PHP ${{ matrix.php }} - ${{ matrix.stability }}
+    name: PHP ${{ matrix.php }} - Laravel ${{ matrix.laravel }} - ${{ matrix.stability }}
 
     services:
       redis:
@@ -48,6 +54,7 @@ jobs:
       - name: Install dependencies
         run: |
           composer update --${{ matrix.stability }} --prefer-dist --no-interaction
+          composer require "illuminate/console:${{ matrix.laravel }}" "illuminate/database:${{ matrix.laravel }}" "illuminate/redis:${{ matrix.laravel }}" "illuminate/support:${{ matrix.laravel }}" --no-interaction -W
 
       - name: Run Pint (Code Style Check)
         run: vendor/bin/pint --test
@@ -56,14 +63,14 @@ jobs:
         run: vendor/bin/phpunit --testdox --coverage-clover coverage.xml
 
       - name: Upload coverage to Codecov
-        if: matrix.php == '8.4' && matrix.stability == 'prefer-stable'
+        if: matrix.php == '8.3' && matrix.laravel == '12.*' && matrix.stability == 'prefer-stable'
         uses: codecov/codecov-action@v5
         with:
           files: coverage.xml
           fail_ci_if_error: false
 
       - name: Run PHPStan
-        if: matrix.php == '8.4'
+        if: matrix.php == '8.3' && matrix.laravel == '12.*'
         run: |
           if [ -f phpstan.neon ]; then
             vendor/bin/phpstan analyse --memory-limit=1G

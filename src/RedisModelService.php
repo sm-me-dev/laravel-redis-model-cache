@@ -137,7 +137,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
 
     /**
      * @param  array<int, string>  $ids
-     * @return ($hydrate is true ? Collection<int, Model> : Collection<int, string>)
+     * @return Collection<int, Model>|Collection<int, string>
      */
     protected function hydrateIds(array $ids, bool $hydrate = true): Collection
     {
@@ -297,7 +297,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
     }
 
     /**
-     * @return array<string, mixed>
+     * @return array<mixed, mixed>
      */
     protected function deserialize(string $json): array
     {
@@ -628,7 +628,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
     {
         return $only === null || $only === []
             ? $items
-            : Arr::only($items, $only);
+            : array_intersect_key($items, array_flip($only));
     }
 
     /**
@@ -719,7 +719,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
      *
      * @param  array<string, mixed>  $where  Equality conditions only (field => value)
      * @param  array<string>|null  $only
-     * @return Collection<int, Model>|ExplainResult
+     * @return Collection<int, Model>|Collection<int, string>|ExplainResult
      *
      * @throws InvalidArgumentException If any field is not indexed
      */
@@ -768,7 +768,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         }
 
         // Batch hydrate (relation-aware)
-        $result = $ids === [] ? collect() : $this->hydrateIds($ids, $hydrate);
+        $result = $this->hydrateIds($ids, $hydrate);
 
         // Dispatch metrics event
         if ($this->metricsEnabled && config('redis-model-cache.observability.dispatch_events', true)) {
@@ -806,7 +806,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
      * @param  array<int|string>  $values  Array of values to match (OR logic)
      * @param  bool  $hydrate  Whether to return full models or just IDs
      * @param  array<string>|null  $only  Optional filter for specific primary keys
-     * @return Collection<int, Model>|ExplainResult
+     * @return Collection<int, Model>|Collection<int, string>|ExplainResult
      *
      * @throws InvalidArgumentException If field is not indexed or values array is empty
      */
@@ -859,7 +859,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         }
 
         // Batch hydrate (relation-aware)
-        $result = $ids === [] ? collect() : $this->hydrateIds($ids, $hydrate);
+        $result = $this->hydrateIds($ids, $hydrate);
 
         // Dispatch metrics event
         if ($this->metricsEnabled && config('redis-model-cache.observability.dispatch_events', true)) {
@@ -896,7 +896,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
      * @param  int|float  $max  Maximum value (inclusive)
      * @param  bool  $hydrate  Whether to return full models or just IDs
      * @param  array<string>|null  $only  Optional filter for specific primary keys
-     * @return Collection<int, Model>|ExplainResult
+     * @return Collection<int, Model>|Collection<int, string>|ExplainResult
      *
      * @throws InvalidArgumentException If field is not a sorted index
      */
@@ -951,7 +951,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         }
 
         // Batch hydrate (relation-aware)
-        $result = $ids === [] ? collect() : $this->hydrateIds($ids, $hydrate);
+        $result = $this->hydrateIds($ids, $hydrate);
 
         // Dispatch metrics event
         if ($this->metricsEnabled && config('redis-model-cache.observability.dispatch_events', true)) {
@@ -989,7 +989,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
      * @param  array<string, mixed>  $where  Additional WHERE conditions (OR logic)
      * @param  array<string>  $baseIds  IDs from previous where() call
      * @param  bool  $hydrate  Whether to return full models or just IDs
-     * @return Collection<int, Model>
+     * @return Collection<int, Model>|Collection<int, string>
      *
      * @throws InvalidArgumentException If fields are not indexed
      */
@@ -1015,10 +1015,10 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         $newIds = $indexKeys === [] ? [] : $this->redis->sinter(...$indexKeys);
 
         // Merge with base IDs (union = OR logic)
-        $mergedIds = array_unique(array_merge($baseIds, $newIds));
+        $mergedIds = array_values(array_unique(array_merge($baseIds, $newIds)));
 
         // Batch hydrate
-        return $mergedIds === [] ? collect() : $this->hydrateIds($mergedIds, $hydrate);
+        return $this->hydrateIds($mergedIds, $hydrate);
     }
 
     /**
@@ -1068,10 +1068,6 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
             $ids = array_values(array_intersect($ids, $only));
         }
 
-        if ($ids === []) {
-            return collect();
-        }
-
         // Fetch payloads with batched HMGET for large sets
         $hashKey = $this->hashKey();
         $maxBatch = max(1, (int) config('redis-model-cache.hydrate_batch_size', 5000));
@@ -1095,7 +1091,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         // Extract only requested attributes
         return collect($results)
             ->filter()
-            ->map(function (string $payload) use ($attributes): array {
+            ->map(function ($payload) use ($attributes): array {
                 /** @var array{attributes: array<string, mixed>, relations: array<string, mixed>} $data */
                 $data = $this->deserialize($payload);
 
@@ -1146,10 +1142,6 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
             $ids = array_values(array_intersect($ids, $only));
         }
 
-        if ($ids === []) {
-            return collect();
-        }
-
         $hashKey = $this->hashKey();
         $maxBatch = max(1, (int) config('redis-model-cache.hydrate_batch_size', 5000));
         $results = [];
@@ -1170,7 +1162,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
 
         return collect($results)
             ->filter()
-            ->map(function (string $payload) use ($fields): array {
+            ->map(function ($payload) use ($fields): array {
                 /** @var array{attributes: array<string, mixed>, relations: array<string, mixed>} $data */
                 $data = $this->deserialize($payload);
 
@@ -2258,7 +2250,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
 
         // Single index: use SCARD for O(1) cardinality
         if ($resolved->isSingleKey()) {
-            return $this->redis->scard($indexKeys[0]);
+            return (int) $this->redis->scard($indexKeys[0]);
         }
 
         // Multi index: intersection needed

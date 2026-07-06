@@ -5,16 +5,40 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [v2.3.0] — 2026-07-06
+
+### Production Polish
+
+#### Added
+
+- **CI matrix expansion** — PHP 8.3/8.4/8.5 × Laravel 11/12 × prefer-lowest/prefer-stable; Codecov on PHP 8.3 + Laravel 12; PHPStan on PHP 8.3 + Laravel 12
+- **Architecture diagrams** — `docs/diagrams/` with 4 SVGs: request flow, key layout, query resolution, invalidation lifecycle
+- **ADRs** — `docs/adr/0001-0005` covering indexed-only queries, deterministic behavior, no automatic index generation, no silent DB fallback, Redis hash/set choice
+- **Repository polish** — CodeQL analysis workflow, Dependabot config, Pint standalone workflow, expanded PR template, compatibility/benchmark issue templates
+- **Benchmark automation** — `scripts/run-benchmarks.sh` runner, `docs/benchmarks/report.md`, `benchmarks.yml` CI workflow, fixed bootstrap
+- **Edge-case test coverage** — `EdgeCaseTest` (11 tests): Redis connection exceptions, corrupted payloads, empty/null results, async invalidation, delete of uncached model
+
+#### Changed
+
+- **Composer constraints widened** — PHP `^8.3`, Illuminate `^11.0 || ^12.0`, Testbench `^9.0 || ^10.11`
+- **README claims audit** — removed unsubstantiated "production-tested" and blanket O(1) claims; qualified performance characteristics with explicit complexity table
+- **Docs reorganization** — technical docs moved from root to `docs/`; root now only contains README, CHANGELOG, CONTRIBUTING, SECURITY, LICENSE
+- **PHPStan raised to level max** — documented ignoreErrors with rationale for config-derived mixed types, Telescope stubs, and Mockery conventions
+- **Type improvements** — `RequestTenantResolver` return types narrowed; `CacheManager` config access cast; `QueryPlanner` mixed concat fixed; `ResolvedIndex` keys parameter widened
+- **Benchmark scripts** — all 4 benchmarks now properly register the service provider via `benchmarks/bootstrap.php`
+- **`hydrateIds()`** — early return for empty ID arrays restored
+- **Internal doc links** — all references from root docs updated to `docs/` paths
+
 ## [v2.2.0] — 2026-07-06
 
-### Added
+#### Added
 
 - **Lua atomic store: zero string parsing** — `LUA_ATOMIC_STORE` script rewritten to use mathematical offset indexing with discrete `ARGV[4..7]` counts and individual `ARGV[8+Q]` score entries. Eliminates `string.gmatch` parsing and Lua GC pressure under high-throughput stores.
 - **Batch EVALSHA pipelining** — `storeMany()` pipelines EVALSHA commands with explicit `SCRIPT LOAD` priming before pipeline entry. Guarantees atomic batch writes without NOSCRIPT fallback within the batch.
 - **Explicit script priming** — `primeAtomicStoreScript()` loads `LUA_ATOMIC_STORE` into Redis cache before pipeline enters, ensuring all EVALSHA calls within the batch succeed on first attempt.
 - **Client-agnostic EVALSHA dispatch** — `queueLuaAtomicStoreOnClient()` handles both phpredis and Predis eval/evalSha signatures on direct connections and pipeline objects.
 
-### Changed
+#### Changed
 
 - **`storeModel()`** — now uses Lua atomic store in all execution paths (direct AND pipeline), not only when `$pipeline === null`. This extends atomicity guarantees to the batch write path.
 - **`storeModelAtomic()`** — accepts optional `$pipeline` and `$precomputedStaleKeys` parameters for pipeline-mode execution.
@@ -23,11 +47,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Lifecycle hooks** — `registerLifecycleHooks()` hooks `flushRedisModelCacheProcessing()` into `App::terminating` and Octane `WorkerTickStarting` events. Prevents static state bleed between requests.
 - **`MonitorCacheCommand` production safety** — all `KEYS` calls replaced with cursor-based `SCAN` via `scanKeys()`. Supports both phpredis and Predis clients.
 
-### Removed
+#### Removed
 
 - **String parsing in Lua** — `string.gmatch` and comma-split score parsing removed from `LUA_ATOMIC_STORE`.
 
-### Fixed
+#### Fixed
 
 - **Pipeline Lua bypass** — `storeModel()` no longer skips Lua when a pipeline is provided. Previously the batch path fell back to individual Redis commands even when Lua scripting was enabled.
 - **Observability ring buffer access** — `latencySamples()` and statistical methods now use `flattenRingBuffer()` so partially filled or wrapped buffers report correct values.
@@ -38,7 +62,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Added
 
 - **Multi-tenant cache isolation** — `{tenant:{id}:{table}}` key prefixing via `TenantResolverInterface` with built-in `RequestTenantResolver` supporting header, subdomain, auth, and session strategies.
-- **Concurrency safety test suite** — 18 tests covering stampede lock acquire/wait/timeout/CAS, concurrent read-modify-write, Redis failure simulation (connection refused, timeout, Lua failure, SCAN failure), and invalidation consistency.
+- **Concurrency safety test suite** — 18 tests covering stampede lock acquire/wait/timeout/CAS, concurrent read-modify-write, Redis failure simulation, and invalidation consistency.
 - **GitHub Actions CI** — PHPUnit with `--coverage-clover`, Codecov upload step, coverage badge in README.
 - **CHANGELOG.md, CONTRIBUTING.md, SECURITY.md** — GitHub community health files.
 - **PR template and issue templates** — `PULL_REQUEST_TEMPLATE.md`, `bug_report.md`, `feature_request.md`.
@@ -49,10 +73,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **ARCHITECTURE.md** — comprehensive architecture documentation covering key layout, data flow, design decisions, and Redis command inventory.
 - **QUERY_LIMITATIONS.md** — complete table of supported/invalid operations with rationale.
 - **INVALIDATION.md** — lifecycle hooks, versioning strategy, parent touches, edge case documentation.
-
-### Fixed
-
-- (none)
 
 ## [v2.0.0] — 2026-07-02
 

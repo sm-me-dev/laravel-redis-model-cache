@@ -1,0 +1,1075 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Binary operation "\." between ''  Average\:          '' and mixed results in an error\.$#'
+			identifier: binaryOp.invalid
+			count: 1
+			path: src/Console/DebugCommand.php
+
+		-
+			message: '#^Binary operation "\." between ''  Cache hits\:       '' and mixed results in an error\.$#'
+			identifier: binaryOp.invalid
+			count: 1
+			path: src/Console/DebugCommand.php
+
+		-
+			message: '#^Binary operation "\." between ''  Cache misses\:     '' and mixed results in an error\.$#'
+			identifier: binaryOp.invalid
+			count: 1
+			path: src/Console/DebugCommand.php
+
+		-
+			message: '#^Binary operation "\." between ''  Connected clients…'' and mixed results in an error\.$#'
+			identifier: binaryOp.invalid
+			count: 1
+			path: src/Console/DebugCommand.php
+
+		-
+			message: '#^Binary operation "\." between ''  Events\:           '' and mixed results in an error\.$#'
+			identifier: binaryOp.invalid
+			count: 1
+			path: src/Console/DebugCommand.php
+
+		-
+			message: '#^Binary operation "\." between ''  Expired keys\:     '' and mixed results in an error\.$#'
+			identifier: binaryOp.invalid
+			count: 1
+			path: src/Console/DebugCommand.php
+
+		-
+			message: '#^Binary operation "\." between ''  Hit rate\:         '' and mixed results in an error\.$#'
+			identifier: binaryOp.invalid
+			count: 1
+			path: src/Console/DebugCommand.php
+
+		-
+			message: '#^Binary operation "\." between ''  Keys removed\:     '' and mixed results in an error\.$#'
+			identifier: binaryOp.invalid
+			count: 1
+			path: src/Console/DebugCommand.php
+
+		-
+			message: '#^Binary operation "\." between ''  Lock contentions\: '' and mixed results in an error\.$#'
+			identifier: binaryOp.invalid
+			count: 1
+			path: src/Console/DebugCommand.php
+
+		-
+			message: '#^Binary operation "\." between ''  Min / Max\:        '' and mixed results in an error\.$#'
+			identifier: binaryOp.invalid
+			count: 1
+			path: src/Console/DebugCommand.php
+
+		-
+			message: '#^Binary operation "\." between ''  Miss rate\:        '' and mixed results in an error\.$#'
+			identifier: binaryOp.invalid
+			count: 1
+			path: src/Console/DebugCommand.php
+
+		-
+			message: '#^Binary operation "\." between ''  P50\:              '' and mixed results in an error\.$#'
+			identifier: binaryOp.invalid
+			count: 1
+			path: src/Console/DebugCommand.php
+
+		-
+			message: '#^Binary operation "\." between ''  P95\:              '' and mixed results in an error\.$#'
+			identifier: binaryOp.invalid
+			count: 1
+			path: src/Console/DebugCommand.php
+
+		-
+			message: '#^Binary operation "\." between ''  P99\:              '' and mixed results in an error\.$#'
+			identifier: binaryOp.invalid
+			count: 1
+			path: src/Console/DebugCommand.php
+
+		-
+			message: '#^Binary operation "\." between ''  Samples\:          '' and mixed results in an error\.$#'
+			identifier: binaryOp.invalid
+			count: 1
+			path: src/Console/DebugCommand.php
+
+		-
+			message: '#^Binary operation "\." between ''  Total keys\:       '' and mixed results in an error\.$#'
+			identifier: binaryOp.invalid
+			count: 1
+			path: src/Console/DebugCommand.php
+
+		-
+			message: '#^Binary operation "\." between ''  Total requests\:   '' and mixed results in an error\.$#'
+			identifier: binaryOp.invalid
+			count: 1
+			path: src/Console/DebugCommand.php
+
+		-
+			message: '#^Binary operation "\." between ''  Version\:          '' and mixed results in an error\.$#'
+			identifier: binaryOp.invalid
+			count: 1
+			path: src/Console/DebugCommand.php
+
+		-
+			message: '#^Binary operation "\." between non\-falsy\-string and mixed results in an error\.$#'
+			identifier: binaryOp.invalid
+			count: 1
+			path: src/Console/DebugCommand.php
+
+		-
+			message: '#^Binary operation "/" between mixed and 86400 results in an error\.$#'
+			identifier: binaryOp.invalid
+			count: 1
+			path: src/Console/DebugCommand.php
+
+		-
+			message: '#^Cannot access offset ''average'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/Console/DebugCommand.php
+
+		-
+			message: '#^Cannot access offset ''count'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/Console/DebugCommand.php
+
+		-
+			message: '#^Cannot access offset ''hit_rate'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/Console/DebugCommand.php
+
+		-
+			message: '#^Cannot access offset ''hits'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/Console/DebugCommand.php
+
+		-
+			message: '#^Cannot access offset ''keys_removed'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/Console/DebugCommand.php
+
+		-
+			message: '#^Cannot access offset ''latency'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/Console/DebugCommand.php
+
+		-
+			message: '#^Cannot access offset ''lock_contention'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/Console/DebugCommand.php
+
+		-
+			message: '#^Cannot access offset ''max'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/Console/DebugCommand.php
+
+		-
+			message: '#^Cannot access offset ''min'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/Console/DebugCommand.php
+
+		-
+			message: '#^Cannot access offset ''miss_rate'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/Console/DebugCommand.php
+
+		-
+			message: '#^Cannot access offset ''misses'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/Console/DebugCommand.php
+
+		-
+			message: '#^Cannot access offset ''p50'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/Console/DebugCommand.php
+
+		-
+			message: '#^Cannot access offset ''p95'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/Console/DebugCommand.php
+
+		-
+			message: '#^Cannot access offset ''p99'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/Console/DebugCommand.php
+
+		-
+			message: '#^Cannot access offset ''redis'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/Console/DebugCommand.php
+
+		-
+			message: '#^Cannot access offset ''requests'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 5
+			path: src/Console/DebugCommand.php
+
+		-
+			message: '#^Cannot access offset ''samples'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/Console/DebugCommand.php
+
+		-
+			message: '#^Cannot access offset ''stale_cleanup'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/Console/DebugCommand.php
+
+		-
+			message: '#^Cannot access offset ''total_keys'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/Console/DebugCommand.php
+
+		-
+			message: '#^Cannot access offset ''total_requests'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/Console/DebugCommand.php
+
+		-
+			message: '#^Cannot cast mixed to string\.$#'
+			identifier: cast.string
+			count: 1
+			path: src/Console/DebugCommand.php
+
+		-
+			message: '#^Parameter \#1 \$info of method Sm_mE\\RedisModelCache\\Console\\DebugCommand\:\:renderRedisInfo\(\) expects array\<string, mixed\>, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Console/DebugCommand.php
+
+		-
+			message: '#^Argument of an invalid type mixed supplied for foreach, only iterables are supported\.$#'
+			identifier: foreach.nonIterable
+			count: 1
+			path: src/Console/MonitorCacheCommand.php
+
+		-
+			message: '#^Binary operation "\." between mixed and ''s'' results in an error\.$#'
+			identifier: binaryOp.invalid
+			count: 1
+			path: src/Console/MonitorCacheCommand.php
+
+		-
+			message: '#^Binary operation "/" between mixed and 3600 results in an error\.$#'
+			identifier: binaryOp.invalid
+			count: 1
+			path: src/Console/MonitorCacheCommand.php
+
+		-
+			message: '#^Binary operation "/" between mixed and 86400 results in an error\.$#'
+			identifier: binaryOp.invalid
+			count: 1
+			path: src/Console/MonitorCacheCommand.php
+
+		-
+			message: '#^Cannot access offset ''connected_clients'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/Console/MonitorCacheCommand.php
+
+		-
+			message: '#^Cannot access offset ''evicted_keys'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/Console/MonitorCacheCommand.php
+
+		-
+			message: '#^Cannot access offset ''expired_keys'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/Console/MonitorCacheCommand.php
+
+		-
+			message: '#^Cannot access offset ''mem_allocator'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/Console/MonitorCacheCommand.php
+
+		-
+			message: '#^Cannot access offset ''mem_fragmentation_ratio'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/Console/MonitorCacheCommand.php
+
+		-
+			message: '#^Cannot access offset ''redis_version'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/Console/MonitorCacheCommand.php
+
+		-
+			message: '#^Cannot access offset ''uptime_in_seconds'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/Console/MonitorCacheCommand.php
+
+		-
+			message: '#^Cannot access offset ''used_memory'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 2
+			path: src/Console/MonitorCacheCommand.php
+
+		-
+			message: '#^Cannot access offset ''used_memory_peak'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 2
+			path: src/Console/MonitorCacheCommand.php
+
+		-
+			message: '#^Cannot access offset ''used_memory_rss'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/Console/MonitorCacheCommand.php
+
+		-
+			message: '#^Cannot access offset 0 on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/Console/MonitorCacheCommand.php
+
+		-
+			message: '#^Cannot access offset 1 on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/Console/MonitorCacheCommand.php
+
+		-
+			message: '#^Cannot cast mixed to string\.$#'
+			identifier: cast.string
+			count: 1
+			path: src/Console/MonitorCacheCommand.php
+
+		-
+			message: '#^Method Sm_mE\\RedisModelCache\\Console\\MonitorCacheCommand\:\:scanKeys\(\) should return array\<int, string\> but returns list\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Console/MonitorCacheCommand.php
+
+		-
+			message: '#^Only iterables can be unpacked, mixed given in argument \#2\.$#'
+			identifier: argument.unpackNonIterable
+			count: 1
+			path: src/Console/MonitorCacheCommand.php
+
+		-
+			message: '#^Parameter \#1 \$array of function array_unique expects an array of values castable to string, list given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Console/MonitorCacheCommand.php
+
+		-
+			message: '#^Parameter \#1 \$bytes of method Sm_mE\\RedisModelCache\\Console\\MonitorCacheCommand\:\:formatBytes\(\) expects int, mixed given\.$#'
+			identifier: argument.type
+			count: 5
+			path: src/Console/MonitorCacheCommand.php
+
+		-
+			message: '#^Parameter \#1 \$callback of function array_map expects \(callable\(mixed\)\: mixed\)\|null, ''strlen'' given\.$#'
+			identifier: argument.type
+			count: 4
+			path: src/Console/MonitorCacheCommand.php
+
+		-
+			message: '#^Parameter \#1 \$haystack of function str_starts_with expects string, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Console/MonitorCacheCommand.php
+
+		-
+			message: '#^Parameter \#1 \$string of function strlen expects string, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Console/MonitorCacheCommand.php
+
+		-
+			message: '#^Parameter \#2 \$array of function array_map expects array, mixed given\.$#'
+			identifier: argument.type
+			count: 4
+			path: src/Console/MonitorCacheCommand.php
+
+		-
+			message: '#^Parameter \#2 \$pattern of method Sm_mE\\RedisModelCache\\Console\\MonitorCacheCommand\:\:scanKeys\(\) expects string, mixed given\.$#'
+			identifier: argument.type
+			count: 3
+			path: src/Console/MonitorCacheCommand.php
+
+		-
+			message: '#^Parameter \#2 \$subject of function preg_match expects string, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Console/MonitorCacheCommand.php
+
+		-
+			message: '#^Parameter \#3 \$type of method Sm_mE\\RedisModelCache\\Console\\MonitorCacheCommand\:\:getKeySize\(\) expects string, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Console/MonitorCacheCommand.php
+
+		-
+			message: '#^Parameter \#3 \$type of method Sm_mE\\RedisModelCache\\Console\\MonitorCacheCommand\:\:getKeySizeBytes\(\) expects string, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Console/MonitorCacheCommand.php
+
+		-
+			message: '#^Part \$pattern \(mixed\) of encapsed string cannot be cast to string\.$#'
+			identifier: encapsedStringPart.nonString
+			count: 1
+			path: src/Console/MonitorCacheCommand.php
+
+		-
+			message: '#^Cannot access offset ''used_memory'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/Console/WarmupCommand.php
+
+		-
+			message: '#^Cannot access offset ''used_memory_peak'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/Console/WarmupCommand.php
+
+		-
+			message: '#^Cannot access offset ''used_memory_rss'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/Console/WarmupCommand.php
+
+		-
+			message: '#^Parameter \#1 \$bytes of method Sm_mE\\RedisModelCache\\Console\\WarmupCommand\:\:formatBytes\(\) expects int, mixed given\.$#'
+			identifier: argument.type
+			count: 3
+			path: src/Console/WarmupCommand.php
+
+		-
+			message: '#^Parameter \$modelId of class Sm_mE\\RedisModelCache\\Invalidation\\InvalidationContext constructor expects int\|string, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Invalidation/InvalidationManager.php
+
+		-
+			message: '#^Cannot access offset ''connection'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/Jobs/InvalidateModelCacheJob.php
+
+		-
+			message: '#^Cannot access offset ''custom_indexes'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/Jobs/InvalidateModelCacheJob.php
+
+		-
+			message: '#^Cannot access offset ''indexes'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/Jobs/InvalidateModelCacheJob.php
+
+		-
+			message: '#^Cannot access offset ''sorted'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/Jobs/InvalidateModelCacheJob.php
+
+		-
+			message: '#^Cannot access offset ''ttl'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/Jobs/InvalidateModelCacheJob.php
+
+		-
+			message: '#^Parameter \#1 \$queue of method Sm_mE\\RedisModelCache\\Jobs\\RevalidateCacheJob\:\:onQueue\(\) expects string\|UnitEnum\|null, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Jobs/RevalidateCacheJob.php
+
+		-
+			message: '#^Cannot cast mixed to string\.$#'
+			identifier: cast.string
+			count: 2
+			path: src/RedisBaseService.php
+
+		-
+			message: '#^Method Sm_mE\\RedisModelCache\\RedisBaseService\:\:compressLz4\(\) should return string but returns mixed\.$#'
+			identifier: return.type
+			count: 1
+			path: src/RedisBaseService.php
+
+		-
+			message: '#^Method Sm_mE\\RedisModelCache\\RedisBaseService\:\:decompressLz4\(\) should return string but returns mixed\.$#'
+			identifier: return.type
+			count: 1
+			path: src/RedisBaseService.php
+
+		-
+			message: '#^Cannot cast mixed to string\.$#'
+			identifier: cast.string
+			count: 2
+			path: src/RedisHelperService.php
+
+		-
+			message: '#^Method Sm_mE\\RedisModelCache\\RedisHelperService\:\:getSet\(\) should return array\<string, mixed\> but returns array\.$#'
+			identifier: return.type
+			count: 1
+			path: src/RedisHelperService.php
+
+		-
+			message: '#^Parameter \#1 \$array of static method Illuminate\\Support\\Arr\:\:map\(\) expects array, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/RedisHelperService.php
+
+		-
+			message: '#^Cannot access offset ''ttl'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/RedisModelCacheServiceProvider.php
+
+		-
+			message: '#^Parameter \#1 \$class of function class_exists expects string, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/RedisModelCacheServiceProvider.php
+
+		-
+			message: '#^Parameter \#1 \$connection of class Sm_mE\\RedisModelCache\\Support\\DefaultConnectionResolver constructor expects string\|null, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/RedisModelCacheServiceProvider.php
+
+		-
+			message: '#^Parameter \$connection of class Sm_mE\\RedisModelCache\\RedisModelService constructor expects string\|null, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/RedisModelCacheServiceProvider.php
+
+		-
+			message: '#^Parameter \$connectionResolver of class Sm_mE\\RedisModelCache\\RedisHelperService constructor expects Sm_mE\\RedisModelCache\\Contracts\\RedisConnectionResolver, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/RedisModelCacheServiceProvider.php
+
+		-
+			message: '#^Parameter \$connectionResolver of class Sm_mE\\RedisModelCache\\RedisModelService constructor expects Sm_mE\\RedisModelCache\\Contracts\\RedisConnectionResolver, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/RedisModelCacheServiceProvider.php
+
+		-
+			message: '#^Parameter \$connectionResolver of class Sm_mE\\RedisModelCache\\Support\\CacheManager constructor expects Sm_mE\\RedisModelCache\\Contracts\\RedisConnectionResolver, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/RedisModelCacheServiceProvider.php
+
+		-
+			message: '#^Parameter \$custom_indexes of class Sm_mE\\RedisModelCache\\RedisModelService constructor expects array\<string, array\<int, string\>\>, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/RedisModelCacheServiceProvider.php
+
+		-
+			message: '#^Parameter \$indexes of class Sm_mE\\RedisModelCache\\RedisModelService constructor expects array\<int, string\>, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/RedisModelCacheServiceProvider.php
+
+		-
+			message: '#^Parameter \$key of class Sm_mE\\RedisModelCache\\Support\\TenantResolvers\\RequestTenantResolver constructor expects string, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/RedisModelCacheServiceProvider.php
+
+		-
+			message: '#^Parameter \$matchStrategy of class Sm_mE\\RedisModelCache\\RedisModelService constructor expects Sm_mE\\RedisModelCache\\Contracts\\ModelMatchStrategy\|null, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/RedisModelCacheServiceProvider.php
+
+		-
+			message: '#^Parameter \$model_class of class Sm_mE\\RedisModelCache\\RedisModelService constructor expects string, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/RedisModelCacheServiceProvider.php
+
+		-
+			message: '#^Parameter \$observability of class Sm_mE\\RedisModelCache\\Support\\CacheManager constructor expects Sm_mE\\RedisModelCache\\Support\\Observability, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/RedisModelCacheServiceProvider.php
+
+		-
+			message: '#^Parameter \$sorted of class Sm_mE\\RedisModelCache\\RedisModelService constructor expects array\<int, string\>, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/RedisModelCacheServiceProvider.php
+
+		-
+			message: '#^Parameter \$strategy of class Sm_mE\\RedisModelCache\\Support\\TenantResolvers\\RequestTenantResolver constructor expects string, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/RedisModelCacheServiceProvider.php
+
+		-
+			message: '#^Parameter \$ttl of class Sm_mE\\RedisModelCache\\RedisHelperService constructor expects int\|null, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/RedisModelCacheServiceProvider.php
+
+		-
+			message: '#^Parameter \$ttl of class Sm_mE\\RedisModelCache\\RedisModelService constructor expects int\|null, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/RedisModelCacheServiceProvider.php
+
+		-
+			message: '#^Part \$connection \(mixed\) of encapsed string cannot be cast to string\.$#'
+			identifier: encapsedStringPart.nonString
+			count: 2
+			path: src/RedisModelCacheServiceProvider.php
+
+		-
+			message: '#^Part \$scanStrategy \(mixed\) of encapsed string cannot be cast to string\.$#'
+			identifier: encapsedStringPart.nonString
+			count: 1
+			path: src/RedisModelCacheServiceProvider.php
+
+		-
+			message: '#^Argument of an invalid type mixed supplied for foreach, only iterables are supported\.$#'
+			identifier: foreach.nonIterable
+			count: 4
+			path: src/RedisModelService.php
+
+		-
+			message: '#^Cannot access offset ''class'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/RedisModelService.php
+
+		-
+			message: '#^Cannot access offset 0 on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/RedisModelService.php
+
+		-
+			message: '#^Cannot access offset mixed on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 4
+			path: src/RedisModelService.php
+
+		-
+			message: '#^Cannot access offset string on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 7
+			path: src/RedisModelService.php
+
+		-
+			message: '#^Cannot cast mixed to float\.$#'
+			identifier: cast.double
+			count: 1
+			path: src/RedisModelService.php
+
+		-
+			message: '#^Cannot cast mixed to string\.$#'
+			identifier: cast.string
+			count: 18
+			path: src/RedisModelService.php
+
+		-
+			message: '#^Method Sm_mE\\RedisModelCache\\RedisModelService\:\:collectKeysByPattern\(\) should return array\<int, string\> but returns list\<mixed\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/RedisModelService.php
+
+		-
+			message: '#^Method Sm_mE\\RedisModelCache\\RedisModelService\:\:count\(\) should return int but returns mixed\.$#'
+			identifier: return.type
+			count: 1
+			path: src/RedisModelService.php
+
+		-
+			message: '#^Method Sm_mE\\RedisModelCache\\RedisModelService\:\:deserialize\(\) should return array\<string, mixed\> but returns array\<mixed, mixed\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/RedisModelService.php
+
+		-
+			message: '#^Method Sm_mE\\RedisModelCache\\RedisModelService\:\:executePipeline\(\) should return array\<int, mixed\> but returns array\.$#'
+			identifier: return.type
+			count: 3
+			path: src/RedisModelService.php
+
+		-
+			message: '#^Method Sm_mE\\RedisModelCache\\RedisModelService\:\:extractRelations\(\) should return array\<string, array\<int, mixed\>\|null\> but returns array\<array\<mixed\>\|null\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/RedisModelService.php
+
+		-
+			message: '#^Method Sm_mE\\RedisModelCache\\RedisModelService\:\:filterRedisHashItemsByKey\(\) should return array\<string, string\> but returns array\.$#'
+			identifier: return.type
+			count: 1
+			path: src/RedisModelService.php
+
+		-
+			message: '#^Method Sm_mE\\RedisModelCache\\RedisModelService\:\:hydrateIds\(\) should return Illuminate\\Support\\Collection\<int, Illuminate\\Database\\Eloquent\\Model\>\|Illuminate\\Support\\Collection\<int, string\> but returns Illuminate\\Support\\Collection\<\(int\|string\), mixed\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/RedisModelService.php
+
+		-
+			message: '#^Method Sm_mE\\RedisModelCache\\RedisModelService\:\:orWhere\(\) should return Illuminate\\Support\\Collection\<int, Illuminate\\Database\\Eloquent\\Model\> but returns Illuminate\\Support\\Collection\<\(int\|string\), mixed\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/RedisModelService.php
+
+		-
+			message: '#^Method Sm_mE\\RedisModelCache\\RedisModelService\:\:pluck\(\) should return Illuminate\\Support\\Collection\<int, array\<string, mixed\>\> but returns Illuminate\\Support\\Collection\<\(int\|string\), mixed\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/RedisModelService.php
+
+		-
+			message: '#^Method Sm_mE\\RedisModelCache\\RedisModelService\:\:selective\(\) should return Illuminate\\Support\\Collection\<int, array\<string, mixed\>\> but returns Illuminate\\Support\\Collection\<\(int\|string\), mixed\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/RedisModelService.php
+
+		-
+			message: '#^Method Sm_mE\\RedisModelCache\\RedisModelService\:\:where\(\) should return Illuminate\\Support\\Collection\<int, Illuminate\\Database\\Eloquent\\Model\>\|Sm_mE\\RedisModelCache\\Support\\ExplainResult but returns Illuminate\\Support\\Collection\<\(int\|string\), mixed\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/RedisModelService.php
+
+		-
+			message: '#^Method Sm_mE\\RedisModelCache\\RedisModelService\:\:whereBetween\(\) should return Illuminate\\Support\\Collection\<int, Illuminate\\Database\\Eloquent\\Model\>\|Sm_mE\\RedisModelCache\\Support\\ExplainResult but returns Illuminate\\Support\\Collection\<\(int\|string\), mixed\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/RedisModelService.php
+
+		-
+			message: '#^Method Sm_mE\\RedisModelCache\\RedisModelService\:\:whereIn\(\) should return Illuminate\\Support\\Collection\<int, Illuminate\\Database\\Eloquent\\Model\>\|Sm_mE\\RedisModelCache\\Support\\ExplainResult but returns Illuminate\\Support\\Collection\<\(int\|string\), mixed\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/RedisModelService.php
+
+		-
+			message: '#^Parameter \#1 \$array of function array_chunk expects array, mixed given\.$#'
+			identifier: argument.type
+			count: 2
+			path: src/RedisModelService.php
+
+		-
+			message: '#^Parameter \#1 \$array of function array_intersect expects array, mixed given\.$#'
+			identifier: argument.type
+			count: 5
+			path: src/RedisModelService.php
+
+		-
+			message: '#^Parameter \#1 \$array of function array_unique expects an array of values castable to string, array given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/RedisModelService.php
+
+		-
+			message: '#^Parameter \#1 \$array of function array_unique expects an array of values castable to string, array\<mixed\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/RedisModelService.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<\(int\|string\),mixed\>\:\:map\(\) expects callable\(mixed, int\|string\)\: array\{class\: string, attributes\: array\<string, mixed\>, relations\: array\<string, mixed\>\}, Closure\(Illuminate\\Database\\Eloquent\\Model\)\: array\{class\: string, attributes\: array\<string, mixed\>, relations\: array\<string, mixed\>\} given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/RedisModelService.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,mixed\>\:\:map\(\) expects callable\(mixed, int\)\: Illuminate\\Database\\Eloquent\\Model, Closure\(string\)\: Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/RedisModelService.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,mixed\>\:\:map\(\) expects callable\(mixed, int\)\: array\<string, mixed\>, Closure\(string\)\: array\<string, mixed\> given\.$#'
+			identifier: argument.type
+			count: 2
+			path: src/RedisModelService.php
+
+		-
+			message: '#^Parameter \#1 \$ids of method Sm_mE\\RedisModelCache\\RedisModelService\:\:hydrateIds\(\) expects array\<int, string\>, array given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/RedisModelService.php
+
+		-
+			message: '#^Parameter \#1 \$ids of method Sm_mE\\RedisModelCache\\RedisModelService\:\:hydrateIds\(\) expects array\<int, string\>, mixed given\.$#'
+			identifier: argument.type
+			count: 7
+			path: src/RedisModelService.php
+
+		-
+			message: '#^Parameter \#1 \$json of method Sm_mE\\RedisModelCache\\RedisModelService\:\:deserialize\(\) expects string, mixed given\.$#'
+			identifier: argument.type
+			count: 7
+			path: src/RedisModelService.php
+
+		-
+			message: '#^Parameter \#1 \$models of method Sm_mE\\RedisModelCache\\RedisModelService\:\:storeMany\(\) expects Illuminate\\Support\\Collection\<int, Illuminate\\Database\\Eloquent\\Model\>, Illuminate\\Support\\Collection\<\(int\|string\), mixed\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/RedisModelService.php
+
+		-
+			message: '#^Parameter \#1 \$object_or_class of function is_a expects object, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/RedisModelService.php
+
+		-
+			message: '#^Parameter \#1 \$object_or_class of function method_exists expects object\|string, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/RedisModelService.php
+
+		-
+			message: '#^Parameter \#1 \$value of function count expects array\|Countable, mixed given\.$#'
+			identifier: argument.type
+			count: 11
+			path: src/RedisModelService.php
+
+		-
+			message: '#^Parameter \#2 \$array of function array_key_exists expects array, mixed given\.$#'
+			identifier: argument.type
+			count: 2
+			path: src/RedisModelService.php
+
+		-
+			message: '#^Parameter \#2 \$haystack of function in_array expects array, mixed given\.$#'
+			identifier: argument.type
+			count: 2
+			path: src/RedisModelService.php
+
+		-
+			message: '#^Parameter \#2 \$relations of method Sm_mE\\RedisModelCache\\RedisModelService\:\:restoreRelations\(\) expects array\<string, array\<int, mixed\>\|null\>, array\<string, mixed\> given\.$#'
+			identifier: argument.type
+			count: 2
+			path: src/RedisModelService.php
+
+		-
+			message: '#^Parameter \#2 \$value of method Sm_mE\\RedisModelCache\\RedisModelService\:\:indexKey\(\) expects int\|string, mixed given\.$#'
+			identifier: argument.type
+			count: 11
+			path: src/RedisModelService.php
+
+		-
+			message: '#^Parameter \#2 \.\.\.\$arrays of function array_merge expects array, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/RedisModelService.php
+
+		-
+			message: '#^Parameter \$redisConnection of class Sm_mE\\RedisModelCache\\Jobs\\RevalidateCacheJob constructor expects string\|null, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/RedisModelService.php
+
+		-
+			message: '#^Cannot access offset ''connected_clients'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/Support/CacheManager.php
+
+		-
+			message: '#^Cannot access offset ''expired_keys'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/Support/CacheManager.php
+
+		-
+			message: '#^Cannot access offset ''redis_version'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/Support/CacheManager.php
+
+		-
+			message: '#^Cannot access offset ''uptime_in_seconds'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/Support/CacheManager.php
+
+		-
+			message: '#^Cannot access offset ''used_memory'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/Support/CacheManager.php
+
+		-
+			message: '#^Cannot access offset ''used_memory_peak'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/Support/CacheManager.php
+
+		-
+			message: '#^Cannot cast mixed to string\.$#'
+			identifier: cast.string
+			count: 1
+			path: src/Support/CacheManager.php
+
+		-
+			message: '#^Method Sm_mE\\RedisModelCache\\Support\\CacheManager\:\:resolveModelConfig\(\) should return array\<string, mixed\> but returns mixed\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Support/CacheManager.php
+
+		-
+			message: '#^Parameter \#1 \$info of method Sm_mE\\RedisModelCache\\Support\\CacheManager\:\:totalKeys\(\) expects array\<string, mixed\>, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Support/CacheManager.php
+
+		-
+			message: '#^Parameter \$custom_indexes of class Sm_mE\\RedisModelCache\\RedisModelService constructor expects array\<string, array\<int, string\>\>, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Support/CacheManager.php
+
+		-
+			message: '#^Parameter \$indexes of class Sm_mE\\RedisModelCache\\RedisModelService constructor expects array\<int, string\>, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Support/CacheManager.php
+
+		-
+			message: '#^Parameter \$redis of class Sm_mE\\RedisModelCache\\Support\\CacheMetrics constructor expects array\{version\: string, used_memory\: int, used_memory_peak\: int, uptime_seconds\: int, connected_clients\: int, total_keys\: int, expired_keys\: int\}, array\{version\: mixed, used_memory\: int, used_memory_peak\: int, uptime_seconds\: int, connected_clients\: int, total_keys\: int, expired_keys\: int\} given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Support/CacheManager.php
+
+		-
+			message: '#^Parameter \$sorted of class Sm_mE\\RedisModelCache\\RedisModelService constructor expects array\<int, string\>, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Support/CacheManager.php
+
+		-
+			message: '#^Parameter \$ttl of class Sm_mE\\RedisModelCache\\RedisModelService constructor expects int\|null, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Support/CacheManager.php
+
+		-
+			message: '#^Cannot cast mixed to string\.$#'
+			identifier: cast.string
+			count: 2
+			path: src/Support/DefaultConnectionResolver.php
+
+		-
+			message: '#^Cannot cast mixed to string\.$#'
+			identifier: cast.string
+			count: 2
+			path: src/Support/DefaultModelMatchStrategy.php
+
+		-
+			message: '#^Parameter \#2 \$value of method Sm_mE\\RedisModelCache\\Support\\IndexResolver\:\:buildIndexKey\(\) expects int\|string, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Support/IndexResolver.php
+
+		-
+			message: '#^Parameter \$keys of class Sm_mE\\RedisModelCache\\Support\\ResolvedIndex constructor expects array\<int, string\>, array\<string\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Support/IndexResolver.php
+
+		-
+			message: '#^Binary operation "\." between ''\{prefix\}\:index\:…'' and mixed results in an error\.$#'
+			identifier: binaryOp.invalid
+			count: 3
+			path: src/Support/QueryPlanner.php
+
+		-
+			message: '#^Method Sm_mE\\RedisModelCache\\Support\\TenantResolvers\\RequestTenantResolver\:\:resolveFromAuth\(\) should return int\|string\|null but returns mixed\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Support/TenantResolvers/RequestTenantResolver.php
+
+		-
+			message: '#^Method Sm_mE\\RedisModelCache\\Support\\TenantResolvers\\RequestTenantResolver\:\:resolveFromSession\(\) should return int\|string\|null but returns mixed\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Support/TenantResolvers/RequestTenantResolver.php
+
+		-
+			message: '#^Cannot access offset ''connection'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 2
+			path: tests/Fixtures/DummyModel.php
+
+		-
+			message: '#^Cannot access offset ''custom_indexes'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 2
+			path: tests/Fixtures/DummyModel.php
+
+		-
+			message: '#^Cannot access offset ''indexes'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 2
+			path: tests/Fixtures/DummyModel.php
+
+		-
+			message: '#^Cannot access offset ''queue'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 2
+			path: tests/Fixtures/DummyModel.php
+
+		-
+			message: '#^Cannot access offset ''sorted'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 2
+			path: tests/Fixtures/DummyModel.php
+
+		-
+			message: '#^Cannot access offset ''strategy'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 2
+			path: tests/Fixtures/DummyModel.php
+
+		-
+			message: '#^Cannot access offset ''ttl'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 2
+			path: tests/Fixtures/DummyModel.php
+
+		-
+			message: '#^Cannot access offset ''versioned'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 2
+			path: tests/Fixtures/DummyModel.php
+
+		-
+			message: '#^Method Sm_mE\\RedisModelCache\\Tests\\Fixtures\\DummyModel\:\:resolveRedisModelCacheTouches\(\) should return array\<int, string\> but returns mixed\.$#'
+			identifier: return.type
+			count: 2
+			path: tests/Fixtures/DummyModel.php
+
+		-
+			message: '#^Method Sm_mE\\RedisModelCache\\Tests\\Fixtures\\DummySoftDeleteModel\:\:resolveRedisModelCacheTouches\(\) should return array\<int, string\> but returns mixed\.$#'
+			identifier: return.type
+			count: 2
+			path: tests/Fixtures/DummyModel.php

@@ -26,6 +26,7 @@ class CacheManager
     {
         $snapshot = $this->observability->snapshot();
         $redis = $this->connectionResolver->resolve();
+        /** @var array<string, mixed> $info */
         $info = $redis->info();
 
         return new CacheMetrics(
@@ -37,7 +38,7 @@ class CacheManager
                 'miss_rate' => $snapshot['miss_rate'],
             ],
             redis: [
-                'version' => $info['redis_version'] ?? 'N/A',
+                'version' => (string) ($info['redis_version'] ?? 'N/A'),
                 'used_memory' => (int) ($info['used_memory'] ?? 0),
                 'used_memory_peak' => (int) ($info['used_memory_peak'] ?? 0),
                 'uptime_seconds' => (int) ($info['uptime_in_seconds'] ?? 0),
@@ -107,7 +108,7 @@ class CacheManager
             in_array(self::FACADE_TRAIT, class_uses_recursive($modelClass), true)
             && method_exists($modelClass, 'redisModelCacheConfig')
         ) {
-            return $modelClass::redisModelCacheConfig();
+            return (array) $modelClass::redisModelCacheConfig();
         }
 
         return [];

@@ -12,16 +12,12 @@ declare(strict_types=1);
  * Run: php benchmarks/memory_benchmark.php
  */
 
-use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Redis;
 use Sm_mE\RedisModelCache\RedisModelService;
 
-require __DIR__.'/../vendor/autoload.php';
-
-$app = require_once __DIR__.'/../workbench/bootstrap/app.php';
-$app->make(Kernel::class)->bootstrap();
+require __DIR__.'/bootstrap.php';
 
 class MemoryModel extends Model
 {
