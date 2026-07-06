@@ -37,7 +37,8 @@ jobs:
         with:
           php-version: ${{ matrix.php }}
           extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite3, pdo_sqlite, bcmath, soap, intl, gd, exif, iconv, imagick, fileinfo, redis
-          coverage: none
+          coverage: xdebug
+          ini-values: xdebug.mode=coverage
 
       - name: Setup problem matchers
         run: |
@@ -52,7 +53,14 @@ jobs:
         run: vendor/bin/pint --test
 
       - name: Run PHP Tests
-        run: vendor/bin/phpunit --testdox
+        run: vendor/bin/phpunit --testdox --coverage-clover coverage.xml
+
+      - name: Upload coverage to Codecov
+        if: matrix.php == '8.4' && matrix.stability == 'prefer-stable'
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage.xml
+          fail_ci_if_error: false
 
       - name: Run PHPStan
         if: matrix.php == '8.4'
