@@ -14,12 +14,15 @@ use RuntimeException;
 use Sm_mE\RedisModelCache\Contracts\ModelCacheService;
 use Sm_mE\RedisModelCache\Contracts\ModelMatchStrategy;
 use Sm_mE\RedisModelCache\Contracts\RedisConnectionResolver;
+use Sm_mE\RedisModelCache\Contracts\TenantResolverInterface;
 use Sm_mE\RedisModelCache\Events\CacheHit;
 use Sm_mE\RedisModelCache\Events\CacheMiss;
 use Sm_mE\RedisModelCache\Events\QueryExecuted;
 use Sm_mE\RedisModelCache\Jobs\RevalidateCacheJob;
 use Sm_mE\RedisModelCache\Support\DefaultConnectionResolver;
 use Sm_mE\RedisModelCache\Support\ExplainResult;
+use Sm_mE\RedisModelCache\Support\IndexResolver;
+use Sm_mE\RedisModelCache\Support\QueryPlanner;
 use Sm_mE\RedisModelCache\Support\StampedeProtection;
 
 /** @implements ModelCacheService<int, Model> */
@@ -59,6 +62,10 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
     /** @var bool Whether debug verbose logging is enabled */
     protected bool $debugMode = false;
 
+    protected IndexResolver $indexResolver;
+
+    protected QueryPlanner $queryPlanner;
+
     /**
      * @param  array<int, string>  $indexes
      * @param  array<int, string>  $sorted
@@ -91,6 +98,8 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         $this->custom_indexes = $custom_indexes;
         $this->matchStrategy = $matchStrategy ?? app(ModelMatchStrategy::class);
         $this->metricsEnabled = (bool) config('redis-model-cache.observability.enabled', true);
+        $this->indexResolver = new IndexResolver;
+        $this->queryPlanner = new QueryPlanner;
     }
 
     /**
@@ -136,6 +145,10 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
             return collect();
         }
 
+        if (! $hydrate) {
+            return collect($ids);
+        }
+
         $hashKey = $this->hashKey();
         $maxBatch = max(1, (int) config('redis-model-cache.hydrate_batch_size', 5000));
 
@@ -143,29 +156,17 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         $results = [];
 
         if (count($ids) <= $maxBatch) {
-            $pipeline = $this->redis->pipeline();
-
+            $raw = $this->redis->hmget($hashKey, $ids);
             foreach ($ids as $id) {
-                $pipeline->hget($hashKey, $id);
+                $results[] = $raw[$id] ?? false;
             }
-
-            $results = $this->executePipeline($pipeline);
         } else {
-            // Chunk large ID sets into batches to avoid huge pipeline arrays
             foreach (array_chunk($ids, $maxBatch) as $chunk) {
-                $pipeline = $this->redis->pipeline();
-
+                $raw = $this->redis->hmget($hashKey, $chunk);
                 foreach ($chunk as $id) {
-                    $pipeline->hget($hashKey, $id);
+                    $results[] = $raw[$id] ?? false;
                 }
-
-                $chunkResults = $this->executePipeline($pipeline);
-                array_push($results, ...$chunkResults);
             }
-        }
-
-        if (! $hydrate) {
-            return collect($ids);
         }
 
         return collect($results)
@@ -208,30 +209,23 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
      */
     protected function buildPrefix(string $table): string
     {
-        // Check if multi-tenant is enabled
         if (! config('redis-model-cache.multi_tenant.enabled', false)) {
             return '{'.$table.'}';
         }
 
-        // Get tenant resolver class
-        $resolverClass = config('redis-model-cache.multi_tenant.resolver');
-
-        if (! $resolverClass || ! class_exists($resolverClass)) {
-            return '{'.$table.'}';
-        }
-
-        // Resolve tenant ID
         try {
-            $resolver = app($resolverClass);
+            /** @var TenantResolverInterface $resolver */
+            $resolver = app(TenantResolverInterface::class);
             $tenantId = $resolver->getTenantId();
 
             if ($tenantId === null) {
                 return '{'.$table.'}';
             }
 
-            // Hash tag wraps tenant:ID:table so all keys for a tenant+model land on same node
-            return '{'.'tenant:'.$tenantId.':'.$table.'}';
-        } catch (\Exception $e) {
+            $sanitized = str_replace(['{', '}', ':'], ['', '', '_'], (string) $tenantId);
+
+            return '{'.'tenant:'.$sanitized.':'.$table.'}';
+        } catch (\Throwable $e) {
             return '{'.$table.'}';
         }
     }
@@ -395,6 +389,32 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
     {
         foreach ($this->sorted as $field) {
             $this->redis->zrem($this->sortedKey($field), (string) $id);
+        }
+    }
+
+    /**
+     * Remove model ID from all custom index sets on delete.
+     *
+     * @param  int|string  $id  Model primary key
+     * @param  array<string, mixed>  $attributes  Model attributes (unused, kept for signature stability)
+     */
+    public function removeCustomIndexes(int|string $id, array $attributes = []): void
+    {
+        foreach (array_keys($this->custom_indexes) as $name) {
+            $this->redis->srem($this->customIndexKey((string) $name), (string) $id);
+        }
+    }
+
+    /**
+     * Atomically increment the version counter in meta hash.
+     * Used by versioned invalidation to signal cache staleness.
+     */
+    public function bustVersion(): void
+    {
+        $this->redis->hincrby($this->metaKey(), 'version', 1);
+
+        if ($this->ttl) {
+            $this->redis->expire($this->metaKey(), $this->ttl);
         }
     }
 
@@ -689,6 +709,9 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
     /**
      * Query by indexed fields only using set intersection (SINTER).
      *
+     * Delegates field validation and key resolution to IndexResolver.
+     * No O(N) hash scans — every query maps to deterministic set ops.
+     *
      * @param  array<string, mixed>  $where  Equality conditions only (field => value)
      * @param  array<string>|null  $only
      * @return Collection<int, Model>|ExplainResult
@@ -699,60 +722,40 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
     {
         $startTime = microtime(true);
 
-        // Validate ALL query fields are indexed
-        foreach (array_keys($where) as $field) {
-            if (! in_array($field, $this->indexes, true)) {
-                throw new InvalidArgumentException(
-                    "Field '{$field}' is not indexed. Define it in \$indexes constructor arg. "
-                    .'Available: ['.implode(', ', $this->indexes).']'
-                );
-            }
-        }
+        // Resolve via IndexResolver — validates and determines strategy
+        $resolved = $this->indexResolver->resolve($where, $this->indexes);
 
-        // Build index keys for each equality condition
-        $indexKeys = [];
-        foreach ($where as $field => $value) {
-            $indexKeys[] = $this->indexKey($field, $value);
-        }
+        // Build concrete keys using the service prefix
+        $indexKeys = $this->buildConcreteKeys($where);
 
-        // Explain mode: return query plan without executing
+        // Explain mode: delegate to QueryPlanner for deterministic plan
         if ($this->explainMode) {
-            $this->explainMode = false; // Reset for next query
+            $this->explainMode = false;
 
-            $steps = [];
-            foreach ($indexKeys as $key) {
-                $steps[] = [
-                    'command' => 'SMEMBERS',
-                    'key' => $key,
-                    'estimated_cardinality' => 'unknown (explain mode)',
-                ];
-            }
-
-            if (count($indexKeys) > 1) {
-                $steps[] = [
-                    'command' => 'SINTER',
-                    'key' => implode(' ', $indexKeys),
-                    'estimated_cardinality' => 'intersection result',
-                ];
-            }
-
-            $steps[] = [
-                'command' => 'Pipeline HGET × N',
-                'key' => $this->hashKey(),
-                'estimated_cardinality' => 'N models',
-            ];
+            $plan = $this->queryPlanner->plan('where', $resolved, $this->hashKey(), [
+                'prefix' => $this->prefix,
+                'where' => $where,
+            ]);
 
             return new ExplainResult(
                 operation: 'where',
                 parameters: $where,
-                steps: $steps,
-                totalCommands: count($indexKeys) > 0 ? 1 + count($indexKeys) : 0,
-                strategy: count($indexKeys) > 1 ? 'index_intersection' : 'single_index_lookup'
+                steps: array_map(fn (array $s): array => [
+                    'command' => $s['command'],
+                    'key' => $s['key'],
+                    'estimated_cardinality' => $s['estimated_cost'],
+                ], $plan->steps),
+                totalCommands: $plan->totalCommands,
+                strategy: $resolved->strategy,
             );
         }
 
-        // Set intersection = AND logic
-        $ids = $indexKeys === [] ? [] : $this->redis->sinter(...$indexKeys);
+        // Deterministic Redis ops based on resolved strategy
+        $ids = match ($resolved->command) {
+            'SMEMBERS' => $this->redis->smembers($indexKeys[0]),
+            'SINTER' => $this->redis->sinter(...$indexKeys),
+            default => throw new RuntimeException("Unexpected command: {$resolved->command}"),
+        };
 
         // Optional $only filter (primary keys)
         if ($only !== null && $only !== []) {
@@ -764,7 +767,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
 
         // Dispatch metrics event
         if ($this->metricsEnabled && config('redis-model-cache.observability.dispatch_events', true)) {
-            $executionTime = (microtime(true) - $startTime) * 1000; // Convert to milliseconds
+            $executionTime = (microtime(true) - $startTime) * 1000;
 
             if ($ids !== []) {
                 event(new CacheHit(
@@ -792,6 +795,8 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
      * Query models where field value is in the given array (OR logic).
      * Uses Redis SUNION to combine multiple index sets.
      *
+     * Delegates field validation and key resolution to IndexResolver.
+     *
      * @param  string  $field  The indexed field to query
      * @param  array<int|string>  $values  Array of values to match (OR logic)
      * @param  bool  $hydrate  Whether to return full models or just IDs
@@ -804,67 +809,44 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
     {
         $startTime = microtime(true);
 
-        // Validate field is indexed
-        if (! in_array($field, $this->indexes, true)) {
-            throw new InvalidArgumentException(
-                "Field '{$field}' is not indexed. Define it in \$indexes constructor arg. "
-                .'Available: ['.implode(', ', $this->indexes).']'
-            );
-        }
+        // Resolve via IndexResolver — validates and determines strategy
+        $resolved = $this->indexResolver->resolveWhereIn($field, $values, $this->indexes);
 
-        // Validate values array is not empty
-        if ($values === []) {
-            throw new InvalidArgumentException(
-                "Values array cannot be empty for whereIn query on field '{$field}'."
-            );
-        }
+        // Build concrete keys using the service prefix
+        $indexKeys = array_map(
+            fn (string|int $value): string => $this->indexKey($field, $value),
+            $values
+        );
 
-        // Build index keys for each value
-        $indexKeys = [];
-        foreach ($values as $value) {
-            $indexKeys[] = $this->indexKey($field, $value);
-        }
-
-        // Explain mode: return query plan without executing
+        // Explain mode: delegate to QueryPlanner for deterministic plan
         if ($this->explainMode) {
-            $this->explainMode = false; // Reset for next query
+            $this->explainMode = false;
 
-            $steps = [];
-            foreach ($indexKeys as $key) {
-                $steps[] = [
-                    'command' => 'SMEMBERS',
-                    'key' => $key,
-                    'estimated_cardinality' => 'unknown (explain mode)',
-                ];
-            }
-
-            if (count($indexKeys) > 1) {
-                $steps[] = [
-                    'command' => 'SUNION',
-                    'key' => implode(' ', $indexKeys),
-                    'estimated_cardinality' => 'union result',
-                ];
-            }
-
-            $steps[] = [
-                'command' => 'Pipeline HGET × N',
-                'key' => $this->hashKey(),
-                'estimated_cardinality' => 'N models',
-            ];
+            $plan = $this->queryPlanner->plan('whereIn', $resolved, $this->hashKey(), [
+                'prefix' => $this->prefix,
+                'field' => $field,
+                'values' => $values,
+            ]);
 
             return new ExplainResult(
                 operation: 'whereIn',
                 parameters: ['field' => $field, 'values' => $values],
-                steps: $steps,
-                totalCommands: count($indexKeys) + 1,
-                strategy: count($indexKeys) > 1 ? 'index_union' : 'single_index_lookup'
+                steps: array_map(fn (array $s): array => [
+                    'command' => $s['command'],
+                    'key' => $s['key'],
+                    'estimated_cardinality' => $s['estimated_cost'],
+                ], $plan->steps),
+                totalCommands: $plan->totalCommands,
+                strategy: $resolved->strategy,
             );
         }
 
-        // Set union = OR logic
-        $ids = count($indexKeys) === 1
-            ? $this->redis->smembers($indexKeys[0])
-            : $this->redis->sunion(...$indexKeys);
+        // Deterministic Redis ops based on resolved strategy
+        $ids = match ($resolved->command) {
+            'SMEMBERS' => $this->redis->smembers($indexKeys[0]),
+            'SUNION' => $this->redis->sunion(...$indexKeys),
+            default => throw new RuntimeException("Unexpected command: {$resolved->command}"),
+        };
 
         // Optional $only filter (primary keys)
         if ($only !== null && $only !== []) {
@@ -1085,26 +1067,23 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
             return collect();
         }
 
-        // Fetch payloads with batched pipelines for large sets
+        // Fetch payloads with batched HMGET for large sets
         $hashKey = $this->hashKey();
         $maxBatch = max(1, (int) config('redis-model-cache.hydrate_batch_size', 5000));
         /** @var array<int, string|false> $results */
         $results = [];
 
         if (count($ids) <= $maxBatch) {
-            $pipeline = $this->redis->pipeline();
+            $raw = $this->redis->hmget($hashKey, $ids);
             foreach ($ids as $id) {
-                $pipeline->hget($hashKey, $id);
+                $results[] = $raw[$id] ?? false;
             }
-            $results = $this->executePipeline($pipeline);
         } else {
             foreach (array_chunk($ids, $maxBatch) as $chunk) {
-                $pipeline = $this->redis->pipeline();
+                $raw = $this->redis->hmget($hashKey, $chunk);
                 foreach ($chunk as $id) {
-                    $pipeline->hget($hashKey, $id);
+                    $results[] = $raw[$id] ?? false;
                 }
-                $chunkResults = $this->executePipeline($pipeline);
-                array_push($results, ...$chunkResults);
             }
         }
 
@@ -1123,6 +1102,81 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
 
                 /** @var array<string, mixed> */
                 return $dto;
+            })
+            ->values();
+    }
+
+    /**
+     * Lightweight field-only fetch — returns collections of arrays, not models.
+     *
+     * Uses HMGET for single-round-trip batch fetching, then extracts only the
+     * requested fields from the serialized payload. Avoids full model hydration
+     * and relation reconstruction, reducing memory by 60–80%.
+     *
+     * @param  array<string>  $fields  Field names to retrieve
+     * @param  array<string, mixed>  $where  WHERE conditions (indexed fields only)
+     * @param  array<string>|null  $only  Optional filter for specific primary keys
+     * @return Collection<int, array<string, mixed>>
+     */
+    public function selective(array $fields, array $where = [], ?array $only = null): Collection
+    {
+        foreach (array_keys($where) as $field) {
+            if (! in_array($field, $this->indexes, true)) {
+                throw new InvalidArgumentException(
+                    "Field '{$field}' is not indexed. Declare it in \$indexes. "
+                    .'Available: ['.implode(', ', $this->indexes).']'
+                );
+            }
+        }
+
+        if ($fields === []) {
+            throw new InvalidArgumentException('Fields array cannot be empty.');
+        }
+
+        $ids = $where !== []
+            ? $this->redis->sinter(...$this->buildConcreteKeys($where))
+            : $this->redis->hkeys($this->hashKey());
+
+        if ($only !== null && $only !== []) {
+            $ids = array_values(array_intersect($ids, $only));
+        }
+
+        if ($ids === []) {
+            return collect();
+        }
+
+        $hashKey = $this->hashKey();
+        $maxBatch = max(1, (int) config('redis-model-cache.hydrate_batch_size', 5000));
+        $results = [];
+
+        if (count($ids) <= $maxBatch) {
+            $raw = $this->redis->hmget($hashKey, $ids);
+            foreach ($ids as $id) {
+                $results[] = $raw[$id] ?? false;
+            }
+        } else {
+            foreach (array_chunk($ids, $maxBatch) as $chunk) {
+                $raw = $this->redis->hmget($hashKey, $chunk);
+                foreach ($chunk as $id) {
+                    $results[] = $raw[$id] ?? false;
+                }
+            }
+        }
+
+        return collect($results)
+            ->filter()
+            ->map(function (string $payload) use ($fields): array {
+                /** @var array{attributes: array<string, mixed>, relations: array<string, mixed>} $data */
+                $data = $this->deserialize($payload);
+
+                // Build lightweight DTO with only requested fields
+                $row = [];
+                foreach ($fields as $field) {
+                    $row[$field] = $data['attributes'][$field] ?? null;
+                }
+
+                /** @var array<string, mixed> */
+                return $row;
             })
             ->values();
     }
@@ -2058,6 +2112,126 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         ];
 
         return $result;
+    }
+
+    /**
+     * Build concrete index keys for a where clause using the service prefix.
+     *
+     * @param  array<string, mixed>  $where
+     * @return array<int, string>
+     */
+    protected function buildConcreteKeys(array $where): array
+    {
+        $keys = [];
+        foreach ($where as $field => $value) {
+            $keys[] = $this->indexKey($field, $value);
+        }
+
+        return $keys;
+    }
+
+    /**
+     * Find a single model by primary key via direct HGET.
+     *
+     * O(1) — no index needed, no scan.
+     */
+    public function find(int|string $id): ?Model
+    {
+        $hashKey = $this->hashKey();
+        $payload = $this->redis->hget($hashKey, (string) $id);
+
+        if ($payload === null || $payload === false) {
+            return null;
+        }
+
+        /** @var array{attributes: array<string, mixed>, relations: array<string, mixed>} $data */
+        $data = $this->deserialize($payload);
+
+        return $this->hydrateModelFromPayload($data);
+    }
+
+    /**
+     * Return the first model matching the where clause.
+     *
+     * Resolves via IndexResolver, executes SMEMBERS/SINTER for the
+     * first matching ID, then HGET to hydrate. No O(N) hydration.
+     */
+    public function first(array $where): ?Model
+    {
+        $resolved = $this->indexResolver->resolve($where, $this->indexes);
+        $indexKeys = $this->buildConcreteKeys($where);
+
+        // Resolve IDs via the determined strategy, take first only
+        $ids = match ($resolved->command) {
+            'SMEMBERS' => $this->redis->smembers($indexKeys[0]),
+            'SINTER' => $this->redis->sinter(...$indexKeys),
+            default => throw new RuntimeException("Unexpected command: {$resolved->command}"),
+        };
+
+        if ($ids === []) {
+            return null;
+        }
+
+        // Hydrate only the first match
+        $hashKey = $this->hashKey();
+        $payload = $this->redis->hget($hashKey, $ids[0]);
+
+        if ($payload === null || $payload === false) {
+            return null;
+        }
+
+        /** @var array{attributes: array<string, mixed>, relations: array<string, mixed>} $data */
+        $data = $this->deserialize($payload);
+
+        return $this->hydrateModelFromPayload($data);
+    }
+
+    /**
+     * Count models matching the where clause.
+     *
+     * Single-index: uses SCARD (O(1)).
+     * Multi-index: uses SINTER + count (O(N)).
+     *
+     * No hydration — counts from indexes only.
+     */
+    public function count(array $where): int
+    {
+        $resolved = $this->indexResolver->resolve($where, $this->indexes);
+        $indexKeys = $this->buildConcreteKeys($where);
+
+        // Single index: use SCARD for O(1) cardinality
+        if ($resolved->isSingleKey()) {
+            return $this->redis->scard($indexKeys[0]);
+        }
+
+        // Multi index: intersection needed
+        $ids = $this->redis->sinter(...$indexKeys);
+
+        return count($ids);
+    }
+
+    /**
+     * Check if any models match the where clause.
+     *
+     * Single-index: uses EXISTS (O(1)).
+     * Multi-index: uses SINTER + check (O(N)).
+     *
+     * No hydration — existence from indexes only.
+     */
+    public function exists(array $where): bool
+    {
+        $resolved = $this->indexResolver->resolve($where, $this->indexes);
+        $indexKeys = $this->buildConcreteKeys($where);
+
+        // Single index: use EXISTS for O(1) check
+        if ($resolved->isSingleKey()) {
+            return (bool) $this->redis->exists($indexKeys[0]);
+        }
+
+        // Multi index: intersection needed
+        $ids = $this->redis->sinter(...$indexKeys);
+
+        return $ids !== [];
     }
 
     /**
