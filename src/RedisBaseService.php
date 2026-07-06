@@ -180,11 +180,17 @@ LUA;
     }
 
     /**
-     * Compress data if compression is enabled.
+     * Compress data if compression is enabled and payload exceeds minimum threshold.
      */
     protected function compress(string $data): string
     {
         if (! config('redis-model-cache.compression.enabled', false)) {
+            return $data;
+        }
+
+        $minSize = (int) config('redis-model-cache.compression.min_size', 512);
+
+        if (strlen($data) < $minSize) {
             return $data;
         }
 

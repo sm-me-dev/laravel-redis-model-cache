@@ -138,13 +138,9 @@ class RedisModelServiceTest extends TestCase
         $serialized = json_encode($payload, JSON_THROW_ON_ERROR);
 
         $this->redis->shouldReceive('smembers')->with('{test_models}:index:role_id:1')->andReturn(['1']);
-        $this->redis->shouldReceive('pipeline')->andReturn(
-            Mockery::mock('Illuminate\Redis\Connections\Pipeline')
-                ->shouldReceive('hget')->with('{test_models}:hash', '1')->andReturn($serialized)
-                ->getMock()
-                ->shouldReceive('execute')->andReturn([$serialized])
-                ->getMock()
-        );
+        $this->redis->shouldReceive('hmget')
+            ->with('{test_models}:hash', Mockery::type('array'))
+            ->andReturn(['1' => $serialized]);
 
         $result = $this->service->where(['role_id' => 1]);
 
@@ -180,18 +176,12 @@ class RedisModelServiceTest extends TestCase
     {
         $this->redis->shouldReceive('smembers')->with('{test_models}:index:role_id:1')->andReturn(['1', '2']);
 
-        $pipelineMock = Mockery::mock('Illuminate\Redis\Connections\Pipeline');
-        $this->redis->shouldReceive('pipeline')->andReturn($pipelineMock);
-        $pipelineMock->shouldReceive('hget')->with('{test_models}:hash', '1')->andReturn(
-            json_encode(['attributes' => ['id' => 1, 'role_id' => 1, 'status' => 'active'], 'relations' => []], JSON_THROW_ON_ERROR)
-        );
-        $pipelineMock->shouldReceive('hget')->with('{test_models}:hash', '2')->andReturn(
-            json_encode(['attributes' => ['id' => 2, 'role_id' => 1, 'status' => 'inactive'], 'relations' => []], JSON_THROW_ON_ERROR)
-        );
-        $pipelineMock->shouldReceive('execute')->andReturn([
-            json_encode(['attributes' => ['id' => 1, 'role_id' => 1, 'status' => 'active'], 'relations' => []], JSON_THROW_ON_ERROR),
-            json_encode(['attributes' => ['id' => 2, 'role_id' => 1, 'status' => 'inactive'], 'relations' => []], JSON_THROW_ON_ERROR),
-        ]);
+        $this->redis->shouldReceive('hmget')
+            ->with('{test_models}:hash', Mockery::type('array'))
+            ->andReturn([
+                '1' => json_encode(['attributes' => ['id' => 1, 'role_id' => 1, 'status' => 'active'], 'relations' => []], JSON_THROW_ON_ERROR),
+                '2' => json_encode(['attributes' => ['id' => 2, 'role_id' => 1, 'status' => 'inactive'], 'relations' => []], JSON_THROW_ON_ERROR),
+            ]);
 
         $result = $this->service->where(['role_id' => 1]);
 
@@ -214,17 +204,11 @@ class RedisModelServiceTest extends TestCase
         $this->redis->shouldReceive('exists')->with('{test_models}:index:role_id:1')->andReturn(true);
         $this->redis->shouldReceive('smembers')->with('{test_models}:index:role_id:1')->andReturn(['1']);
 
-        $this->redis->shouldReceive('pipeline')->andReturn(
-            Mockery::mock('Illuminate\Redis\Connections\Pipeline')
-                ->shouldReceive('hget')->with('{test_models}:hash', '1')->andReturn(
-                    json_encode(['attributes' => ['id' => 1, 'role_id' => 1, 'status' => 'active'], 'relations' => []], JSON_THROW_ON_ERROR)
-                )
-                ->getMock()
-                ->shouldReceive('execute')->andReturn([
-                    json_encode(['attributes' => ['id' => 1, 'role_id' => 1, 'status' => 'active'], 'relations' => []], JSON_THROW_ON_ERROR),
-                ])
-                ->getMock()
-        );
+        $this->redis->shouldReceive('hmget')
+            ->with('{test_models}:hash', Mockery::type('array'))
+            ->andReturn([
+                '1' => json_encode(['attributes' => ['id' => 1, 'role_id' => 1, 'status' => 'active'], 'relations' => []], JSON_THROW_ON_ERROR),
+            ]);
 
         $result = $this->service->rememberIndex('role_id', 1, fn () => new Collection([]));
 
@@ -235,18 +219,12 @@ class RedisModelServiceTest extends TestCase
     {
         $this->redis->shouldReceive('sinter')->with('{test_models}:custom:active_admins')->andReturn(['1', '2']);
 
-        $pipelineMock = Mockery::mock('Illuminate\Redis\Connections\Pipeline');
-        $this->redis->shouldReceive('pipeline')->andReturn($pipelineMock);
-        $pipelineMock->shouldReceive('hget')->with('{test_models}:hash', '1')->andReturn(
-            json_encode(['attributes' => ['id' => 1, 'role_id' => 1, 'status' => 'active'], 'relations' => []], JSON_THROW_ON_ERROR)
-        );
-        $pipelineMock->shouldReceive('hget')->with('{test_models}:hash', '2')->andReturn(
-            json_encode(['attributes' => ['id' => 2, 'role_id' => 1, 'status' => 'active'], 'relations' => []], JSON_THROW_ON_ERROR)
-        );
-        $pipelineMock->shouldReceive('execute')->andReturn([
-            json_encode(['attributes' => ['id' => 1, 'role_id' => 1, 'status' => 'active'], 'relations' => []], JSON_THROW_ON_ERROR),
-            json_encode(['attributes' => ['id' => 2, 'role_id' => 1, 'status' => 'active'], 'relations' => []], JSON_THROW_ON_ERROR),
-        ]);
+        $this->redis->shouldReceive('hmget')
+            ->with('{test_models}:hash', Mockery::type('array'))
+            ->andReturn([
+                '1' => json_encode(['attributes' => ['id' => 1, 'role_id' => 1, 'status' => 'active'], 'relations' => []], JSON_THROW_ON_ERROR),
+                '2' => json_encode(['attributes' => ['id' => 2, 'role_id' => 1, 'status' => 'active'], 'relations' => []], JSON_THROW_ON_ERROR),
+            ]);
 
         $result = $this->service->customWhere(['active_admins']);
 
@@ -314,18 +292,12 @@ class RedisModelServiceTest extends TestCase
     {
         $this->redis->shouldReceive('zrevrange')->with('{test_models}:sorted:created_at', 0, 9)->andReturn(['2', '1']);
 
-        $pipelineMock = Mockery::mock('Illuminate\Redis\Connections\Pipeline');
-        $this->redis->shouldReceive('pipeline')->andReturn($pipelineMock);
-        $pipelineMock->shouldReceive('hget')->with('{test_models}:hash', '2')->andReturn(
-            json_encode(['attributes' => ['id' => 2, 'role_id' => 1, 'status' => 'active', 'created_at' => '2024-01-02'], 'relations' => []], JSON_THROW_ON_ERROR)
-        );
-        $pipelineMock->shouldReceive('hget')->with('{test_models}:hash', '1')->andReturn(
-            json_encode(['attributes' => ['id' => 1, 'role_id' => 1, 'status' => 'active', 'created_at' => '2024-01-01'], 'relations' => []], JSON_THROW_ON_ERROR)
-        );
-        $pipelineMock->shouldReceive('execute')->andReturn([
-            json_encode(['attributes' => ['id' => 2, 'role_id' => 1, 'status' => 'active', 'created_at' => '2024-01-02'], 'relations' => []], JSON_THROW_ON_ERROR),
-            json_encode(['attributes' => ['id' => 1, 'role_id' => 1, 'status' => 'active', 'created_at' => '2024-01-01'], 'relations' => []], JSON_THROW_ON_ERROR),
-        ]);
+        $this->redis->shouldReceive('hmget')
+            ->with('{test_models}:hash', Mockery::type('array'))
+            ->andReturn([
+                '2' => json_encode(['attributes' => ['id' => 2, 'role_id' => 1, 'status' => 'active', 'created_at' => '2024-01-02'], 'relations' => []], JSON_THROW_ON_ERROR),
+                '1' => json_encode(['attributes' => ['id' => 1, 'role_id' => 1, 'status' => 'active', 'created_at' => '2024-01-01'], 'relations' => []], JSON_THROW_ON_ERROR),
+            ]);
 
         $result = $this->service->sorted('created_at', 0, 9);
 
@@ -337,14 +309,11 @@ class RedisModelServiceTest extends TestCase
     {
         $this->redis->shouldReceive('zrevrange')->with('{test_models}:sorted:created_at', 10, 19)->andReturn(['3']);
 
-        $pipelineMock = Mockery::mock('Illuminate\Redis\Connections\Pipeline');
-        $this->redis->shouldReceive('pipeline')->andReturn($pipelineMock);
-        $pipelineMock->shouldReceive('hget')->with('{test_models}:hash', '3')->andReturn(
-            json_encode(['attributes' => ['id' => 3, 'role_id' => 1, 'status' => 'active', 'created_at' => '2024-01-03'], 'relations' => []], JSON_THROW_ON_ERROR)
-        );
-        $pipelineMock->shouldReceive('execute')->andReturn([
-            json_encode(['attributes' => ['id' => 3, 'role_id' => 1, 'status' => 'active', 'created_at' => '2024-01-03'], 'relations' => []], JSON_THROW_ON_ERROR),
-        ]);
+        $this->redis->shouldReceive('hmget')
+            ->with('{test_models}:hash', Mockery::type('array'))
+            ->andReturn([
+                '3' => json_encode(['attributes' => ['id' => 3, 'role_id' => 1, 'status' => 'active', 'created_at' => '2024-01-03'], 'relations' => []], JSON_THROW_ON_ERROR),
+            ]);
 
         $result = $this->service->paginateSorted('created_at', 2, 10);
 
@@ -724,18 +693,12 @@ class RedisModelServiceTest extends TestCase
     {
         $this->redis->shouldReceive('smembers')->with('{test_models}:custom:active_admins')->andReturn(['1', '2']);
 
-        $pipelineMock = Mockery::mock('Illuminate\Redis\Connections\Pipeline');
-        $this->redis->shouldReceive('pipeline')->andReturn($pipelineMock);
-        $pipelineMock->shouldReceive('hget')->with('{test_models}:hash', '1')->andReturn(
-            json_encode(['attributes' => ['id' => 1, 'role_id' => 1, 'status' => 'active'], 'relations' => []], JSON_THROW_ON_ERROR)
-        );
-        $pipelineMock->shouldReceive('hget')->with('{test_models}:hash', '2')->andReturn(
-            json_encode(['attributes' => ['id' => 2, 'role_id' => 1, 'status' => 'active'], 'relations' => []], JSON_THROW_ON_ERROR)
-        );
-        $pipelineMock->shouldReceive('execute')->andReturn([
-            json_encode(['attributes' => ['id' => 1, 'role_id' => 1, 'status' => 'active'], 'relations' => []], JSON_THROW_ON_ERROR),
-            json_encode(['attributes' => ['id' => 2, 'role_id' => 1, 'status' => 'active'], 'relations' => []], JSON_THROW_ON_ERROR),
-        ]);
+        $this->redis->shouldReceive('hmget')
+            ->with('{test_models}:hash', Mockery::type('array'))
+            ->andReturn([
+                '1' => json_encode(['attributes' => ['id' => 1, 'role_id' => 1, 'status' => 'active'], 'relations' => []], JSON_THROW_ON_ERROR),
+                '2' => json_encode(['attributes' => ['id' => 2, 'role_id' => 1, 'status' => 'active'], 'relations' => []], JSON_THROW_ON_ERROR),
+            ]);
 
         $result = $this->service->custom('active_admins');
 
@@ -757,14 +720,11 @@ class RedisModelServiceTest extends TestCase
         $this->redis->shouldReceive('exists')->with('{test_models}:custom:active_admins')->andReturn(true);
         $this->redis->shouldReceive('smembers')->with('{test_models}:custom:active_admins')->andReturn(['1']);
 
-        $pipelineMock = Mockery::mock('Illuminate\Redis\Connections\Pipeline');
-        $this->redis->shouldReceive('pipeline')->andReturn($pipelineMock);
-        $pipelineMock->shouldReceive('hget')->with('{test_models}:hash', '1')->andReturn(
-            json_encode(['attributes' => ['id' => 1, 'role_id' => 1, 'status' => 'active'], 'relations' => []], JSON_THROW_ON_ERROR)
-        );
-        $pipelineMock->shouldReceive('execute')->andReturn([
-            json_encode(['attributes' => ['id' => 1, 'role_id' => 1, 'status' => 'active'], 'relations' => []], JSON_THROW_ON_ERROR),
-        ]);
+        $this->redis->shouldReceive('hmget')
+            ->with('{test_models}:hash', Mockery::type('array'))
+            ->andReturn([
+                '1' => json_encode(['attributes' => ['id' => 1, 'role_id' => 1, 'status' => 'active'], 'relations' => []], JSON_THROW_ON_ERROR),
+            ]);
 
         $result = $this->service->rememberCustom('active_admins', fn () => new Collection([]));
 
@@ -833,18 +793,12 @@ class RedisModelServiceTest extends TestCase
         $this->redis->shouldReceive('exists')->with('{test_models}:custom:active_admins:sorted:created_at')->andReturn(true);
         $this->redis->shouldReceive('zrange')->with('{test_models}:custom:active_admins:sorted:created_at', 0, -1)->andReturn(['2', '1']);
 
-        $pipelineMock = Mockery::mock('Illuminate\Redis\Connections\Pipeline');
-        $this->redis->shouldReceive('pipeline')->andReturn($pipelineMock);
-        $pipelineMock->shouldReceive('hget')->with('{test_models}:hash', '2')->andReturn(
-            json_encode(['attributes' => ['id' => 2, 'role_id' => 1, 'status' => 'active', 'created_at' => '2024-01-02'], 'relations' => []], JSON_THROW_ON_ERROR)
-        );
-        $pipelineMock->shouldReceive('hget')->with('{test_models}:hash', '1')->andReturn(
-            json_encode(['attributes' => ['id' => 1, 'role_id' => 1, 'status' => 'active', 'created_at' => '2024-01-01'], 'relations' => []], JSON_THROW_ON_ERROR)
-        );
-        $pipelineMock->shouldReceive('execute')->andReturn([
-            json_encode(['attributes' => ['id' => 2, 'role_id' => 1, 'status' => 'active', 'created_at' => '2024-01-02'], 'relations' => []], JSON_THROW_ON_ERROR),
-            json_encode(['attributes' => ['id' => 1, 'role_id' => 1, 'status' => 'active', 'created_at' => '2024-01-01'], 'relations' => []], JSON_THROW_ON_ERROR),
-        ]);
+        $this->redis->shouldReceive('hmget')
+            ->with('{test_models}:hash', Mockery::type('array'))
+            ->andReturn([
+                '2' => json_encode(['attributes' => ['id' => 2, 'role_id' => 1, 'status' => 'active', 'created_at' => '2024-01-02'], 'relations' => []], JSON_THROW_ON_ERROR),
+                '1' => json_encode(['attributes' => ['id' => 1, 'role_id' => 1, 'status' => 'active', 'created_at' => '2024-01-01'], 'relations' => []], JSON_THROW_ON_ERROR),
+            ]);
 
         $result = $this->service->rememberCustom('active_admins', fn () => new Collection([]), sortBy: 'created_at');
 
@@ -856,18 +810,12 @@ class RedisModelServiceTest extends TestCase
     {
         $this->redis->shouldReceive('zrevrange')->with('{test_models}:sorted:created_at', 0, 9)->andReturn(['2', '1']);
 
-        $pipelineMock = Mockery::mock('Illuminate\Redis\Connections\Pipeline');
-        $this->redis->shouldReceive('pipeline')->andReturn($pipelineMock);
-        $pipelineMock->shouldReceive('hget')->with('{test_models}:hash', '2')->andReturn(
-            json_encode(['attributes' => ['id' => 2, 'created_at' => '2024-01-02'], 'relations' => []], JSON_THROW_ON_ERROR)
-        );
-        $pipelineMock->shouldReceive('hget')->with('{test_models}:hash', '1')->andReturn(
-            json_encode(['attributes' => ['id' => 1, 'created_at' => '2024-01-01'], 'relations' => []], JSON_THROW_ON_ERROR)
-        );
-        $pipelineMock->shouldReceive('execute')->andReturn([
-            json_encode(['attributes' => ['id' => 2, 'created_at' => '2024-01-02'], 'relations' => []], JSON_THROW_ON_ERROR),
-            json_encode(['attributes' => ['id' => 1, 'created_at' => '2024-01-01'], 'relations' => []], JSON_THROW_ON_ERROR),
-        ]);
+        $this->redis->shouldReceive('hmget')
+            ->with('{test_models}:hash', Mockery::type('array'))
+            ->andReturn([
+                '2' => json_encode(['attributes' => ['id' => 2, 'created_at' => '2024-01-02'], 'relations' => []], JSON_THROW_ON_ERROR),
+                '1' => json_encode(['attributes' => ['id' => 1, 'created_at' => '2024-01-01'], 'relations' => []], JSON_THROW_ON_ERROR),
+            ]);
 
         $result = $this->service->sorted('created_at', 0, 9);
 
@@ -879,14 +827,11 @@ class RedisModelServiceTest extends TestCase
     {
         $this->redis->shouldReceive('zrevrange')->with('{test_models}:sorted:created_at', 10, 19)->andReturn(['3']);
 
-        $pipelineMock = Mockery::mock('Illuminate\Redis\Connections\Pipeline');
-        $this->redis->shouldReceive('pipeline')->andReturn($pipelineMock);
-        $pipelineMock->shouldReceive('hget')->with('{test_models}:hash', '3')->andReturn(
-            json_encode(['attributes' => ['id' => 3, 'created_at' => '2024-01-03'], 'relations' => []], JSON_THROW_ON_ERROR)
-        );
-        $pipelineMock->shouldReceive('execute')->andReturn([
-            json_encode(['attributes' => ['id' => 3, 'created_at' => '2024-01-03'], 'relations' => []], JSON_THROW_ON_ERROR),
-        ]);
+        $this->redis->shouldReceive('hmget')
+            ->with('{test_models}:hash', Mockery::type('array'))
+            ->andReturn([
+                '3' => json_encode(['attributes' => ['id' => 3, 'created_at' => '2024-01-03'], 'relations' => []], JSON_THROW_ON_ERROR),
+            ]);
 
         $result = $this->service->paginateSorted('created_at', 2, 10);
 

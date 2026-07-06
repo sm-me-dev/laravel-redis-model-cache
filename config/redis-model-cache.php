@@ -121,11 +121,15 @@ return [
     |              'lz4' (fastest, requires ext-lz4)
     | - level: Compression level (1-9 for gzip, 1-22 for zstd)
     |          Higher = better compression but slower
+    | - min_size: Minimum payload size (bytes) before compression is applied.
+    |             Small payloads skip compression to avoid unnecessary CPU.
+    |             Default: 512 (compression overhead > benefit below this)
     */
     'compression' => [
         'enabled' => env('REDIS_MODEL_CACHE_COMPRESS', false),
         'algorithm' => env('REDIS_MODEL_CACHE_COMPRESS_ALGO', 'gzip'),
         'level' => env('REDIS_MODEL_CACHE_COMPRESS_LEVEL', 6),
+        'min_size' => env('REDIS_MODEL_CACHE_COMPRESS_MIN_SIZE', 512),
     ],
 
     /*
@@ -136,12 +140,24 @@ return [
     | Isolate cache data per tenant by prefixing keys with tenant ID.
     | Enables safe multi-tenancy without key collisions.
     |
-    | - resolver: Class implementing TenantResolverInterface with getTenantId()
+    | Key format: {tenant:{tenant_id}:{table}}:{key_type}:{field}
+    | Example:    {tenant:42:users}:hash
+    |             {tenant:42:users}:index:status:active
+    |
+    | - resolver: Class implementing TenantResolverInterface with getTenantId().
     |             Example: App\Services\TenantResolver::class
+    |             When null, falls back to RequestTenantResolver with the
+    |             configured strategy and key.
+    | - strategy: Resolution strategy for RequestTenantResolver:
+    |             'header' (default), 'subdomain', 'auth', 'session'
+    | - key:      Header name, session key, or user attribute for the tenant ID.
+    |             Default: 'X-Tenant-ID' (for header strategy)
     */
     'multi_tenant' => [
         'enabled' => env('REDIS_MODEL_CACHE_MULTI_TENANT', false),
         'resolver' => env('REDIS_MODEL_CACHE_TENANT_RESOLVER', null),
+        'strategy' => env('REDIS_MODEL_CACHE_TENANT_STRATEGY', 'header'),
+        'key' => env('REDIS_MODEL_CACHE_TENANT_KEY', 'X-Tenant-ID'),
     ],
 
     /*

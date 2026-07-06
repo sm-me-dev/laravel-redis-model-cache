@@ -40,6 +40,7 @@ class CompressionTest extends TestCase
             'redis-model-cache.compression.enabled' => true,
             'redis-model-cache.compression.algorithm' => 'gzip',
             'redis-model-cache.compression.level' => 6,
+            'redis-model-cache.compression.min_size' => 0,
         ]);
 
         $service = new TestableRedisBaseService($this->connectionResolver);
@@ -66,6 +67,7 @@ class CompressionTest extends TestCase
             'redis-model-cache.compression.enabled' => true,
             'redis-model-cache.compression.algorithm' => 'zstd',
             'redis-model-cache.compression.level' => 6,
+            'redis-model-cache.compression.min_size' => 0,
         ]);
 
         $service = new TestableRedisBaseService($this->connectionResolver);
@@ -91,6 +93,7 @@ class CompressionTest extends TestCase
         config([
             'redis-model-cache.compression.enabled' => true,
             'redis-model-cache.compression.algorithm' => 'lz4',
+            'redis-model-cache.compression.min_size' => 0,
         ]);
 
         $service = new TestableRedisBaseService($this->connectionResolver);
@@ -114,6 +117,7 @@ class CompressionTest extends TestCase
             'redis-model-cache.compression.enabled' => true,
             'redis-model-cache.compression.algorithm' => 'gzip',
             'redis-model-cache.compression.level' => 6,
+            'redis-model-cache.compression.min_size' => 0,
         ]);
 
         $service1 = new TestableRedisBaseService($this->connectionResolver);
@@ -165,6 +169,7 @@ class CompressionTest extends TestCase
         config([
             'redis-model-cache.compression.enabled' => true,
             'redis-model-cache.compression.algorithm' => 'gzip',
+            'redis-model-cache.compression.min_size' => 0,
         ]);
 
         $service = new TestableRedisBaseService($this->connectionResolver);
@@ -183,6 +188,7 @@ class CompressionTest extends TestCase
         config([
             'redis-model-cache.compression.enabled' => true,
             'redis-model-cache.compression.algorithm' => 'gzip',
+            'redis-model-cache.compression.min_size' => 0,
         ]);
 
         $service = new TestableRedisBaseService($this->connectionResolver);
@@ -209,7 +215,8 @@ class CompressionTest extends TestCase
         config([
             'redis-model-cache.compression.enabled' => true,
             'redis-model-cache.compression.algorithm' => 'gzip',
-            'redis-model-cache.compression.level' => 6,
+            'redis-model-cache.compression.level' => 9,
+            'redis-model-cache.compression.min_size' => 0,
         ]);
 
         $service = new TestableRedisBaseService($this->connectionResolver);
@@ -263,6 +270,7 @@ class CompressionTest extends TestCase
         config([
             'redis-model-cache.compression.enabled' => true,
             'redis-model-cache.compression.algorithm' => 'gzip',
+            'redis-model-cache.compression.min_size' => 0,
         ]);
 
         $service = new TestableRedisBaseService($this->connectionResolver);

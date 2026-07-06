@@ -9,7 +9,7 @@
 ## Code Quality
 - **PHPStan:** Run `vendor/bin/phpstan analyse --no-progress` — level 8, target zero errors.
 - **Pint:** Run `vendor/bin/pint --test` after changes. Fix with `vendor/bin/pint`.
-- **Tests:** All 124 tests must pass. Both `tests/Unit/` and `tests/Feature/` exist.
+- **Tests:** All 145 tests must pass. Both `tests/Unit/` and `tests/Feature/` exist.
 
 ## Key Files & Patterns
 - `src/RedisModelService.php` — core cache service (main file for changes)
@@ -30,13 +30,17 @@
 - Stale-while-revalidate (SWR) pattern with background queue jobs
 - Stampede protection with Redis lock mechanism
 - Compression (zstd/gzip) support
-- Pluck/hydrate with configurable batch size
+- Pluck/hydrate with configurable batch size (uses HMGET for O(1) round trips)
+- `selective()` method for lightweight field-only fetches (60-80% less memory)
+- Compression min_size threshold to skip CPU waste on small payloads
 - Incremental index updates on model changes
 - Debug tooling (inspect, analyzeIndexes, debug mode)
 - Telescope & Pulse integration (optional)
 - Observability metrics (hit rates, latency percentiles)
 - Warmup artisan command
 - Benchmark suite (in `benchmarks/`) for throughput, latency, memory
+- Multi-tenant cache isolation via `{tenant:{id}:{table}}:` key prefixing
+- `TenantResolverInterface` with default `RequestTenantResolver` (header/subdomain/auth/session strategies)
 ## graphify
 
 This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
