@@ -72,7 +72,9 @@ class RequestTenantResolver implements TenantResolverInterface
             return null;
         }
 
-        return $user->getAttribute($this->key);
+        $value = $user->getAttribute($this->key);
+
+        return is_string($value) || is_int($value) ? $value : null;
     }
 
     protected function resolveFromSession(Request $request): string|int|null
@@ -81,6 +83,8 @@ class RequestTenantResolver implements TenantResolverInterface
             return null;
         }
 
-        return $request->session()->get($this->key);
+        $value = $request->session()->get($this->key);
+
+        return is_string($value) || is_int($value) ? $value : null;
     }
 }

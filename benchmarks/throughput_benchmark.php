@@ -14,16 +14,13 @@ declare(strict_types=1);
  *      php benchmarks/throughput_benchmark.php --scale=10000
  */
 
-use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Sm_mE\RedisModelCache\RedisModelService;
 
 require __DIR__.'/../vendor/autoload.php';
 
-// Bootstrap Laravel app
-$app = require_once __DIR__.'/../workbench/bootstrap/app.php';
-$app->make(Kernel::class)->bootstrap();
+require __DIR__.'/bootstrap.php';
 
 // Parse args
 $scale = 1000;

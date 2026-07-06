@@ -141,7 +141,7 @@ class QueryPlanner
         } else {
             $steps[] = [
                 'command' => $command,
-                'key' => '{prefix}:index:{field}:{value} ('.($index->metadata['field_count'] ?? 'N').' keys)',
+                'key' => '{prefix}:index:{field}:{value} ('.(string) ($index->metadata['field_count'] ?? 'N').' keys)',
                 'description' => "Resolve members via {$command} then count",
                 'estimated_cost' => 'O(N)',
             ];
@@ -201,7 +201,7 @@ class QueryPlanner
         } else {
             $steps[] = [
                 'command' => $command,
-                'key' => '{prefix}:index:{field}:{value} ('.($index->metadata['field_count'] ?? 'N').' keys)',
+                'key' => '{prefix}:index:{field}:{value} ('.(string) ($index->metadata['field_count'] ?? 'N').' keys)',
                 'description' => "Resolve members via {$command} then check non-empty",
                 'estimated_cost' => 'O(N)',
             ];
@@ -234,7 +234,7 @@ class QueryPlanner
         } else {
             $steps[] = [
                 'command' => $command,
-                'key' => '{prefix}:index:{field}:{value} ('.($index->metadata['field_count'] ?? 'N').' keys)',
+                'key' => '{prefix}:index:{field}:{value} ('.(string) ($index->metadata['field_count'] ?? 'N').' keys)',
                 'description' => "Resolve model IDs via {$command}",
                 'estimated_cost' => 'O(N)',
             ];

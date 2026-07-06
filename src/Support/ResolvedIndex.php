@@ -8,7 +8,7 @@ class ResolvedIndex
 {
     /**
      * @param  string  $strategy  Redis strategy: 'single_key_lookup', 'intersection', 'union', 'direct_hash', 'range'
-     * @param  array<int, string>  $keys  Redis keys to query
+     * @param  array<string>  $keys  Redis keys to query
      * @param  string  $command  Redis command: 'SMEMBERS', 'SINTER', 'SUNION', 'SCARD', 'EXISTS', 'ZRANGEBYSCORE', 'HGET'
      * @param  array<string, mixed>  $metadata  Extra metadata (field count, estimated cardinality hint, etc.)
      */

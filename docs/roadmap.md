@@ -491,7 +491,7 @@ $service->analyzeIndexes(); // Returns cardinality report
 
 ### Deliverables
 - `benchmarks/` directory with performance tests
-- `PERFORMANCE.md` with results and tuning guide
+- `docs/performance.md` with results and tuning guide
 - CI integration for regression detection
 
 ### Backward Compatibility

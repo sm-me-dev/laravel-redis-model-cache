@@ -1,0 +1,200 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 800" font-family="system-ui, -apple-system, sans-serif">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FAFAFA"/>
+      <stop offset="100%" stop-color="#F0F0F0"/>
+    </linearGradient>
+    <linearGradient id="headerGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F5F5F5"/>
+      <stop offset="100%" stop-color="#E8E8E8"/>
+    </linearGradient>
+    <filter id="shadow" x="-3%" y="-3%" width="106%" height="106%">
+      <feDropShadow dx="1" dy="2" stdDeviation="2" flood-opacity="0.1"/>
+    </filter>
+    <filter id="shadowSmall" x="-3%" y="-3%" width="106%" height="106%">
+      <feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-opacity="0.08"/>
+    </filter>
+  </defs>
+
+  <rect width="1100" height="800" fill="url(#bgGrad)" rx="8"/>
+
+  <text x="550" y="32" text-anchor="middle" font-size="18" font-weight="700" fill="#333">Redis Key Layout</text>
+  <text x="550" y="50" text-anchor="middle" font-size="11" fill="#666">All keys use cluster hash tags <tspan font-family="monospace" font-size="11" fill="#D35400">{table}</tspan> to keep related keys on the same cluster node</text>
+
+  <!-- ===== HASH GROUP ===== -->
+  <rect x="30" y="70" width="1040" height="120" rx="8" fill="#FFF" stroke="#4A90D9" stroke-width="1.5" filter="url(#shadow)"/>
+  <rect x="30" y="70" width="1040" height="32" rx="8" fill="#4A90D9"/>
+  <rect x="30" y="90" width="1040" height="12" fill="#4A90D9"/>
+  <text x="550" y="91" text-anchor="middle" font-size="12" font-weight="700" fill="#FFF">Primary Hash — O(1) model storage</text>
+
+  <text x="55" y="122" font-family="monospace" font-size="12" font-weight="600" fill="#C0392B">{users}</text>
+  <text x="185" y="122" font-family="monospace" font-size="12" fill="#888">:</text>
+  <text x="195" y="122" font-family="monospace" font-size="12" font-weight="600" fill="#4A90D9">hash</text>
+  <text x="250" y="122" font-family="monospace" font-size="12" fill="#888">→</text>
+  <text x="270" y="122" font-family="monospace" font-size="12" font-weight="600" fill="#D35400">Hash</text>
+  <text x="320" y="122" font-size="12" fill="#555">{</text>
+  <text x="332" y="122" font-family="monospace" font-size="12" fill="#555">1 → serialized JSON payload</text>
+  <text x="560" y="122" font-size="12" fill="#555">}</text>
+
+  <rect x="575" y="110" width="140" height="18" rx="4" fill="#EBF2FB" stroke="#4A90D9" stroke-width="0.8"/>
+  <text x="645" y="123" text-anchor="middle" font-size="9" fill="#4A90D9">HSET / HGET / HMGET</text>
+
+  <!-- Example serialized JSON -->
+  <rect x="55" y="138" width="990" height="38" rx="4" fill="#F8F8F8" stroke="#DDD" stroke-width="1"/>
+  <text x="70" y="153" font-family="monospace" font-size="9" fill="#888">Payload:</text>
+  <text x="130" y="153" font-family="monospace" font-size="9" fill="#888">{</text>
+  <text x="142" y="153" font-family="monospace" font-size="9" fill="#6AB04C">"attributes"</text>
+  <text x="215" y="153" font-family="monospace" font-size="9" fill="#888">: {</text>
+  <text x="243" y="153" font-family="monospace" font-size="9" fill="#E67E22">"id"</text>
+  <text x="267" y="153" font-family="monospace" font-size="9" fill="#888">: 1,</text>
+  <text x="296" y="153" font-family="monospace" font-size="9" fill="#E67E22">"name"</text>
+  <text x="333" y="153" font-family="monospace" font-size="9" fill="#888">:</text>
+  <text x="342" y="153" font-family="monospace" font-size="9" fill="#6AB04C">"Alice"</text>
+  <text x="385" y="153" font-family="monospace" font-size="9" fill="#888">,</text>
+  <text x="395" y="153" font-family="monospace" font-size="9" fill="#E67E22">"role_id"</text>
+  <text x="445" y="153" font-family="monospace" font-size="9" fill="#888">: 1 },</text>
+  <text x="495" y="153" font-family="monospace" font-size="9" fill="#6AB04C">"relations"</text>
+  <text x="568" y="153" font-family="monospace" font-size="9" fill="#888">: {</text>
+  <text x="596" y="153" font-family="monospace" font-size="9" fill="#E67E22">"posts"</text>
+  <text x="629" y="153" font-family="monospace" font-size="9" fill="#888">: [...] } → Model + relations</text>
+
+  <!-- ===== META GROUP ===== -->
+  <rect x="30" y="205" width="1040" height="50" rx="8" fill="#FFF" stroke="#999" stroke-width="1" filter="url(#shadowSmall)"/>
+  <text x="55" y="232" font-family="monospace" font-size="12" font-weight="600" fill="#C0392B">{users}</text>
+  <text x="185" y="232" font-family="monospace" font-size="12" fill="#888">:</text>
+  <text x="195" y="232" font-family="monospace" font-size="12" font-weight="600" fill="#8E44AD">meta</text>
+  <text x="250" y="232" font-family="monospace" font-size="12" fill="#888">→</text>
+  <text x="270" y="232" font-family="monospace" font-size="12" font-weight="600" fill="#D35400">Hash</text>
+  <text x="320" y="232" font-size="12" fill="#555">{</text>
+  <text x="332" y="232" font-family="monospace" font-size="12" fill="#555">cached_at: 1712345678, version: 3</text>
+  <text x="565" y="232" font-size="12" fill="#555">}</text>
+  <rect x="585" y="220" width="120" height="18" rx="4" fill="#F4ECF7" stroke="#8E44AD" stroke-width="0.8"/>
+  <text x="645" y="233" text-anchor="middle" font-size="9" fill="#8E44AD">HGET / HINCRBY</text>
+
+  <!-- ===== INDEX SETS GROUP ===== -->
+  <rect x="30" y="270" width="1040" height="120" rx="8" fill="#FFF" stroke="#E67E22" stroke-width="1.5" filter="url(#shadow)"/>
+  <rect x="30" y="270" width="1040" height="32" rx="8" fill="#E67E22"/>
+  <rect x="30" y="290" width="1040" height="12" fill="#E67E22"/>
+  <text x="550" y="291" text-anchor="middle" font-size="12" font-weight="700" fill="#FFF">Index Sets — equality lookups via SMEMBERS / SINTER</text>
+
+  <text x="55" y="322" font-family="monospace" font-size="12" font-weight="600" fill="#C0392B">{users}</text>
+  <text x="185" y="322" font-family="monospace" font-size="12" fill="#888">:</text>
+  <text x="195" y="322" font-family="monospace" font-size="12" font-weight="600" fill="#E67E22">index</text>
+  <text x="250" y="322" font-family="monospace" font-size="12" fill="#888">:</text>
+  <text x="262" y="322" font-family="monospace" font-size="12" font-weight="600" fill="#D35400">role_id</text>
+  <text x="322" y="322" font-family="monospace" font-size="12" fill="#888">:</text>
+  <text x="335" y="322" font-family="monospace" font-size="12" font-weight="600" fill="#2980B9">1</text>
+  <text x="360" y="322" font-family="monospace" font-size="12" fill="#888">→</text>
+  <text x="380" y="322" font-family="monospace" font-size="12" font-weight="600" fill="#D35400">Set</text>
+  <text x="420" y="322" font-size="12" fill="#555">{</text>
+  <text x="432" y="322" font-family="monospace" font-size="12" fill="#555">1, 2, 5, 9</text>
+  <text x="530" y="322" font-size="12" fill="#555">}</text>
+
+  <rect x="555" y="310" width="130" height="18" rx="4" fill="#FDF2E9" stroke="#E67E22" stroke-width="0.8"/>
+  <text x="620" y="323" text-anchor="middle" font-size="9" fill="#E67E22">SADD / SMEMBERS / SINTER</text>
+
+  <text x="55" y="346" font-family="monospace" font-size="12" font-weight="600" fill="#C0392B">{users}</text>
+  <text x="185" y="346" font-family="monospace" font-size="12" fill="#888">:</text>
+  <text x="195" y="346" font-family="monospace" font-size="12" font-weight="600" fill="#E67E22">index</text>
+  <text x="250" y="346" font-family="monospace" font-size="12" fill="#888">:</text>
+  <text x="262" y="346" font-family="monospace" font-size="12" font-weight="600" fill="#D35400">status</text>
+  <text x="322" y="346" font-family="monospace" font-size="12" fill="#888">:</text>
+  <text x="335" y="346" font-family="monospace" font-size="12" font-weight="600" fill="#2980B9">active</text>
+  <text x="395" y="346" font-family="monospace" font-size="12" fill="#888">→</text>
+  <text x="415" y="346" font-family="monospace" font-size="12" font-weight="600" fill="#D35400">Set</text>
+  <text x="455" y="346" font-size="12" fill="#555">{</text>
+  <text x="467" y="346" font-family="monospace" font-size="12" fill="#555">1, 3, 7</text>
+  <text x="530" y="346" font-size="12" fill="#555">}</text>
+
+  <rect x="555" y="334" width="130" height="18" rx="4" fill="#FDF2E9" stroke="#E67E22" stroke-width="0.8"/>
+  <text x="620" y="347" text-anchor="middle" font-size="9" fill="#E67E22">SADD / SMEMBERS / SINTER</text>
+
+  <text x="55" y="370" font-family="monospace" font-size="12" font-weight="600" fill="#C0392B">{users}</text>
+  <text x="185" y="370" font-family="monospace" font-size="12" fill="#888">:</text>
+  <text x="195" y="370" font-family="monospace" font-size="12" font-weight="600" fill="#E67E22">index</text>
+  <text x="250" y="370" font-family="monospace" font-size="12" fill="#888">:</text>
+  <text x="262" y="370" font-family="monospace" font-size="12" font-weight="600" fill="#D35400">department</text>
+  <text x="352" y="370" font-family="monospace" font-size="12" fill="#888">:</text>
+  <text x="365" y="370" font-family="monospace" font-size="12" font-weight="600" fill="#2980B9">engineering</text>
+  <text x="488" y="370" font-family="monospace" font-size="12" fill="#888">→</text>
+  <text x="508" y="370" font-family="monospace" font-size="12" font-weight="600" fill="#D35400">Set</text>
+  <text x="548" y="370" font-size="12" fill="#555">{</text>
+  <text x="560" y="370" font-family="monospace" font-size="12" fill="#555">1, 4, 8</text>
+  <text x="620" y="370" font-size="12" fill="#555">}</text>
+
+  <!-- ===== SORTED SET GROUP ===== -->
+  <rect x="30" y="405" width="1040" height="65" rx="8" fill="#FFF" stroke="#27AE60" stroke-width="1.5" filter="url(#shadow)"/>
+  <rect x="30" y="405" width="1040" height="32" rx="8" fill="#27AE60"/>
+  <rect x="30" y="425" width="1040" height="12" fill="#27AE60"/>
+  <text x="550" y="426" text-anchor="middle" font-size="12" font-weight="700" fill="#FFF">Sorted Sets — range queries via ZRANGEBYSCORE</text>
+
+  <text x="55" y="455" font-family="monospace" font-size="12" font-weight="600" fill="#C0392B">{users}</text>
+  <text x="185" y="455" font-family="monospace" font-size="12" fill="#888">:</text>
+  <text x="195" y="455" font-family="monospace" font-size="12" font-weight="600" fill="#27AE60">sorted</text>
+  <text x="258" y="455" font-family="monospace" font-size="12" fill="#888">:</text>
+  <text x="270" y="455" font-family="monospace" font-size="12" font-weight="600" fill="#D35400">created_at</text>
+  <text x="355" y="455" font-family="monospace" font-size="12" fill="#888">→</text>
+  <text x="375" y="455" font-family="monospace" font-size="12" font-weight="600" fill="#D35400">ZSet</text>
+  <text x="420" y="455" font-size="12" fill="#555">{</text>
+  <text x="432" y="455" font-family="monospace" font-size="12" fill="#555">5 → 1712345678, 2 → 1712345000</text>
+  <text x="640" y="455" font-size="12" fill="#555">}</text>
+
+  <rect x="660" y="443" width="150" height="18" rx="4" fill="#E8F8E8" stroke="#27AE60" stroke-width="0.8"/>
+  <text x="735" y="456" text-anchor="middle" font-size="9" fill="#27AE60">ZADD / ZRANGEBYSCORE / ZREVRANGE</text>
+
+  <!-- ===== CUSTOM INDEX GROUP ===== -->
+  <rect x="30" y="485" width="1040" height="65" rx="8" fill="#FFF" stroke="#8E44AD" stroke-width="1.5" filter="url(#shadow)"/>
+  <rect x="30" y="485" width="1040" height="32" rx="8" fill="#8E44AD"/>
+  <rect x="30" y="505" width="1040" height="12" fill="#8E44AD"/>
+  <text x="550" y="506" text-anchor="middle" font-size="12" font-weight="700" fill="#FFF">Custom Indexes — named sets for app-defined groupings</text>
+
+  <text x="55" y="535" font-family="monospace" font-size="12" font-weight="600" fill="#C0392B">{users}</text>
+  <text x="185" y="535" font-family="monospace" font-size="12" fill="#888">:</text>
+  <text x="195" y="535" font-family="monospace" font-size="12" font-weight="600" fill="#8E44AD">custom</text>
+  <text x="258" y="535" font-family="monospace" font-size="12" fill="#888">:</text>
+  <text x="270" y="535" font-family="monospace" font-size="12" font-weight="600" fill="#D35400">active_admins</text>
+  <text x="390" y="535" font-family="monospace" font-size="12" fill="#888">→</text>
+  <text x="410" y="535" font-family="monospace" font-size="12" font-weight="600" fill="#D35400">Set</text>
+  <text x="450" y="535" font-size="12" fill="#555">{</text>
+  <text x="462" y="535" font-family="monospace" font-size="12" fill="#555">1, 3</text>
+  <text x="500" y="535" font-size="12" fill="#555">}</text>
+
+  <rect x="520" y="523" width="140" height="18" rx="4" fill="#F4ECF7" stroke="#8E44AD" stroke-width="0.8"/>
+  <text x="590" y="536" text-anchor="middle" font-size="9" fill="#8E44AD">SADD / SMEMBERS / customWhere()</text>
+
+  <!-- ===== PRINCIPLES ===== -->
+  <rect x="30" y="570" width="1040" height="210" rx="8" fill="#FFF" stroke="#DDD" stroke-width="1" filter="url(#shadowSmall)"/>
+  <text x="550" y="594" text-anchor="middle" font-size="13" font-weight="600" fill="#444">Key Design Principles</text>
+
+  <!-- Principle 1 -->
+  <rect x="50" y="612" width="490" height="72" rx="6" fill="#F8F8F8" stroke="#E0E0E0" stroke-width="1"/>
+  <rect x="50" y="612" width="4" height="72" rx="2" fill="#C0392B"/>
+  <text x="68" y="632" font-size="11" font-weight="600" fill="#C0392B">Cluster Hash Tags</text>
+  <text x="68" y="648" font-size="10" fill="#555">Keys use <tspan font-family="monospace" font-size="10" fill="#888">{table}</tspan> hash tags so all keys for one</text>
+  <text x="68" y="664" font-size="10" fill="#555">model type land on the same Redis cluster node.</text>
+  <text x="68" y="680" font-size="10" fill="#555">This enables SINTER, SUNION, and other multi-key ops.</text>
+
+  <!-- Principle 2 -->
+  <rect x="560" y="612" width="490" height="72" rx="6" fill="#F8F8F8" stroke="#E0E0E0" stroke-width="1"/>
+  <rect x="560" y="612" width="4" height="72" rx="2" fill="#4A90D9"/>
+  <text x="578" y="632" font-size="11" font-weight="600" fill="#4A90D9">No O(N) Hash Scans</text>
+  <text x="578" y="648" font-size="10" fill="#555">Every lookup uses declared index sets or sorted sets.</text>
+  <text x="578" y="664" font-size="10" fill="#555">Full <tspan font-family="monospace" font-size="10" fill="#888">HGETALL</tspan> scans are prohibited — they can OOM</text>
+  <text x="578" y="680" font-size="10" fill="#555">Redis with large datasets. All queries are bounded.</text>
+
+  <!-- Principle 3 -->
+  <rect x="50" y="694" width="490" height="72" rx="6" fill="#F8F8F8" stroke="#E0E0E0" stroke-width="1"/>
+  <rect x="50" y="694" width="4" height="72" rx="2" fill="#27AE60"/>
+  <text x="68" y="714" font-size="11" font-weight="600" fill="#27AE60">Deterministic Key Construction</text>
+  <text x="68" y="730" font-size="10" fill="#555">Every key follows a strict pattern:</text>
+  <text x="68" y="746" font-size="10" font-family="monospace" fill="#888">{prefix}:{type}:{field}:{value}</text>
+  <text x="68" y="762" font-size="10" fill="#555">No ambiguity, no collisions, no TTL drift.</text>
+
+  <!-- Principle 4 -->
+  <rect x="560" y="694" width="490" height="72" rx="6" fill="#F8F8F8" stroke="#E0E0E0" stroke-width="1"/>
+  <rect x="560" y="694" width="4" height="72" rx="2" fill="#E67E22"/>
+  <text x="578" y="714" font-size="11" font-weight="600" fill="#E67E22">Multi-Tenant Isolation</text>
+  <text x="578" y="730" font-size="10" fill="#555">When multi-tenant mode is enabled, prefix becomes:</text>
+  <text x="578" y="746" font-size="10" font-family="monospace" fill="#888">{tenant:{id}:{table}}</text>
+  <text x="578" y="762" font-size="10" fill="#555">Tenant ID is resolved via TenantResolverInterface.</text>
+</svg>

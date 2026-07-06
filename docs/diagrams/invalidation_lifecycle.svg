@@ -1,0 +1,192 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 820" font-family="system-ui, -apple-system, sans-serif">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FAFAFA"/>
+      <stop offset="100%" stop-color="#F0F0F0"/>
+    </linearGradient>
+    <filter id="shadow" x="-3%" y="-3%" width="106%" height="106%">
+      <feDropShadow dx="1" dy="2" stdDeviation="2" flood-opacity="0.12"/>
+    </filter>
+    <filter id="shadowSmall" x="-3%" y="-3%" width="106%" height="106%">
+      <feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-opacity="0.08"/>
+    </filter>
+    <marker id="arrowBlue" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#4A90D9"/>
+    </marker>
+    <marker id="arrowOrange" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#E67E22"/>
+    </marker>
+    <marker id="arrowGreen" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#27AE60"/>
+    </marker>
+    <marker id="arrowRed" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#E74C3C"/>
+    </marker>
+    <marker id="arrowGray" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#888"/>
+    </marker>
+    <marker id="arrowBlueBack" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto-start-reverse">
+      <polygon points="10 0, 0 3.5, 10 7" fill="#4A90D9"/>
+    </marker>
+  </defs>
+
+  <rect width="1100" height="820" fill="url(#bgGrad)" rx="8"/>
+  <text x="550" y="32" text-anchor="middle" font-size="18" font-weight="700" fill="#333">Invalidation Lifecycle</text>
+  <text x="550" y="50" text-anchor="middle" font-size="11" fill="#666">Guaranteed cache consistency via guarded model lifecycle events</text>
+
+  <!-- ===== ENTITY: Eloquent Model ===== -->
+  <rect x="25" y="75" width="200" height="50" rx="8" fill="#333" filter="url(#shadow)"/>
+  <text x="125" y="100" text-anchor="middle" font-size="13" font-weight="700" fill="#FFF">Eloquent Model</text>
+  <text x="125" y="116" text-anchor="middle" font-size="9" fill="#AAA">saved / deleted events</text>
+
+  <!-- ===== SAVED PATH ===== -->
+
+  <!-- saved event -->
+  <path d="M 225 95 L 290 95" stroke="#27AE60" stroke-width="1.5" marker-end="url(#arrowGreen)"/>
+
+  <!-- Re-entry guard diamond -->
+  <polygon points="340,75 370,95 340,115 310,95" fill="#FFF" stroke="#E74C3C" stroke-width="1.5" filter="url(#shadowSmall)"/>
+  <text x="340" y="92" text-anchor="middle" font-size="8" font-weight="600" fill="#C0392B">already</text>
+  <text x="340" y="104" text-anchor="middle" font-size="8" font-weight="600" fill="#C0392B">processing?</text>
+
+  <!-- Yes: exit -->
+  <path d="M 370 95 L 420 95 L 420 30 L 125 30" stroke="#E74C3C" stroke-width="1" fill="none" marker-end="url(#arrowRed)" stroke-dasharray="4,3"/>
+  <text x="460" y="60" text-anchor="start" font-size="9" fill="#E74C3C">YES → return (guard)</text>
+
+  <!-- No: continue -->
+  <path d="M 310 95 L 270 95 L 270 155 L 310 155" stroke="#27AE60" stroke-width="1.5" fill="none" marker-end="url(#arrowGreen)"/>
+  <text x="255" y="130" text-anchor="end" font-size="9" fill="#27AE60">NO</text>
+
+  <!-- Delete-in-cycle guard -->
+  <polygon points="360,135 390,155 360,175 330,155" fill="#FFF" stroke="#E74C3C" stroke-width="1.5" filter="url(#shadowSmall)"/>
+  <text x="360" y="150" text-anchor="middle" font-size="8" font-weight="600" fill="#C0392B">deleted</text>
+  <text x="360" y="162" text-anchor="middle" font-size="8" font-weight="600" fill="#C0392B">in cycle?</text>
+
+  <!-- Yes: exit -->
+  <path d="M 390 155 L 440 155 L 440 30 L 125 30" stroke="#E74C3C" stroke-width="1" fill="none" marker-end="url(#arrowRed)" stroke-dasharray="4,3"/>
+
+  <!-- No: continue -->
+  <path d="M 330 155 L 290 155 L 290 475 L 340 475" stroke="#27AE60" stroke-width="1.5" fill="none" marker-end="url(#arrowGreen)"/>
+  <text x="278" y="320" text-anchor="end" font-size="9" fill="#27AE60">NO</text>
+
+  <!-- markProcessing -->
+  <rect x="420" y="130" width="190" height="28" rx="4" fill="#E8F8E8" stroke="#27AE60" stroke-width="1" filter="url(#shadowSmall)"/>
+  <text x="515" y="148" text-anchor="middle" font-family="monospace" font-size="9" font-weight="600" fill="#1E8449">markRedisModelCacheProcessing()</text>
+
+  <path d="M 515 158 L 515 185" stroke="#27AE60" stroke-width="1.5" marker-end="url(#arrowGreen)"/>
+
+  <!-- store() -->
+  <rect x="420" y="190" width="190" height="36" rx="6" fill="#FFF" stroke="#27AE60" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="515" y="209" text-anchor="middle" font-size="11" font-weight="600" fill="#1E8449">RedisModelService::store()</text>
+  <text x="515" y="222" text-anchor="middle" font-size="9" fill="#666">HSET + index diff + SADD + ZADD</text>
+
+  <!-- Index diff detail -->
+  <path d="M 610 208 L 670 208" stroke="#4A90D9" stroke-width="1.5" marker-end="url(#arrowBlue)"/>
+  <rect x="680" y="190" width="220" height="48" rx="6" fill="#E8F0FE" stroke="#4A90D9" stroke-width="1" filter="url(#shadowSmall)"/>
+  <text x="790" y="208" text-anchor="middle" font-size="10" font-weight="600" fill="#2C6FBB">Index Diff Computation</text>
+  <text x="790" y="224" text-anchor="middle" font-size="9" fill="#555">HGET old data → compare each indexed field</text>
+  <text x="790" y="236" text-anchor="middle" font-size="9" fill="#555">changed? SREM(old value) + SADD(new value)</text>
+
+  <path d="M 515 226 L 515 255" stroke="#27AE60" stroke-width="1.5" marker-end="url(#arrowGreen)"/>
+
+  <!-- InvalidationManager::handle(saved) -->
+  <rect x="420" y="260" width="190" height="36" rx="6" fill="#FDF2E9" stroke="#E67E22" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="515" y="279" text-anchor="middle" font-size="11" font-weight="600" fill="#D35400">InvalidationManager</text>
+  <text x="515" y="292" text-anchor="middle" font-size="9" fill="#A04000">handle('saved')</text>
+
+  <!-- versioned? → bustVersion -->
+  <path d="M 610 278 L 670 278" stroke="#E67E22" stroke-width="1.5" marker-end="url(#arrowOrange)"/>
+  <rect x="680" y="258" width="200" height="40" rx="6" fill="#FDF2E9" stroke="#E67E22" stroke-width="1" filter="url(#shadowSmall)"/>
+  <text x="780" y="276" text-anchor="middle" font-size="10" font-weight="600" fill="#D35400">bustVersion()</text>
+  <text x="780" y="290" text-anchor="middle" font-size="9" fill="#A04000">HINCRBY meta version +1</text>
+  <text x="780" y="298" text-anchor="middle" font-size="9" fill="#888">(only if invalidation.versioned = true)</text>
+
+  <path d="M 515 296 L 515 330" stroke="#E67E22" stroke-width="1.5" marker-end="url(#arrowOrange)"/>
+
+  <!-- touchParents -->
+  <rect x="420" y="335" width="190" height="50" rx="6" fill="#FFF" stroke="#8E44AD" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="515" y="354" text-anchor="middle" font-size="11" font-weight="600" fill="#6C3483">touchRedisModelCacheParents()</text>
+  <text x="515" y="370" text-anchor="middle" font-size="9" fill="#555">Resolve $redisModelCacheTouches</text>
+  <text x="515" y="382" text-anchor="middle" font-size="9" fill="#555">→ storeParentCache($parent)</text>
+
+  <path d="M 515 385 L 515 415" stroke="#8E44AD" stroke-width="1.5" marker-end="url(#arrowGray)"/>
+
+  <!-- unmarkProcessing -->
+  <rect x="420" y="420" width="190" height="28" rx="4" fill="#E8F8E8" stroke="#27AE60" stroke-width="1" filter="url(#shadowSmall)"/>
+  <text x="515" y="438" text-anchor="middle" font-family="monospace" font-size="9" font-weight="600" fill="#1E8449">unmarkRedisModelCacheProcessing()</text>
+
+  <!-- Done -->
+  <path d="M 515 448 L 515 475 L 400 475 L 400 30 L 125 30" stroke="#27AE60" stroke-width="1.5" fill="none" marker-end="url(#arrowGreen)"/>
+  <text x="445" y="462" text-anchor="end" font-size="9" fill="#27AE60">done</text>
+
+  <!-- ===== DELETED PATH ===== -->
+  <path d="M 225 115 L 290 115" stroke="#E74C3C" stroke-width="1.5" marker-end="url(#arrowRed)"/>
+
+  <!-- Re-entry guard for deleted -->
+  <polygon points="340,95 370,115 340,135 310,115" fill="#FFF" stroke="#E74C3C" stroke-width="1.5" filter="url(#shadowSmall)"/>
+  <text x="340" y="112" text-anchor="middle" font-size="8" font-weight="600" fill="#C0392B">already</text>
+  <text x="340" y="124" text-anchor="middle" font-size="8" font-weight="600" fill="#C0392B">processing?</text>
+
+  <!-- Yes: return -->
+  <path d="M 370 115 L 420 115 L 420 30 L 125 30" stroke="#E74C3C" stroke-width="1" fill="none" marker-end="url(#arrowRed)" stroke-dasharray="4,3"/>
+
+  <!-- No: continue -->
+  <path d="M 310 115 L 270 115 L 270 545 L 340 545" stroke="#E74C3C" stroke-width="1.5" fill="none" marker-end="url(#arrowRed)"/>
+  <text x="255" y="330" text-anchor="end" font-size="9" fill="#E74C3C">NO</text>
+
+  <!-- markProcessing -->
+  <rect x="420" y="500" width="190" height="28" rx="4" fill="#FDEDEC" stroke="#E74C3C" stroke-width="1" filter="url(#shadowSmall)"/>
+  <text x="515" y="518" text-anchor="middle" font-family="monospace" font-size="9" font-weight="600" fill="#C0392B">markRedisModelCacheProcessing()</text>
+
+  <path d="M 515 528 L 515 560" stroke="#E74C3C" stroke-width="1.5" marker-end="url(#arrowRed)"/>
+
+  <!-- InvalidationManager::handle(deleted) -->
+  <rect x="420" y="565" width="190" height="36" rx="6" fill="#FDEDEC" stroke="#E74C3C" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="515" y="584" text-anchor="middle" font-size="11" font-weight="600" fill="#C0392B">InvalidationManager</text>
+  <text x="515" y="596" text-anchor="middle" font-size="9" fill="#C0392B">handle('deleted')</text>
+
+  <path d="M 515 601 L 515 625" stroke="#E74C3C" stroke-width="1.5" marker-end="url(#arrowRed)"/>
+
+  <!-- service::delete() -->
+  <rect x="420" y="630" width="190" height="50" rx="6" fill="#FFF" stroke="#E74C3C" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="515" y="649" text-anchor="middle" font-size="11" font-weight="600" fill="#C0392B">RedisModelService::delete()</text>
+  <text x="515" y="665" text-anchor="middle" font-size="9" fill="#555">HGET old data → HDEL</text>
+  <text x="515" y="677" text-anchor="middle" font-size="9" fill="#555">removeIndexes() → SREM + ZREM</text>
+
+  <!-- Delete in cycle marker -->
+  <path d="M 610 655 L 670 655" stroke="#E74C3C" stroke-width="1.5" marker-end="url(#arrowRed)"/>
+  <rect x="680" y="640" width="220" height="30" rx="6" fill="#FDEDEC" stroke="#E74C3C" stroke-width="1" filter="url(#shadowSmall)"/>
+  <text x="790" y="655" text-anchor="middle" font-family="monospace" font-size="9" font-weight="600" fill="#C0392B">markRedisModelCacheDeletedInCycle()</text>
+
+  <path d="M 515 680 L 515 710" stroke="#E74C3C" stroke-width="1.5" marker-end="url(#arrowRed)"/>
+
+  <!-- touchParents -->
+  <rect x="420" y="715" width="190" height="36" rx="6" fill="#FFF" stroke="#8E44AD" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="515" y="734" text-anchor="middle" font-size="11" font-weight="600" fill="#6C3483">touchRedisModelCacheParents()</text>
+  <text x="515" y="746" text-anchor="middle" font-size="9" fill="#555">store parent models</text>
+
+  <path d="M 515 751 L 515 775" stroke="#8E44AD" stroke-width="1.5" marker-end="url(#arrowGray)"/>
+
+  <!-- unmarkProcessing -->
+  <rect x="420" y="780" width="190" height="28" rx="4" fill="#FDEDEC" stroke="#E74C3C" stroke-width="1" filter="url(#shadowSmall)"/>
+  <text x="515" y="798" text-anchor="middle" font-family="monospace" font-size="9" font-weight="600" fill="#C0392B">unmarkRedisModelCacheProcessing()</text>
+
+  <!-- ===== FORCE DELETE NOTE ===== -->
+  <rect x="680" y="710" width="380" height="60" rx="8" fill="#FFF" stroke="#DDD" stroke-width="1" filter="url(#shadowSmall)"/>
+  <text x="870" y="730" text-anchor="middle" font-size="10" font-weight="600" fill="#C0392B">forceDelete Caveat</text>
+  <text x="695" y="746" font-size="9" fill="#555">forceDelete fires: forceDeleted → deleted → saved in a single cycle.</text>
+  <text x="695" y="762" font-size="9" fill="#555">The "deleted in cycle" guard prevents the subsequent saved event</text>
+  <text x="695" y="774" font-size="9" fill="#555">from re-caching a model that was just deleted.</text>
+
+  <!-- ===== LEGEND ===== -->
+  <rect x="25" y="650" width="280" height="120" rx="8" fill="#FFF" stroke="#DDD" stroke-width="1" filter="url(#shadowSmall)"/>
+  <text x="165" y="672" text-anchor="middle" font-size="11" font-weight="600" fill="#444">Legend</text>
+  <rect x="45" y="686" width="12" height="12" rx="2" fill="#27AE60"/>
+  <text x="65" y="696" font-size="10" fill="#555">Saved / create / restore path</text>
+  <rect x="45" y="706" width="12" height="12" rx="2" fill="#E74C3C"/>
+  <text x="65" y="716" font-size="10" fill="#555">Deleted / forceDeleted path</text>
+  <rect x="45" y="726" width="12" height="12" rx="2" fill="#E67E22"/>
+  <text x="65" y="736" font-size="10" fill="#555">Invalidation (sync or async)</text>
+  <polygon points="60,756 68,748 76,756 68,764" fill="#E74C3C" stroke="none"/>
+  <text x="84" y="760" font-size="10" fill="#555">Decision diamond (guard check)</text>
+</svg>
