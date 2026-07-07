@@ -6,6 +6,7 @@ namespace Sm_mE\RedisModelCache\Tests\Unit;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Queue;
 use Mockery;
 use Mockery\MockInterface;
 use RuntimeException;
@@ -155,6 +156,8 @@ class EdgeCaseTest extends TestCase
             $this->markTestSkipped('AsyncStrategy not available');
         }
 
+        Queue::fake();
+
         $strategy = new AsyncStrategy('default');
         $context = new InvalidationContext(
             modelClass: EdgeCaseModel::class,
@@ -165,13 +168,9 @@ class EdgeCaseTest extends TestCase
             timestamp: microtime(true),
         );
 
-        // Should dispatch a job without error (may fail if queue not configured)
-        try {
-            $strategy->invalidate($context);
-            $this->addToAssertionCount(1);
-        } catch (\Throwable $e) {
-            $this->assertStringContainsString('queue', strtolower($e->getMessage()), 'Expected queue-related error in test environment');
-        }
+        $strategy->invalidate($context);
+
+        Queue::assertPushed(\Sm_mE\RedisModelCache\Jobs\InvalidateModelCacheJob::class);
     }
 
     // =========================================================================
