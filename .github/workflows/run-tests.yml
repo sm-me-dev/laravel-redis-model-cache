@@ -53,8 +53,11 @@ jobs:
 
       - name: Install dependencies
         run: |
-          TESTBENCH_VERSION="${{ matrix.laravel == '11.*' && '^9.0' || '^10.11' }}"
-          composer require --dev "orchestra/testbench:${TESTBENCH_VERSION}" --no-interaction --no-update
+          if [ "${{ matrix.laravel }}" = "11.*" ]; then
+            sed -i 's/"orchestra\/testbench": "[^"]*"/"orchestra\/testbench": "^9.0"/' composer.json
+          else
+            sed -i 's/"orchestra\/testbench": "[^"]*"/"orchestra\/testbench": "^10.11"/' composer.json
+          fi
           composer update --${{ matrix.stability }} --prefer-dist --no-interaction --no-audit
 
       - name: Run Pint (Code Style Check)

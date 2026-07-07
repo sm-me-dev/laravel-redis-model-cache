@@ -25,6 +25,12 @@ jobs:
       - name: Run PHPStan
         run: vendor/bin/phpstan analyse --memory-limit=1G -c phpstan.neon.dist --error-format=github
 
-      - name: PHPStan debug (show errors without baseline)
+      - name: PHPStan debug (show errors)
         if: failure()
-        run: vendor/bin/phpstan analyse --memory-limit=1G -c phpstan.neon.dist --no-baseline --error-format=table 2>&1 | head -50
+        run: |
+          echo "=== PHPSTAN VERSION ==="
+          vendor/bin/phpstan --version
+          echo "=== PHPSTAN ERRORS ==="
+          vendor/bin/phpstan analyse --memory-limit=1G -c phpstan.neon.dist --error-format=table 2>&1
+          echo "=== BASELINE CHECK ==="
+          head -20 phpstan-baseline.neon
