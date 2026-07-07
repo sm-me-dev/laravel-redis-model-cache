@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Sm_mE\RedisModelCache\Invalidation\InvalidationManager;
 use Sm_mE\RedisModelCache\RedisModelService;
+use Sm_mE\RedisModelCache\Support\RedisModelCacheState;
 
 trait HasRedisModelCache
 {
@@ -16,16 +17,10 @@ trait HasRedisModelCache
         return [];
     }
 
-    /** @var array<class-string, list<mixed>> */
-    protected static array $redisModelCacheProcessing = [];
-
-    /**
-     * Tracks model keys deleted during current request cycle.
-     * Prevents the saved event (fired by forceDelete) from re-caching a deleted model.
-     *
-     * @var array<class-string, list<mixed>>
-     */
-    protected static array $redisModelCacheDeletedInCycle = [];
+    protected static function redisModelCacheState(): RedisModelCacheState
+    {
+        return app(RedisModelCacheState::class);
+    }
 
     /**
      * Laravel Eloquent calls this via the booting trait convention.
@@ -106,57 +101,39 @@ trait HasRedisModelCache
 
     protected static function isRedisModelCacheProcessing(Model $model): bool
     {
-        return in_array(
-            $model->getKey(),
-            static::$redisModelCacheProcessing[static::class] ?? [],
-            true
-        );
+        return static::redisModelCacheState()->isProcessing(static::class, $model->getKey());
     }
 
     protected static function markRedisModelCacheProcessing(Model $model): void
     {
-        $ids = static::$redisModelCacheProcessing[static::class] ?? [];
-        $ids[] = $model->getKey();
-        static::$redisModelCacheProcessing[static::class] = $ids;
+        static::redisModelCacheState()->markProcessing(static::class, $model->getKey());
     }
 
     protected static function unmarkRedisModelCacheProcessing(Model $model): void
     {
-        $ids = static::$redisModelCacheProcessing[static::class] ?? [];
-        $key = array_search($model->getKey(), $ids, true);
-
-        if ($key !== false) {
-            unset($ids[$key]);
-            static::$redisModelCacheProcessing[static::class] = array_values($ids);
-        }
+        static::redisModelCacheState()->unmarkProcessing(static::class, $model->getKey());
     }
 
     protected static function isRedisModelCacheDeletedInCycle(Model $model): bool
     {
-        return in_array(
-            $model->getKey(),
-            static::$redisModelCacheDeletedInCycle[static::class] ?? [],
-            true
-        );
+        return static::redisModelCacheState()->isDeletedInCycle(static::class, $model->getKey());
     }
 
     protected static function markRedisModelCacheDeletedInCycle(Model $model): void
     {
-        $ids = static::$redisModelCacheDeletedInCycle[static::class] ?? [];
-        $ids[] = $model->getKey();
-        static::$redisModelCacheDeletedInCycle[static::class] = $ids;
+        static::redisModelCacheState()->markDeletedInCycle(static::class, $model->getKey());
     }
 
     /**
-     * Flush all per-request static processing state.
+     * Flush all per-request processing state via the scoped state service.
      *
-     * Call this at the end of each request lifecycle to prevent state
-     * bleed across requests in long-running workers (Octane).
+     * The scoped RedisModelCacheState (registered in the service provider) is
+     * automatically reset between requests in Octane workers. This method
+     * provides an explicit flush for terminating callbacks.
      */
     public static function flushRedisModelCacheProcessing(): void
     {
-        static::$redisModelCacheProcessing = [];
-        static::$redisModelCacheDeletedInCycle = [];
+        static::redisModelCacheState()->flush();
     }
 
     protected static function resolveRedisModelCacheService(): RedisModelService

@@ -7,7 +7,6 @@ namespace Sm_mE\RedisModelCache;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Octane\Events\WorkerTickStarting;
-use Sm_mE\RedisModelCache\Concerns\HasRedisModelCache;
 use Sm_mE\RedisModelCache\Contracts\HashCacheService;
 use Sm_mE\RedisModelCache\Contracts\ModelCacheService;
 use Sm_mE\RedisModelCache\Contracts\ModelMatchStrategy;
@@ -18,6 +17,7 @@ use Sm_mE\RedisModelCache\Support\CacheManager;
 use Sm_mE\RedisModelCache\Support\DefaultConnectionResolver;
 use Sm_mE\RedisModelCache\Support\DefaultModelMatchStrategy;
 use Sm_mE\RedisModelCache\Support\Observability;
+use Sm_mE\RedisModelCache\Support\RedisModelCacheState;
 use Sm_mE\RedisModelCache\Support\TenantResolvers\RequestTenantResolver;
 
 class RedisModelCacheServiceProvider extends ServiceProvider
@@ -44,6 +44,8 @@ class RedisModelCacheServiceProvider extends ServiceProvider
 
             return new RequestTenantResolver(strategy: $strategy, key: $key);
         });
+
+        $this->app->scoped(RedisModelCacheState::class);
 
         $this->app->singleton(Observability::class);
 
@@ -107,14 +109,16 @@ class RedisModelCacheServiceProvider extends ServiceProvider
     /**
      * Register request/worker lifecycle hooks for state cleanup.
      *
-     * Prevents static state bleed across requests in long-lived
-     * Octane workers and ensures Observability ring buffers are
-     * bounded per-request in non-Octane environments.
+     * Uses the scoped RedisModelCacheState instead of static trait state,
+     * making the package safe for Octane workers. The scoped binding is
+     * automatically reset between requests in Octane.
      */
     protected function registerLifecycleHooks(): void
     {
         App::terminating(function (): void {
-            HasRedisModelCache::flushRedisModelCacheProcessing();
+            if ($this->app->resolved(RedisModelCacheState::class)) {
+                $this->app->make(RedisModelCacheState::class)->flush();
+            }
         });
 
         // Octane worker lifecycle: flush between requests
@@ -122,7 +126,9 @@ class RedisModelCacheServiceProvider extends ServiceProvider
             $this->app->make('events')->listen(
                 WorkerTickStarting::class,
                 function (): void {
-                    HasRedisModelCache::flushRedisModelCacheProcessing();
+                    if ($this->app->resolved(RedisModelCacheState::class)) {
+                        $this->app->make(RedisModelCacheState::class)->flush();
+                    }
                     $this->app->make(Observability::class)->reset();
                 }
             );

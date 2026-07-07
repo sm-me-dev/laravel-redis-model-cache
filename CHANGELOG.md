@@ -5,6 +5,25 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [v2.5.0] — 2026-07-07
+
+### Octane-Safe State (Scoped Service)
+
+#### Added
+
+- **`RedisModelCacheState` scoped state service** — `src/Support/RedisModelCacheState.php` holds the processing and deleted-in-cycle tracking previously stored in static arrays. Registered as a Laravel scoped binding (`$this->app->scoped()`), it is automatically reset between requests in Octane workers.
+- **State isolation test suite** — 17 tests covering per-class independence, multi-ID tracking, flush semantics, instance isolation, and string key support.
+
+#### Changed
+
+- **`HasRedisModelCache` trait** — static arrays `$redisModelCacheProcessing` and `$redisModelCacheDeletedInCycle` replaced with the scoped `RedisModelCacheState`. All protected methods (`isRedisModelCacheProcessing`, `markRedisModelCacheProcessing`, `unmarkRedisModelCacheProcessing`, `isRedisModelCacheDeletedInCycle`, `markRedisModelCacheDeletedInCycle`) now delegate to the state service.
+- **`RedisModelCacheServiceProvider::registerLifecycleHooks()`** — `App::terminating` and Octane `WorkerTickStarting` hooks now flush via the scoped state service instead of the static trait method. The scoped binding naturally resets between Octane requests.
+- **`flushRedisModelCacheProcessing()`** — preserved as a backward-compatible public method that delegates to the scoped state service.
+
+#### Removed
+
+- **Static request-cycle state** — `HasRedisModelCache::$redisModelCacheProcessing` and `HasRedisModelCache::$redisModelCacheDeletedInCycle` static arrays removed. No more static state bleed across requests in long-running workers.
+
 ## [v2.4.0] — 2026-07-07
 
 ### Public Release Readiness

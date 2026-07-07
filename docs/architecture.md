@@ -2,7 +2,13 @@
 
 ## Data Flow
 
-> **Diagrams:** See [`docs/diagrams/high_level_request_flow.svg`](diagrams/high_level_request_flow.svg) for the request flow, [`docs/diagrams/redis_key_layout.svg`](diagrams/redis_key_layout.svg) for the key layout, [`docs/diagrams/query_resolution_flow.svg`](diagrams/query_resolution_flow.svg) for query resolution, and [`docs/diagrams/invalidation_lifecycle.svg`](diagrams/invalidation_lifecycle.svg) for invalidation lifecycle.
+<img src="diagrams/high_level_request_flow.svg" alt="High-Level Request Flow" width="900">
+
+<img src="diagrams/redis_key_layout.svg" alt="Redis Key Layout" width="900">
+
+<img src="diagrams/query_resolution_flow.svg" alt="Query Resolution Flow" width="900">
+
+<img src="diagrams/invalidation_lifecycle.svg" alt="Invalidation Lifecycle" width="900">
 
 ```
 ┌──────────────┐    saved/deleted     ┌───────────────────┐
@@ -254,26 +260,28 @@ Redis cluster distributes keys across nodes based on hash slots. Without hash ta
 
 The package uses modern PHP 8.4 features (constructor property promotion, typed properties) and Laravel 12 APIs. Lowest-dependency testing would fail on PHP 8.3 or Laravel 11. The matrix covers both stability modes for compatibility breadth within the supported range.
 
-## Octane & Long-Running Worker Isolation (v2.2)
+## Octane & Long-Running Worker Isolation (v2.5)
 
 ### Memory Safety
 
-| Component | v2.1 (unbounded) | v2.2 (bounded) | Risk if unbounded |
-|-----------|-----------------|----------------|-------------------|
+| Component | v2.1 (unbounded) | v2.5 (bounded/scoped) | Risk if unbounded |
+|-----------|-----------------|----------------------|-------------------|
 | `Observability::$latencySamples` | `array[]` append | Ring buffer 1000, modulo index | OOM after ~8M requests |
 | `Observability::$pipelineSizes` | `array[]` append | Ring buffer 1000, modulo index | OOM after ~8M requests |
 | `Observability::latencyPercentile()` | Sort full array | `flattenRingBuffer()` then sort | O(N log N) on unbounded array |
-| `HasRedisModelCache::$redisModelCacheProcessing` | Static, never cleared | Flushed on `App::terminating` | Request-state bleed |
-| `HasRedisModelCache::$redisModelCacheDeletedInCycle` | Static, never cleared | Flushed on `App::terminating` | Request-state bleed |
+| `RedisModelCacheState` (processing) | Static arrays in trait | Scoped service, auto-reset per request | Request-state bleed |
+| `RedisModelCacheState` (deletedInCycle) | Static arrays in trait | Scoped service, auto-reset per request | Request-state bleed |
 
 ### Lifecycle Hook Registration
 
 Registered in `RedisModelCacheServiceProvider::registerLifecycleHooks()`:
 
 ```php
-// All environments
+// All environments — flush scoped state
 App::terminating(function (): void {
-    HasRedisModelCache::flushRedisModelCacheProcessing();
+    if ($this->app->resolved(RedisModelCacheState::class)) {
+        $this->app->make(RedisModelCacheState::class)->flush();
+    }
 });
 
 // Octane only (when package installed)
@@ -281,12 +289,20 @@ if (class_exists(WorkerTickStarting::class)) {
     $this->app->make('events')->listen(
         WorkerTickStarting::class,
         function (): void {
-            HasRedisModelCache::flushRedisModelCacheProcessing();
-            app(Observability::class)->reset();
+            if ($this->app->resolved(RedisModelCacheState::class)) {
+                $this->app->make(RedisModelCacheState::class)->flush();
+            }
+            $this->app->make(Observability::class)->reset();
         }
     );
 }
 ```
+
+The `RedisModelCacheState` is registered as a **scoped** binding (`$this->app->scoped()`),
+which means Laravel/Octane automatically creates a fresh instance per request or
+per Octane worker tick. This replaces the previous approach of flushing static
+arrays in the `HasRedisModelCache` trait, making the package fully safe for
+Octane workers without relying on lifecycle hook timing.
 
 ### Ring Buffer Flattening
 
@@ -368,8 +384,9 @@ package, even if someone forked or monkey-patched the code.
 
 ### Console commands (stable)
 
-- `redis-model-cache:warmup`
-- `redis-cache:debug`
+- `redis-model-cache:warmup` — pre-populate cache from database
+- `redis-cache:debug` — inspect service state, metrics, config (alias: `redis-model-cache:debug`)
+- `redis:monitor-cache` — monitor keys, TTL, memory, and manage cache
 
 ### Jobs (stable)
 

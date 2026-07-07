@@ -128,6 +128,50 @@ class HasRedisModelCacheTest extends TestCase
         $this->assertFalse(method_exists(DummyModel::class, 'forceDeleted'));
     }
 
+    public function test_trait_uses_scoped_state_and_respects_lifecycle_isolation(): void
+    {
+        $model1 = new DummyModel(['id' => 1, 'status' => 'active']);
+
+        // Simulate processing during first "request"
+        $this->invokeProtectedStatic('markRedisModelCacheProcessing', DummyModel::class, $model1);
+        $isProcessing = $this->invokeProtectedStatic('isRedisModelCacheProcessing', DummyModel::class, $model1);
+        $this->assertTrue($isProcessing);
+
+        // Simulate end-of-request flush (as done by terminate/Octane hooks)
+        $this->invokeProtectedStatic('flushRedisModelCacheProcessing', DummyModel::class);
+
+        // After flush, should not be processing
+        $isProcessing = $this->invokeProtectedStatic('isRedisModelCacheProcessing', DummyModel::class, $model1);
+        $this->assertFalse($isProcessing);
+
+        // Simulate second "request" — state should be clean
+        $model2 = new DummyModel(['id' => 2, 'status' => 'active']);
+        $this->invokeProtectedStatic('markRedisModelCacheProcessing', DummyModel::class, $model2);
+        // Model1 from previous request should NOT be flagged
+        $isProcessingModel1 = $this->invokeProtectedStatic('isRedisModelCacheProcessing', DummyModel::class, $model1);
+        $this->assertFalse($isProcessingModel1);
+        // Model2 in this request should be flagged
+        $isProcessingModel2 = $this->invokeProtectedStatic('isRedisModelCacheProcessing', DummyModel::class, $model2);
+        $this->assertTrue($isProcessingModel2);
+    }
+
+    public function test_deleted_in_cycle_does_not_leak_across_flush(): void
+    {
+        $model = new DummyModel(['id' => 99, 'status' => 'inactive']);
+
+        // Mark as deleted in first request
+        $this->invokeProtectedStatic('markRedisModelCacheDeletedInCycle', DummyModel::class, $model);
+        $isDeleted = $this->invokeProtectedStatic('isRedisModelCacheDeletedInCycle', DummyModel::class, $model);
+        $this->assertTrue($isDeleted);
+
+        // Flush (end of request)
+        $this->invokeProtectedStatic('flushRedisModelCacheProcessing', DummyModel::class);
+
+        // Should be clean after flush
+        $isDeleted = $this->invokeProtectedStatic('isRedisModelCacheDeletedInCycle', DummyModel::class, $model);
+        $this->assertFalse($isDeleted);
+    }
+
     /**
      * Invoke protected static method
      */
