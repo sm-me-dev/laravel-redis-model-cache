@@ -14,6 +14,7 @@ use Sm_mE\RedisModelCache\Contracts\ModelMatchStrategy;
 use Sm_mE\RedisModelCache\Contracts\RedisConnectionResolver;
 use Sm_mE\RedisModelCache\Invalidation\InvalidationContext;
 use Sm_mE\RedisModelCache\Invalidation\Strategies\AsyncStrategy;
+use Sm_mE\RedisModelCache\Jobs\InvalidateModelCacheJob;
 use Sm_mE\RedisModelCache\RedisModelService;
 use Sm_mE\RedisModelCache\Tests\TestCase;
 
@@ -170,7 +171,7 @@ class EdgeCaseTest extends TestCase
 
         $strategy->invalidate($context);
 
-        Queue::assertPushed(\Sm_mE\RedisModelCache\Jobs\InvalidateModelCacheJob::class);
+        Queue::assertPushed(InvalidateModelCacheJob::class);
     }
 
     // =========================================================================
