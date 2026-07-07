@@ -7,15 +7,12 @@
     <a href="https://packagist.org/packages/sm-me/laravel-redis-model-cache"><img src="https://img.shields.io/packagist/v/sm-me/laravel-redis-model-cache" alt="Latest Version"></a>
     <a href="https://packagist.org/packages/sm-me/laravel-redis-model-cache"><img src="https://img.shields.io/packagist/php-v/sm-me/laravel-redis-model-cache" alt="PHP Version"></a>
     <a href="https://packagist.org/packages/sm-me/laravel-redis-model-cache"><img src="https://img.shields.io/packagist/l/sm-me/laravel-redis-model-cache" alt="License"></a>
-    <a href="https://codecov.io/gh/sm-me/laravel-redis-model-cache"><img src="https://codecov.io/gh/sm-me/laravel-redis-model-cache/branch/main/graph/badge.svg" alt="Code Coverage"></a>
     <a href="https://github.com/sm-me/laravel-redis-model-cache/actions"><img src="https://github.com/sm-me/laravel-redis-model-cache/actions/workflows/run-tests.yml/badge.svg" alt="Tests"></a>
-    <a href="https://github.com/sm-me/laravel-redis-model-cache/actions"><img src="https://github.com/sm-me/laravel-redis-model-cache/actions/workflows/static-analysis.yml/badge.svg" alt="Static Analysis"></a>
-    <a href="https://github.com/sm-me/laravel-redis-model-cache/actions"><img src="https://github.com/sm-me/laravel-redis-model-cache/actions/workflows/codeql-analysis.yml/badge.svg" alt="CodeQL"></a>
 </p>
 
 ---
 
-**v2.2.0** | PHP ^8.3 | Laravel ^11.0 || ^12.0
+**v2.4.0** | PHP ^8.3 | Laravel ^11.0 || ^12.0
 
 ---
 
