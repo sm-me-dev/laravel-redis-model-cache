@@ -51,24 +51,13 @@ jobs:
           echo "::add-matcher::${{ runner.tool_cache }}/php.json"
           echo "::add-matcher::${{ runner.tool_cache }}/phpunit.json"
 
-      - name: Pin Laravel version
-        run: |
-          if [ "${{ matrix.laravel }}" = "11.*" ]; then
-            composer config --no-interaction require.illuminate/console ^11.0
-            composer config --no-interaction require.illuminate/database ^11.0
-            composer config --no-interaction require.illuminate/redis ^11.0
-            composer config --no-interaction require.illuminate/support ^11.0
-            composer config --no-interaction require-dev.orchestra/testbench ^9.0
-          else
-            composer config --no-interaction require.illuminate/console ^12.0
-            composer config --no-interaction require.illuminate/database ^12.0
-            composer config --no-interaction require.illuminate/redis ^12.0
-            composer config --no-interaction require.illuminate/support ^12.0
-            composer config --no-interaction require-dev.orchestra/testbench ^10.11
-          fi
-
       - name: Install dependencies
         run: |
+          if [ "${{ matrix.laravel }}" = "11.*" ]; then
+            jq '.require["illuminate/console"] = "^11.0" | .require["illuminate/database"] = "^11.0" | .require["illuminate/redis"] = "^11.0" | .require["illuminate/support"] = "^11.0" | .["require-dev"]["orchestra/testbench"] = "^9.0"' composer.json > composer.tmp.json && mv composer.tmp.json composer.json
+          else
+            jq '.require["illuminate/console"] = "^12.0" | .require["illuminate/database"] = "^12.0" | .require["illuminate/redis"] = "^12.0" | .require["illuminate/support"] = "^12.0" | .["require-dev"]["orchestra/testbench"] = "^10.11"' composer.json > composer.tmp.json && mv composer.tmp.json composer.json
+          fi
           composer config --no-interaction policy.advisories.block false
           composer update --${{ matrix.stability }} --prefer-dist --no-interaction --no-audit
 
