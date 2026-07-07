@@ -16,21 +16,18 @@ parameters:
         # Telescope classes are optional dependencies; stubs exist in phpstan.stub
         - '~Call to static method make\(\) on an unknown class Laravel\\Telescope\\IncomingEntry~'
         - '~Call to static method recordCache\(\) on an unknown class Laravel\\Telescope\\Telescope~'
-        # HasRedisModelCache accesses config('redis-model-cache.*') which returns mixed.
-        # Full type narrowing would require a config DTO.
+        # Config-derived values are now typed via Configuration DTO (src/Support/Configuration.php).
+        # Remaining mixed access issues are from Redis responses, model attributes,
+        # and deserialized payloads — these are inherent to dynamic data and cannot
+        # be fully typed without runtime assertions on every access.
         - '~Cannot access offset [a-zA-Z_]+ on mixed~'
-        # Config-derived values passed to typed parameters
         - '~ expects .*, mixed given\.~'
         - '~Method .*::resolveRedisModelCache(Touches|Config)\(\) should return~'
-        # PHP casting from mixed (formatBytes expects int)
         - '~Cannot cast mixed to~'
-        # foreach on mixed from config arrays
         - '~Argument of an invalid type mixed supplied for foreach~'
-        # array_map/array_intersect with config-derived arrays
         - '~ expects array, mixed given\.~'
         - '~function array_map expects~'
         - '~function array_intersect expects~'
-        # count() on mixed config value
         - '~function count expects~'
         # Mock object method dispatch via __call (PHPUnit/Mockery convention)
         - '~Cannot call method [a-zA-Z]+\(\) on mixed~'

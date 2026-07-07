@@ -12,6 +12,7 @@ use Illuminate\Queue\SerializesModels;
 use Sm_mE\RedisModelCache\Invalidation\InvalidationContext;
 use Sm_mE\RedisModelCache\Invalidation\Strategies\SyncStrategy;
 use Sm_mE\RedisModelCache\RedisModelService;
+use Sm_mE\RedisModelCache\Support\Configuration;
 
 class InvalidateModelCacheJob implements ShouldQueue
 {
@@ -37,7 +38,7 @@ class InvalidateModelCacheJob implements ShouldQueue
             'connection' => $config['connection'] ?? null,
         ]);
 
-        $versioned = (bool) config('redis-model-cache.invalidation.versioned', false);
+        $versioned = Configuration::fromConfig()->invalidationVersioned;
         $strategy = new SyncStrategy($service, $versioned);
         $strategy->invalidate($this->context);
     }

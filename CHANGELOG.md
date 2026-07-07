@@ -5,6 +5,29 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [v2.6.0] — 2026-07-07
+
+### Typed Configuration DTO (Phase 3C)
+
+#### Added
+
+- **`Configuration` typed DTO** (`src/Support/Configuration.php`) — 28 typed readonly properties covering all `redis-model-cache` config keys with proper `int`, `string`, `bool`, and `?int`/`?string` types. Factory method `Configuration::fromConfig()` reads from Laravel's config with full type coercion.
+- **Configuration test suite** — 7 tests covering defaults, custom values, `fromConfig()` round-trip, empty config fallback, explicit null handling, and nullable fields.
+
+#### Changed
+
+- **`RedisBaseService`** — accepts optional `?Configuration $configuration` parameter; resolves via `Configuration::fromConfig()` when omitted. All internal config reads use typed properties instead of raw `config()` calls.
+- **`RedisModelService`** — accepts optional `?Configuration $configuration` parameter (passed through to parent). `metricsEnabled`, `hydrateBatchSize`, `scanCount`, `debugMode`, compression, lua, SWR, stampede protection, and observability dispatch all read from the typed DTO.
+- **`DefaultConnectionResolver`** — accepts optional `?Configuration $configuration`; resolves connection name from DTO.
+- **`HasRedisModelCache` trait** — `resolveInvalidationManager()` reads invalidation config from `Configuration::fromConfig()` instead of raw `config()` array access.
+- **`DebugCommand`** — `renderConfig()` takes a typed `Configuration` parameter; all display values from typed properties.
+- **`RevalidateCacheJob`** / **`InvalidateModelCacheJob`** — config reads via `Configuration::fromConfig()`.
+- **ServiceProvider** — bindings resolve config via `Configuration::fromConfig()`; `registerEventSubscribers()` uses typed DTO.
+
+#### PHPStan
+
+- Removed 9 suppression patterns related to mixed config access; updated comments for remaining mixed-value suppressions (covers Redis responses, model attributes, deserialized payloads — inherent to dynamic data). PHPStan level max: 0 errors.
+
 ## [v2.5.1] — 2026-07-07
 
 ### CI/CD Consolidation

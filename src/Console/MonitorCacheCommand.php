@@ -305,14 +305,6 @@ class MonitorCacheCommand extends Command
 
     private function formatBytes(int $bytes): string
     {
-        $units = ['B', 'KB', 'MB', 'GB'];
-        $i = 0;
-
-        while ($bytes >= 1024 && $i < count($units) - 1) {
-            $bytes /= 1024;
-            $i++;
-        }
-
-        return round($bytes, 2).' '.$units[$i];
+        return \formatBytes($bytes);
     }
 }

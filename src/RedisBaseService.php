@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Sm_mE\RedisModelCache;
 
 use Sm_mE\RedisModelCache\Contracts\RedisConnectionResolver;
+use Sm_mE\RedisModelCache\Support\Configuration;
 
 class RedisBaseService
 {
@@ -103,11 +104,15 @@ end
 return 0
 LUA;
 
+    protected Configuration $configuration;
+
     public function __construct(
         protected RedisConnectionResolver $connectionResolver,
-        ?int $ttl = null
+        ?int $ttl = null,
+        ?Configuration $configuration = null,
     ) {
-        $this->ttl = $ttl ?? (int) config('redis-model-cache.default_ttl', 86400);
+        $this->configuration = $configuration ?? Configuration::fromConfig();
+        $this->ttl = $ttl ?? $this->configuration->defaultTtl;
         $this->redis = $connectionResolver->resolve();
         $this->redisPrefix = $connectionResolver->getPrefix();
     }
@@ -172,18 +177,16 @@ LUA;
      */
     protected function compress(string $data): string
     {
-        if (! config('redis-model-cache.compression.enabled', false)) {
+        if (! $this->configuration->compressionEnabled) {
             return $data;
         }
 
-        $minSize = (int) config('redis-model-cache.compression.min_size', 512);
-
-        if (strlen($data) < $minSize) {
+        if (strlen($data) < $this->configuration->compressionMinSize) {
             return $data;
         }
 
-        $algorithm = config('redis-model-cache.compression.algorithm', 'gzip');
-        $level = (int) config('redis-model-cache.compression.level', 6);
+        $algorithm = $this->configuration->compressionAlgorithm;
+        $level = $this->configuration->compressionLevel;
 
         return match ($algorithm) {
             'gzip' => $this->compressGzip($data, $level),
@@ -199,7 +202,7 @@ LUA;
      */
     protected function decompress(string $data): string
     {
-        if (! config('redis-model-cache.compression.enabled', false)) {
+        if (! $this->configuration->compressionEnabled) {
             return $data;
         }
 
@@ -325,7 +328,7 @@ LUA;
      */
     protected function luaEnabled(): bool
     {
-        return (bool) config('redis-model-cache.lua_scripting.enabled', true);
+        return $this->configuration->luaScriptingEnabled;
     }
 
     /**

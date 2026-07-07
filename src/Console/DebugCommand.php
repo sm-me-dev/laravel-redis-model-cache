@@ -7,11 +7,19 @@ namespace Sm_mE\RedisModelCache\Console;
 use Illuminate\Console\Command;
 use Sm_mE\RedisModelCache\Contracts\RedisConnectionResolver;
 use Sm_mE\RedisModelCache\Support\CacheManager;
+use Sm_mE\RedisModelCache\Support\Configuration;
 
 class DebugCommand extends Command
 {
     protected $signature = 'redis-cache:debug
-                            {--json : Output as JSON}';
+                             {--json : Output as JSON}';
+
+    public function __construct()
+    {
+        parent::__construct();
+
+        $this->setAliases(['redis-model-cache:debug']);
+    }
 
     protected $description = 'Inspect Redis model cache state, metrics, and configuration';
 
@@ -23,12 +31,13 @@ class DebugCommand extends Command
             $redis = $connectionResolver->resolve();
             $info = $redis->info();
             $metrics = $cacheManager->metrics();
+            $config = Configuration::fromConfig();
 
             if ($this->option('json')) {
                 $this->line(json_encode([
                     'redis' => $metrics->toArray()['redis'],
                     'metrics' => $metrics->toArray(),
-                    'config' => config('redis-model-cache'),
+                    'config' => $config,
                 ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT));
 
                 return self::SUCCESS;
@@ -36,7 +45,7 @@ class DebugCommand extends Command
 
             $this->renderRedisInfo($info, $metrics);
             $this->renderMetrics($metrics);
-            $this->renderConfig();
+            $this->renderConfig($config);
 
             return self::SUCCESS;
         } catch (\Exception $e) {
@@ -95,23 +104,23 @@ class DebugCommand extends Command
         $this->newLine();
     }
 
-    private function renderConfig(): void
+    private function renderConfig(Configuration $config): void
     {
         $this->info('Configuration');
         $this->table(
             ['Key', 'Value'],
             [
-                ['Connection', config('redis-model-cache.connection', 'cache')],
-                ['Default TTL', (string) config('redis-model-cache.default_ttl', 86400)],
-                ['Compression', config('redis-model-cache.compression.enabled') ? config('redis-model-cache.compression.algorithm') : 'disabled'],
-                ['Events', config('redis-model-cache.observability.dispatch_events') ? 'enabled' : 'disabled'],
-                ['Debug mode', config('redis-model-cache.observability.debug') ? 'enabled' : 'disabled'],
-                ['SWR', config('redis-model-cache.stale_while_revalidate.enabled') ? 'enabled' : 'disabled'],
-                ['Stampede protection', config('redis-model-cache.stampede_protection.enabled') ? 'enabled' : 'disabled'],
-                ['Invalidation strategy', config('redis-model-cache.invalidation.strategy', 'sync')],
-                ['Versioned keys', config('redis-model-cache.invalidation.versioned') ? 'yes' : 'no'],
-                ['Multi-tenant', config('redis-model-cache.multi_tenant.enabled') ? 'yes' : 'no'],
-                ['Lua scripting', config('redis-model-cache.lua_scripting.enabled') ? 'enabled' : 'disabled'],
+                ['Connection', $config->connection],
+                ['Default TTL', (string) $config->defaultTtl],
+                ['Compression', $config->compressionEnabled ? $config->compressionAlgorithm : 'disabled'],
+                ['Events', $config->observabilityDispatchEvents ? 'enabled' : 'disabled'],
+                ['Debug mode', $config->observabilityDebug ? 'enabled' : 'disabled'],
+                ['SWR', $config->swrEnabled ? 'enabled' : 'disabled'],
+                ['Stampede protection', $config->stampedeProtectionEnabled ? 'enabled' : 'disabled'],
+                ['Invalidation strategy', $config->invalidationStrategy],
+                ['Versioned keys', $config->invalidationVersioned ? 'yes' : 'no'],
+                ['Multi-tenant', $config->multiTenantEnabled ? 'yes' : 'no'],
+                ['Lua scripting', $config->luaScriptingEnabled ? 'enabled' : 'disabled'],
             ]
         );
 
@@ -121,14 +130,6 @@ class DebugCommand extends Command
 
     private function formatBytes(int $bytes): string
     {
-        $units = ['B', 'KB', 'MB', 'GB'];
-        $i = 0;
-
-        while ($bytes >= 1024 && $i < count($units) - 1) {
-            $bytes /= 1024;
-            $i++;
-        }
-
-        return round($bytes, 2).' '.$units[$i];
+        return \formatBytes($bytes);
     }
 }

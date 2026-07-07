@@ -188,9 +188,6 @@ class WarmupCommand extends Command
      */
     protected function formatBytes(int $bytes): string
     {
-        $units = ['B', 'KB', 'MB', 'GB'];
-        $power = (int) ($bytes > 0 ? floor(log($bytes, 1024)) : 0);
-
-        return round($bytes / (1024 ** $power), 2).' '.$units[$power];
+        return \formatBytes($bytes);
     }
 }

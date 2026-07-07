@@ -13,9 +13,10 @@ class DefaultConnectionResolver implements RedisConnectionResolver
 
     protected string $prefix;
 
-    public function __construct(?string $connection = null)
+    public function __construct(?string $connection = null, ?Configuration $configuration = null)
     {
-        $connection ??= (string) config('redis-model-cache.connection', 'cache');
+        $configuration ??= Configuration::fromConfig();
+        $connection ??= $configuration->connection;
 
         $this->client = Redis::connection($connection)->client();
         $this->prefix = (string) config('database.redis.options.prefix', '');

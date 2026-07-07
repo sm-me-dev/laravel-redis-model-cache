@@ -843,6 +843,49 @@ class RedisModelServiceTest extends TestCase
         $this->assertCount(1, $result);
         $this->assertEquals(3, $result->first()->getKey());
     }
+
+    public function test_selective_delegates_to_pluck(): void
+    {
+        $this->redis->shouldReceive('sinter')
+            ->with('{test_models}:index:role_id:1')
+            ->andReturn(['1']);
+        $this->redis->shouldReceive('hmget')
+            ->with('{test_models}:hash', ['1'])
+            ->andReturn([
+                '1' => json_encode(['attributes' => ['id' => 1, 'role_id' => 1, 'status' => 'active'], 'relations' => []], JSON_THROW_ON_ERROR),
+            ]);
+
+        $result = $this->service->selective(['id', 'status'], ['role_id' => 1]);
+
+        $this->assertCount(1, $result);
+        $this->assertIsArray($result->first());
+        $this->assertArrayHasKey('id', $result->first());
+        $this->assertArrayHasKey('status', $result->first());
+        $this->assertSame(1, $result->first()['id']);
+        $this->assertSame('active', $result->first()['status']);
+    }
+
+    public function test_selective_returns_empty_when_no_matches(): void
+    {
+        $this->redis->shouldReceive('sinter')
+            ->with('{test_models}:index:role_id:999')
+            ->andReturn([]);
+        $this->redis->shouldReceive('hmget')
+            ->with('{test_models}:hash', [])
+            ->andReturn([]);
+
+        $result = $this->service->selective(['id'], ['role_id' => 999]);
+
+        $this->assertCount(0, $result);
+    }
+
+    public function test_selective_throws_on_unindexed_field(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('not indexed');
+
+        $this->service->selective(['name'], ['email' => 'test@example.com']);
+    }
 }
 
 class TestableRedisModelService extends RedisModelService

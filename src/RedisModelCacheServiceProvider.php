@@ -14,6 +14,7 @@ use Sm_mE\RedisModelCache\Contracts\RedisConnectionResolver;
 use Sm_mE\RedisModelCache\Contracts\TenantResolverInterface;
 use Sm_mE\RedisModelCache\Listeners\ObservabilitySubscriber;
 use Sm_mE\RedisModelCache\Support\CacheManager;
+use Sm_mE\RedisModelCache\Support\Configuration;
 use Sm_mE\RedisModelCache\Support\DefaultConnectionResolver;
 use Sm_mE\RedisModelCache\Support\DefaultModelMatchStrategy;
 use Sm_mE\RedisModelCache\Support\Observability;
@@ -28,21 +29,21 @@ class RedisModelCacheServiceProvider extends ServiceProvider
 
         $this->app->singleton(RedisConnectionResolver::class, function ($app) {
             return new DefaultConnectionResolver(
-                config('redis-model-cache.connection', 'cache')
+                Configuration::fromConfig()->connection
             );
         });
 
         $this->app->bind(TenantResolverInterface::class, function ($app) {
-            $resolverClass = config('redis-model-cache.multi_tenant.resolver');
+            $config = Configuration::fromConfig();
 
-            if ($resolverClass !== null && class_exists($resolverClass)) {
-                return $app->make($resolverClass);
+            if ($config->multiTenantResolver !== null && class_exists($config->multiTenantResolver)) {
+                return $app->make($config->multiTenantResolver);
             }
 
-            $strategy = config('redis-model-cache.multi_tenant.strategy', 'header');
-            $key = config('redis-model-cache.multi_tenant.key', 'X-Tenant-ID');
-
-            return new RequestTenantResolver(strategy: $strategy, key: $key);
+            return new RequestTenantResolver(
+                strategy: $config->multiTenantStrategy,
+                key: $config->multiTenantKey,
+            );
         });
 
         $this->app->scoped(RedisModelCacheState::class);
@@ -137,7 +138,7 @@ class RedisModelCacheServiceProvider extends ServiceProvider
 
     protected function registerEventSubscribers(): void
     {
-        if (! config('redis-model-cache.observability.dispatch_events', true)) {
+        if (! Configuration::fromConfig()->observabilityDispatchEvents) {
             return;
         }
 

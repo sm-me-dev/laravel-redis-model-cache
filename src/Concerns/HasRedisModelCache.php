@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Sm_mE\RedisModelCache\Invalidation\InvalidationManager;
 use Sm_mE\RedisModelCache\RedisModelService;
+use Sm_mE\RedisModelCache\Support\Configuration;
 use Sm_mE\RedisModelCache\Support\RedisModelCacheState;
 
 trait HasRedisModelCache
@@ -157,14 +158,13 @@ trait HasRedisModelCache
     protected static function resolveInvalidationManager(): InvalidationManager
     {
         $service = static::resolveRedisModelCacheService();
-        $config = static::redisModelCacheConfig();
-        $invalidationConfig = config('redis-model-cache.invalidation', []);
+        $config = Configuration::fromConfig();
 
         return new InvalidationManager(
             service: $service,
-            strategy: $invalidationConfig['strategy'] ?? 'sync',
-            versioned: $invalidationConfig['versioned'] ?? false,
-            queue: $invalidationConfig['queue'] ?? 'default',
+            strategy: $config->invalidationStrategy,
+            versioned: $config->invalidationVersioned,
+            queue: $config->invalidationQueue,
         );
     }
 

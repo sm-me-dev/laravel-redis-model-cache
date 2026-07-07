@@ -2,6 +2,8 @@
 
 Publish: `php artisan vendor:publish --tag=redis-model-cache-config`
 
+The package provides a typed `Configuration` DTO (`Sm_mE\RedisModelCache\Support\Configuration`) with 28 typed readonly properties. All internal config reads go through this DTO instead of raw `config()` calls, ensuring type safety at every access point. Use `Configuration::fromConfig()` to create an instance from the current Laravel config, or inject `Configuration` in your own services (it is auto-resolvable from the container).
+
 | Key | Default | Description |
 |-----|---------|-------------|
 | `connection` | `'cache'` | Redis connection from `config/database.php` |

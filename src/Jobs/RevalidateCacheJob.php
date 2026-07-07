@@ -13,6 +13,7 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Laravel\SerializableClosure\SerializableClosure;
 use Sm_mE\RedisModelCache\RedisModelService;
+use Sm_mE\RedisModelCache\Support\Configuration;
 
 /**
  * Background job for revalidating stale cache entries.
@@ -55,7 +56,7 @@ class RevalidateCacheJob implements ShouldQueue
         $this->callback = new SerializableClosure($callback);
 
         // Use the configured SWR queue
-        $this->onQueue(config('redis-model-cache.stale_while_revalidate.queue', 'default'));
+        $this->onQueue(Configuration::fromConfig()->swrQueue);
     }
 
     /**

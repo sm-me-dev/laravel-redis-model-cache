@@ -18,6 +18,7 @@ use Sm_mE\RedisModelCache\Events\CacheHit;
 use Sm_mE\RedisModelCache\Events\CacheMiss;
 use Sm_mE\RedisModelCache\Events\QueryExecuted;
 use Sm_mE\RedisModelCache\Jobs\RevalidateCacheJob;
+use Sm_mE\RedisModelCache\Support\Configuration;
 use Sm_mE\RedisModelCache\Support\DefaultConnectionResolver;
 use Sm_mE\RedisModelCache\Support\ExplainResult;
 use Sm_mE\RedisModelCache\Support\IndexResolver;
@@ -78,13 +79,14 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         array $custom_indexes = [],
         ?int $ttl = null,
         ?ModelMatchStrategy $matchStrategy = null,
-        ?string $connection = null
+        ?string $connection = null,
+        ?Configuration $configuration = null,
     ) {
         if ($connection !== null) {
-            $connectionResolver = new DefaultConnectionResolver($connection);
+            $connectionResolver = new DefaultConnectionResolver($connection, $configuration);
         }
 
-        parent::__construct($connectionResolver, $ttl);
+        parent::__construct($connectionResolver, $ttl, $configuration);
 
         if (! is_subclass_of($model_class, Model::class)) {
             throw new InvalidArgumentException('$model_class must extend '.Model::class);
@@ -96,7 +98,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         $this->sorted = $sorted;
         $this->custom_indexes = $custom_indexes;
         $this->matchStrategy = $matchStrategy ?? app(ModelMatchStrategy::class);
-        $this->metricsEnabled = (bool) config('redis-model-cache.observability.enabled', true);
+        $this->metricsEnabled = $this->configuration->observabilityEnabled;
         $this->indexResolver = new IndexResolver;
         $this->queryPlanner = new QueryPlanner;
     }
@@ -149,7 +151,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         }
 
         $hashKey = $this->hashKey();
-        $maxBatch = max(1, (int) config('redis-model-cache.hydrate_batch_size', 5000));
+        $maxBatch = max(1, $this->configuration->hydrateBatchSize);
 
         /** @var array<int, string|false> $results */
         $results = [];
@@ -208,7 +210,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
      */
     protected function buildPrefix(string $table): string
     {
-        if (! config('redis-model-cache.multi_tenant.enabled', false)) {
+        if (! $this->configuration->multiTenantEnabled) {
             return '{'.$table.'}';
         }
 
@@ -285,7 +287,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
 
         $age = time() - $cachedAt;
         $isStale = $age > $this->ttl;
-        $gracePeriod = (int) config('redis-model-cache.stale_while_revalidate.grace_period', 300);
+        $gracePeriod = $this->configuration->swrGracePeriod;
         $withinGrace = $isStale && $age <= ($this->ttl + $gracePeriod);
 
         return [
@@ -469,7 +471,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         $hashExists = (bool) $this->redis->exists($hashKey);
 
         // Stale-While-Revalidate logic
-        $swrEnabled = $swr && config('redis-model-cache.stale_while_revalidate.enabled', false);
+        $swrEnabled = $swr && $this->configuration->swrEnabled;
 
         $forceRebuild = false;
 
@@ -502,7 +504,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
                             ttl: $this->ttl,
                             redisConnection: $this->connectionResolver instanceof DefaultConnectionResolver
                                 ? null
-                                : config('redis-model-cache.connection'),
+                                : $this->configuration->connection,
                         ));
 
                         // Return stale data immediately
@@ -530,14 +532,14 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         }
 
         // Stampede protection enabled and configured
-        $stampedeEnabled = $stampede && config('redis-model-cache.stampede_protection.enabled', false);
+        $stampedeEnabled = $stampede && $this->configuration->stampedeProtectionEnabled;
         $lockAcquired = false;
         $lockKey = null;
         $lockValue = null;
 
         if ($stampedeEnabled && ! $hashExists) {
             $lockKey = StampedeProtection::lockKey($hashKey);
-            $lockTimeout = (int) config('redis-model-cache.stampede_protection.lock_timeout', 10);
+            $lockTimeout = $this->configuration->stampedeProtectionLockTimeout;
 
             if ($this->luaEnabled()) {
                 // Use value-based locking for CAS release
@@ -549,8 +551,8 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
 
             if (! $lockAcquired) {
                 // Wait for the lock holder to populate cache
-                $waitTimeout = (int) config('redis-model-cache.stampede_protection.wait_timeout', 5);
-                $waitInterval = (int) config('redis-model-cache.stampede_protection.wait_interval', 100);
+                $waitTimeout = $this->configuration->stampedeProtectionWaitTimeout;
+                $waitInterval = $this->configuration->stampedeProtectionWaitInterval;
 
                 StampedeProtection::waitForLock($this->redis, $lockKey, $waitTimeout, $waitInterval);
 
@@ -574,7 +576,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
             $models = $this->filterModelsByKey($models, $only);
 
             // Dispatch cache miss event
-            if ($this->metricsEnabled && config('redis-model-cache.observability.dispatch_events', true)) {
+            if ($this->metricsEnabled && $this->configuration->observabilityDispatchEvents) {
                 $executionTime = (microtime(true) - $startTime) * 1000;
                 event(new CacheMiss(
                     modelClass: $this->model_class,
@@ -770,7 +772,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         $result = $this->hydrateIds($ids, $hydrate);
 
         // Dispatch metrics event
-        if ($this->metricsEnabled && config('redis-model-cache.observability.dispatch_events', true)) {
+        if ($this->metricsEnabled && $this->configuration->observabilityDispatchEvents) {
             $executionTime = (microtime(true) - $startTime) * 1000;
 
             if ($ids !== []) {
@@ -861,7 +863,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         $result = $this->hydrateIds($ids, $hydrate);
 
         // Dispatch metrics event
-        if ($this->metricsEnabled && config('redis-model-cache.observability.dispatch_events', true)) {
+        if ($this->metricsEnabled && $this->configuration->observabilityDispatchEvents) {
             $executionTime = (microtime(true) - $startTime) * 1000;
 
             if ($ids !== []) {
@@ -953,7 +955,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         $result = $this->hydrateIds($ids, $hydrate);
 
         // Dispatch metrics event
-        if ($this->metricsEnabled && config('redis-model-cache.observability.dispatch_events', true)) {
+        if ($this->metricsEnabled && $this->configuration->observabilityDispatchEvents) {
             $executionTime = (microtime(true) - $startTime) * 1000;
 
             if ($ids !== []) {
@@ -1069,7 +1071,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
 
         // Fetch payloads with batched HMGET for large sets
         $hashKey = $this->hashKey();
-        $maxBatch = max(1, (int) config('redis-model-cache.hydrate_batch_size', 5000));
+        $maxBatch = max(1, $this->configuration->hydrateBatchSize);
         /** @var array<int, string|false> $results */
         $results = [];
 
@@ -1109,9 +1111,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
     /**
      * Lightweight field-only fetch — returns collections of arrays, not models.
      *
-     * Uses HMGET for single-round-trip batch fetching, then extracts only the
-     * requested fields from the serialized payload. Avoids full model hydration
-     * and relation reconstruction, reducing memory by 60–80%.
+     * Delegates to pluck(). See pluck() for full documentation.
      *
      * @param  array<string>  $fields  Field names to retrieve
      * @param  array<string, mixed>  $where  WHERE conditions (indexed fields only)
@@ -1120,61 +1120,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
      */
     public function selective(array $fields, array $where = [], ?array $only = null): Collection
     {
-        foreach (array_keys($where) as $field) {
-            if (! in_array($field, $this->indexes, true)) {
-                throw new InvalidArgumentException(
-                    "Field '{$field}' is not indexed. Declare it in \$indexes. "
-                    .'Available: ['.implode(', ', $this->indexes).']'
-                );
-            }
-        }
-
-        if ($fields === []) {
-            throw new InvalidArgumentException('Fields array cannot be empty.');
-        }
-
-        $ids = $where !== []
-            ? $this->redis->sinter(...$this->buildConcreteKeys($where))
-            : $this->redis->hkeys($this->hashKey());
-
-        if ($only !== null && $only !== []) {
-            $ids = array_values(array_intersect($ids, $only));
-        }
-
-        $hashKey = $this->hashKey();
-        $maxBatch = max(1, (int) config('redis-model-cache.hydrate_batch_size', 5000));
-        $results = [];
-
-        if (count($ids) <= $maxBatch) {
-            $raw = $this->redis->hmget($hashKey, $ids);
-            foreach ($ids as $id) {
-                $results[] = $raw[$id] ?? false;
-            }
-        } else {
-            foreach (array_chunk($ids, $maxBatch) as $chunk) {
-                $raw = $this->redis->hmget($hashKey, $chunk);
-                foreach ($chunk as $id) {
-                    $results[] = $raw[$id] ?? false;
-                }
-            }
-        }
-
-        return collect($results)
-            ->filter()
-            ->map(function ($payload) use ($fields): array {
-                /** @var array{attributes: array<string, mixed>, relations: array<string, mixed>} $data */
-                $data = $this->deserialize($payload);
-
-                // Build lightweight DTO with only requested fields
-                $row = [];
-                foreach ($fields as $field) {
-                    $row[$field] = $data['attributes'][$field] ?? null;
-                }
-
-                /** @var array<string, mixed> */
-                return $row;
-            })
-            ->values();
+        return $this->pluck($fields, $where, $only);
     }
 
     /**
@@ -1808,7 +1754,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
      */
     protected function collectKeysByPattern(string $pattern): array
     {
-        $count = (int) config('redis-model-cache.scan_count', 1000);
+        $count = $this->configuration->scanCount;
         $keys = [];
 
         if (is_a($this->redis, 'Predis\Client')) {
@@ -2296,7 +2242,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
      */
     protected function logDebug(string $operation, array $context = []): void
     {
-        if (! $this->debugMode && ! config('redis-model-cache.observability.debug', false)) {
+        if (! $this->debugMode && ! $this->configuration->observabilityDebug) {
             return;
         }
 
