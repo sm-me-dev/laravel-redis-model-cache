@@ -385,8 +385,8 @@ package, even if someone forked or monkey-patched the code.
 ### Console commands (stable)
 
 - `redis-model-cache:warmup` — pre-populate cache from database
-- `redis-cache:debug` — inspect service state, metrics, config (alias: `redis-model-cache:debug`)
-- `redis:monitor-cache` — monitor keys, TTL, memory, and manage cache
+- `redis-model-cache:debug` — inspect service state, metrics, config (legacy alias: `redis-cache:debug`)
+- `redis-model-cache:monitor-cache` — monitor keys, TTL, memory, and manage cache (legacy alias: `redis:monitor-cache`)
 
 ### Jobs (stable)
 

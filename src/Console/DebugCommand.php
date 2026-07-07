@@ -11,14 +11,14 @@ use Sm_mE\RedisModelCache\Support\Configuration;
 
 class DebugCommand extends Command
 {
-    protected $signature = 'redis-cache:debug
+    protected $signature = 'redis-model-cache:debug
                              {--json : Output as JSON}';
 
     public function __construct()
     {
         parent::__construct();
 
-        $this->setAliases(['redis-model-cache:debug']);
+        $this->setAliases(['redis-cache:debug']);
     }
 
     protected $description = 'Inspect Redis model cache state, metrics, and configuration';

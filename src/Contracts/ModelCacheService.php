@@ -16,6 +16,9 @@ use Sm_mE\RedisModelCache\Support\ExplainResult;
 interface ModelCacheService
 {
     /**
+     * @deprecated 3.1.0 all() is permanently disabled for memory safety.
+     *             Use where() with indexed fields, rememberIndex(), or customWhere() instead.
+     *
      * @param  array<string>|null  $only
      * @return Collection<int, Model>
      */
@@ -120,7 +123,7 @@ interface ModelCacheService
     public function pluck(array $attributes, array $where = [], ?array $only = null): Collection;
 
     /**
-     * Lightweight field-only fetch — returns collections of arrays, not models.
+     * @deprecated 3.1.0 Use pluck() instead. selective() will be removed in a future release.
      *
      * Single HMGET round-trip (no pipeline), avoids full model hydration.
      * 60-80% less memory than full model hydration.

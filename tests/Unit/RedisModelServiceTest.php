@@ -61,7 +61,7 @@ class RedisModelServiceTest extends TestCase
     public function test_all_throws_bad_method_call_exception(): void
     {
         $this->expectException(BadMethodCallException::class);
-        $this->expectExceptionMessage('all() is disabled');
+        $this->expectExceptionMessage('all() is disabled and deprecated');
 
         $this->service->all();
     }

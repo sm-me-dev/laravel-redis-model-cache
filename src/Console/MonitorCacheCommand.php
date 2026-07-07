@@ -9,12 +9,19 @@ use Sm_mE\RedisModelCache\Contracts\RedisConnectionResolver;
 
 class MonitorCacheCommand extends Command
 {
-    protected $signature = 'redis:monitor-cache
-                            {action=info : Action to perform (info|keys|ttl|memory|clear)}
-                            {--pattern=* : Pattern to match keys}
-                            {--detailed : Show detailed information}';
+    protected $signature = 'redis-model-cache:monitor-cache
+                             {action=info : Action to perform (info|keys|ttl|memory|clear)}
+                             {--pattern=* : Pattern to match keys}
+                             {--detailed : Show detailed information}';
 
     protected $description = 'Monitor and manage Redis model cache';
+
+    public function __construct()
+    {
+        parent::__construct();
+
+        $this->setAliases(['redis:monitor-cache']);
+    }
 
     public function handle(RedisConnectionResolver $connectionResolver): int
     {

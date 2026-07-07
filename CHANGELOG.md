@@ -5,6 +5,37 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [v2.7.0] — 2026-07-07
+
+### API Consistency — Deprecations & Command Naming (Phase 3D)
+
+#### Added
+
+- **Command aliases for `redis-model-cache:*` prefix** — all console commands now use the canonical `redis-model-cache:*` prefix as their primary signature:
+  - `php artisan redis-model-cache:debug` (legacy alias: `redis-cache:debug`)
+  - `php artisan redis-model-cache:monitor-cache` (legacy alias: `redis:monitor-cache`)
+  - `php artisan redis-model-cache:warmup` (already canonical, no change)
+- **Command alias test suite** — `ConsoleCommandTest` (6 tests) verifying correct signatures and backward-compatible aliases.
+
+#### Changed
+
+- **`DebugCommand`** — primary signature changed from `redis-cache:debug` to `redis-model-cache:debug`; old name registered as legacy alias.
+- **`MonitorCacheCommand`** — primary signature changed from `redis:monitor-cache` to `redis-model-cache:monitor-cache`; old name registered as legacy alias.
+
+#### Deprecated
+
+- **`RedisModelService::all()`** — already throws `BadMethodCallException`; now marked `@deprecated` with explicit guidance in exception message.
+- **`ModelCacheService::all()`** — interface method marked `@deprecated`.
+- **`RedisModelService::selective()`** — thin wrapper around `pluck()`. Marked `@deprecated` — use `pluck()` instead.
+- **`ModelCacheService::selective()`** — interface method marked `@deprecated`.
+
+#### Documentation
+
+- README command examples updated to use `redis-model-cache:*` prefix with legacy alias notes.
+- `docs/architecture.md` command list updated to reflect canonical names.
+- README partial hydration section updated to recommend `pluck()` over deprecated `selective()`.
+- API reference table marks `selective()` as deprecated.
+
 ## [v2.6.0] — 2026-07-07
 
 ### Typed Configuration DTO (Phase 3C)

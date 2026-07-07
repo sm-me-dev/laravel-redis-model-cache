@@ -607,6 +607,9 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
     }
 
     /**
+     * @deprecated 3.1.0 all() is permanently disabled for memory safety.
+     *             Use where() with indexed fields, rememberIndex(), or customWhere() instead.
+     *
      * @param  array<string>|null  $only
      * @return Collection<int, Model>
      *
@@ -615,8 +618,8 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
     public function all(bool $hydrate = true, ?array $only = null): Collection
     {
         throw new BadMethodCallException(
-            'all() is disabled. Use where() with indexed fields, rememberIndex(), or customWhere(). '
-            .'Full hash scans are prohibited for memory safety.'
+            'all() is disabled and deprecated. Use where() with indexed fields, rememberIndex(), '
+            .'or customWhere(). Full hash scans are prohibited for memory safety.'
         );
     }
 
@@ -1111,7 +1114,9 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
     /**
      * Lightweight field-only fetch — returns collections of arrays, not models.
      *
-     * Delegates to pluck(). See pluck() for full documentation.
+     * @deprecated 3.1.0 Use pluck() instead. selective() is a thin wrapper
+     *             that delegates to pluck() and will be removed in a future release.
+     * @see pluck()
      *
      * @param  array<string>  $fields  Field names to retrieve
      * @param  array<string, mixed>  $where  WHERE conditions (indexed fields only)

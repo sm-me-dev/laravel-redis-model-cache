@@ -33,7 +33,7 @@ Unlike generic key-value caches, this package is **index-aware**: queries must u
 - **Batch atomic writes** — `storeMany()` pipelines EVALSHA commands with explicit script priming
 - **Incremental updates** — `updateAttribute`/`updateAttributes` modify a single field without full re-serialization
 - **Compression** — gzip/zstd/lz4 with `min_size` threshold to skip CPU waste on small payloads
-- **Partial hydration** — `selective()` / `pluck()` fetch only requested fields, reducing memory 60-80% vs full model hydration
+- **Partial hydration** — `pluck()` (recommended) fetches only requested fields, reducing memory 60-80% vs full model hydration. `selective()` is deprecated — migrate to `pluck()`.
 - **Multi-tenant isolation** — `{tenant:{id}:{table}}` prefix via `TenantResolverInterface`
 - **Cluster-safe** — hash tags `{...}` keep all keys for a model on the same cluster node
 - **Observability** — `CacheHit`/`CacheMiss`/`QueryExecuted` events, debug mode, inspect/analyzeIndexes tooling
@@ -112,11 +112,12 @@ The trait hooks into `saved`, `deleted`, and `forceDeleted` events to keep Redis
 php artisan redis-model-cache:warmup "App\Models\User" --where=status=active --indexes=role_id,status
 
 # Debug: inspect Redis state, metrics, config
-php artisan redis-cache:debug
-# Alias: php artisan redis-model-cache:debug
+php artisan redis-model-cache:debug
+# Legacy alias: php artisan redis-cache:debug
 
 # Monitor cache state, keys, TTL, memory
-php artisan redis:monitor-cache info
+php artisan redis-model-cache:monitor-cache info
+# Legacy alias: php artisan redis:monitor-cache info
 ```
 
 ## Requirements
@@ -183,8 +184,8 @@ $cache = app(RedisModelService::class, [
 | `count($where)` | SCARD or SINTER | Single index: O(1). Multi: O(N). |
 | `exists($where)` | EXISTS or SINTER | Single index: O(1). Multi: O(N). |
 | `find($id)` | HGET | Direct PK lookup, no index needed. |
-| `selective($fields, $where)` | SINTER + HMGET | Returns arrays, not models. |
 | `pluck($attributes, $where)` | SINTER + HMGET | Returns arrays, not models. |
+| `selective($fields, $where)` | SINTER + HMGET | **Deprecated** — use `pluck()` instead. |
 | `sorted($field, $start, $end)` | ZREVRANGE | Sorted fields only. |
 | `paginateSorted($field, $page, $perPage)` | ZREVRANGE | Offset calculated from page/perPage. |
 | `custom($name)` | SMEMBERS | Custom index sets. |
@@ -277,12 +278,12 @@ All options with defaults:
 
 | Command | Action | Safe for Production? | Redis Impact |
 |---------|--------|---------------------|--------------|
-| `php artisan redis:monitor-cache info` | Redis INFO + keyspace summary | ✅ Read-only | O(1) per key-type scan |
-| `php artisan redis:monitor-cache keys` | List keys by pattern | ✅ SCAN-based | O(N) cursor scan, configurable batch |
-| `php artisan redis:monitor-cache ttl` | Detect keys without TTL | ✅ SCAN-based | O(N) cursor scan |
-| `php artisan redis:monitor-cache memory` | Memory by key pattern | ✅ SCAN-based | O(N) cursor scan + data reads |
-| `php artisan redis:monitor-cache clear` | Delete keys | ⚠️ Requires confirmation | SCAN + DEL |
-| `php artisan redis-cache:debug` (alias: `redis-model-cache:debug`) | Inspect service state | ✅ Read-only | Config inspection only |
+| `php artisan redis-model-cache:monitor-cache info` | Redis INFO + keyspace summary | ✅ Read-only | O(1) per key-type scan |
+| `php artisan redis-model-cache:monitor-cache keys` | List keys by pattern | ✅ SCAN-based | O(N) cursor scan, configurable batch |
+| `php artisan redis-model-cache:monitor-cache ttl` | Detect keys without TTL | ✅ SCAN-based | O(N) cursor scan |
+| `php artisan redis-model-cache:monitor-cache memory` | Memory by key pattern | ✅ SCAN-based | O(N) cursor scan + data reads |
+| `php artisan redis-model-cache:monitor-cache clear` | Delete keys | ⚠️ Requires confirmation | SCAN + DEL |
+| `php artisan redis-model-cache:debug` (legacy alias: `redis-cache:debug`) | Inspect service state | ✅ Read-only | Config inspection only |
 | `php artisan redis-model-cache:warmup` | Pre-populate cache | ⚠️ Batch write | Pipeline EVALSHA × N |
 
 ## Troubleshooting
