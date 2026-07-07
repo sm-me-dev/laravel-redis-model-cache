@@ -5,6 +5,18 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [v2.5.1] — 2026-07-07
+
+### CI/CD Consolidation
+
+#### Added
+
+- **Consolidated CI workflow** — `.github/workflows/ci.yml` combines Pint, PHPStan, and PHPUnit into a single workflow with PHP 8.3/8.4 × Laravel 11/12 matrix, including prefer-lowest on PHP 8.3 + Laravel 11. Runs on push/PR to `main`/`master`. Redis service container with health check. Explicit `REDIS_HOST: redis` env var for reliable service discovery.
+
+#### Changed
+
+- **README badge** — updated CI badge to point to `ci.yml` workflow.
+
 ## [v2.5.0] — 2026-07-07
 
 ### Octane-Safe State (Scoped Service)

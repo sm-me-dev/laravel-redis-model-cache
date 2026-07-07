@@ -7,7 +7,7 @@
     <a href="https://packagist.org/packages/sm-me/laravel-redis-model-cache"><img src="https://img.shields.io/packagist/v/sm-me/laravel-redis-model-cache" alt="Latest Version"></a>
     <a href="https://packagist.org/packages/sm-me/laravel-redis-model-cache"><img src="https://img.shields.io/packagist/php-v/sm-me/laravel-redis-model-cache" alt="PHP Version"></a>
     <a href="https://packagist.org/packages/sm-me/laravel-redis-model-cache"><img src="https://img.shields.io/packagist/l/sm-me/laravel-redis-model-cache" alt="License"></a>
-    <a href="https://github.com/sm-me/laravel-redis-model-cache/actions"><img src="https://github.com/sm-me/laravel-redis-model-cache/actions/workflows/run-tests.yml/badge.svg" alt="Tests"></a>
+    <a href="https://github.com/sm-me/laravel-redis-model-cache/actions"><img src="https://github.com/sm-me/laravel-redis-model-cache/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
 </p>
 
 ---
@@ -113,6 +113,10 @@ php artisan redis-model-cache:warmup "App\Models\User" --where=status=active --i
 
 # Debug: inspect Redis state, metrics, config
 php artisan redis-cache:debug
+# Alias: php artisan redis-model-cache:debug
+
+# Monitor cache state, keys, TTL, memory
+php artisan redis:monitor-cache info
 ```
 
 ## Requirements
@@ -278,7 +282,7 @@ All options with defaults:
 | `php artisan redis:monitor-cache ttl` | Detect keys without TTL | ✅ SCAN-based | O(N) cursor scan |
 | `php artisan redis:monitor-cache memory` | Memory by key pattern | ✅ SCAN-based | O(N) cursor scan + data reads |
 | `php artisan redis:monitor-cache clear` | Delete keys | ⚠️ Requires confirmation | SCAN + DEL |
-| `php artisan redis-cache:debug` | Inspect service state | ✅ Read-only | Config inspection only |
+| `php artisan redis-cache:debug` (alias: `redis-model-cache:debug`) | Inspect service state | ✅ Read-only | Config inspection only |
 | `php artisan redis-model-cache:warmup` | Pre-populate cache | ⚠️ Batch write | Pipeline EVALSHA × N |
 
 ## Troubleshooting
