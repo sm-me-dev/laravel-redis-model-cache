@@ -51,13 +51,25 @@ jobs:
           echo "::add-matcher::${{ runner.tool_cache }}/php.json"
           echo "::add-matcher::${{ runner.tool_cache }}/phpunit.json"
 
-      - name: Install dependencies
+      - name: Pin Laravel version
         run: |
           if [ "${{ matrix.laravel }}" = "11.*" ]; then
-            sed -i 's/"orchestra\/testbench": "[^"]*"/"orchestra\/testbench": "^9.0"/' composer.json
+            composer config --no-interaction require.illuminate/console ^11.0
+            composer config --no-interaction require.illuminate/database ^11.0
+            composer config --no-interaction require.illuminate/redis ^11.0
+            composer config --no-interaction require.illuminate/support ^11.0
+            composer config --no-interaction require-dev.orchestra/testbench ^9.0
           else
-            sed -i 's/"orchestra\/testbench": "[^"]*"/"orchestra\/testbench": "^10.11"/' composer.json
+            composer config --no-interaction require.illuminate/console ^12.0
+            composer config --no-interaction require.illuminate/database ^12.0
+            composer config --no-interaction require.illuminate/redis ^12.0
+            composer config --no-interaction require.illuminate/support ^12.0
+            composer config --no-interaction require-dev.orchestra/testbench ^10.11
           fi
+
+      - name: Install dependencies
+        run: |
+          composer config --no-interaction policy.advisories.block false
           composer update --${{ matrix.stability }} --prefer-dist --no-interaction --no-audit
 
       - name: Run Pint (Code Style Check)

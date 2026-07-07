@@ -108,7 +108,10 @@ class CacheManager
             in_array(self::FACADE_TRAIT, class_uses_recursive($modelClass), true)
             && method_exists($modelClass, 'redisModelCacheConfig')
         ) {
-            return (array) $modelClass::redisModelCacheConfig();
+            /** @var array<string, mixed> $config */
+            $config = (array) $modelClass::redisModelCacheConfig();
+
+            return $config;
         }
 
         return [];

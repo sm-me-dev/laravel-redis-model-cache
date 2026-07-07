@@ -1,4 +1,4 @@
-name: "CodeQL"
+name: "Security Audit"
 
 on:
   push:
@@ -9,28 +9,15 @@ on:
     - cron: '0 6 * * 1'
 
 jobs:
-  analyze:
-    name: Analyze
+  audit:
+    name: Composer Audit
     runs-on: ubuntu-latest
     permissions:
-      actions: read
       contents: read
-      security-events: write
-
-    strategy:
-      fail-fast: false
-      matrix:
-        language: ['php']
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
-        with:
-          languages: ${{ matrix.language }}
-          queries: security-and-quality
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -39,7 +26,10 @@ jobs:
           coverage: none
 
       - name: Install dependencies
-        run: composer update --prefer-dist --no-interaction
+        run: composer update --prefer-stable --prefer-dist --no-interaction --no-audit
 
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
+      - name: Run composer audit
+        run: composer audit
+
+      - name: Run PHPStan security analysis
+        run: vendor/bin/phpstan analyse --memory-limit=1G -c phpstan.neon.dist --no-progress --error-format=table

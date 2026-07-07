@@ -1757,6 +1757,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
             $ids = $sortBy ? $this->redis->zrange($sortedKey, 0, -1) : $this->redis->smembers($key);
 
             if ($hydrate) {
+                // @phpstan-ignore-next-line hydrate path returns Models
                 return $this->hydrateIds($ids);
             }
 
@@ -1819,10 +1820,12 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
                 $cursor = (string) ($result[0] ?? '0');
                 $chunk = $result[1] ?? [];
                 if (! empty($chunk)) {
+                    /** @var list<string> $keys */
                     $keys = array_merge($keys, $chunk);
                 }
             } while ($cursor !== '0');
 
+            // @phpstan-ignore-next-line Predis keys() returns mixed
             return array_values(array_unique($keys));
         }
 
@@ -1832,11 +1835,13 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
                 // @phpstan-ignore-next-line phpredis uses by-reference iterator
                 $chunk = $this->redis->scan($iterator, $pattern, $count);
                 if (is_array($chunk)) {
+                    /** @var list<string> $keys */
                     $keys = array_merge($keys, $chunk);
                 }
                 // @phpstan-ignore-next-line scan() modifies $iterator by reference
             } while ($iterator !== 0 && $iterator !== '0' && $iterator !== null);
 
+            // @phpstan-ignore-next-line scan() returns mixed
             return array_values(array_unique($keys));
         }
 
@@ -2210,6 +2215,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         $indexKeys = $this->buildConcreteKeys($where);
 
         // Resolve IDs via the determined strategy, take first only
+        /** @var array<int, string> $ids */
         $ids = match ($resolved->command) {
             'SMEMBERS' => $this->redis->smembers($indexKeys[0]),
             'SINTER' => $this->redis->sinter(...$indexKeys),
