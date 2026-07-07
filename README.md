@@ -284,7 +284,100 @@ All options with defaults:
 | `php artisan redis-cache:debug` | Inspect service state | ✅ Read-only | Config inspection only |
 | `php artisan redis-model-cache:warmup` | Pre-populate cache | ⚠️ Batch write | Pipeline EVALSHA × N |
 
-No command uses `KEYS`. All pattern-matching uses `SCAN` with configurable `scan_count`.
+## Troubleshooting
+
+### Redis connection not found
+
+```
+InvalidArgumentException: Redis connection 'cache' is not defined in config/database.php.
+```
+
+Ensure your `config/database.php` has a `redis` section with a connection matching `REDIS_MODEL_CACHE_CONNECTION` (default: `cache`):
+
+```php
+'redis' => [
+    'cache' => [
+        'url' => env('REDIS_CACHE_URL'),
+        'host' => env('REDIS_CACHE_HOST', '127.0.0.1'),
+        'password' => env('REDIS_CACHE_PASSWORD'),
+        'port' => env('REDIS_CACHE_PORT', 6379),
+        'database' => env('REDIS_CACHE_DB', 1),
+    ],
+],
+```
+
+### scan_strategy validation error
+
+```
+InvalidArgumentException: Invalid scan_strategy: only 'scan' is supported.
+```
+
+The package only supports cursor-based `SCAN` operations. Set `scan_strategy` to `'scan'` in your config or via `REDIS_MODEL_CACHE_SCAN_STRATEGY` env var. The `KEYS` command is intentionally blocked — it causes Redis to block all operations during pattern matching.
+
+### Artisan command not found
+
+If `php artisan redis-model-cache:warmup` is not recognized, verify:
+1. The package is installed: `composer require sm-me/laravel-redis-model-cache`
+2. The service provider is registered (auto-discovery should handle this)
+3. Run `php artisan route:list` — console commands are registered during `php artisan` bootstrap
+
+### Multi-tenant resolver not working
+
+If cache keys are not being isolated per tenant, check:
+1. `multi_tenant.enabled` is set to `true`
+2. The configured `resolver` implements `TenantResolverInterface`
+3. The resolver's `getTenantId()` returns a non-null value
+4. The tenant header/key is being sent with each request
+
+### Cache not invalidating on model changes
+
+The `HasRedisModelCache` trait must be applied to your model:
+```php
+use Sm_mE\RedisModelCache\Concerns\HasRedisModelCache;
+
+class User extends Model
+{
+    use HasRedisModelCache;
+}
+```
+
+If using async invalidation, ensure your queue worker is running:
+```bash
+php artisan queue:work
+```
+
+## Why This Package Exists
+
+Eloquent's built-in query cache operates at the query-log level — identical SQL with identical parameters hits the cache, but any variation (different `WHERE` clause, different `LIMIT`, different `JOIN`) misses. This leads to cache fragmentation and unpredictable hit rates.
+
+This package takes a fundamentally different approach: **cache the model, not the query**.
+
+Every model is serialized once into a single Redis hash field. Indexes (Redis Sets / Sorted Sets) map known query patterns to field IDs. Retrieval is always:
+
+1. **Lookup the index** → O(1) or O(N) on set membership
+2. **HMGET the hash fields** → O(1) single round-trip
+
+The result: deterministic cache behavior, predictable Redis memory usage, and zero `KEYS` or `SCAN` on the read path.
+
+### When to use it
+
+- You have a read-heavy Eloquent model with known query patterns (e.g., "users by role_id and status")
+- You want to cache relations (eager loads) alongside the model
+- You need multi-tenant cache isolation
+- You need observability (hit rates, latency percentiles, Telescope/Pulse integration)
+- You want stampede protection and stale-while-revalidate
+
+### When NOT to use it
+
+- Ad-hoc queries with unpredictable `WHERE` clauses (every query field must be pre-declared as an index)
+- Write-heavy models where cache invalidation overhead exceeds query savings
+- Small datasets where direct database queries are faster
+
+## Donate
+
+If you find this package useful, consider supporting the developer:
+
+[![](https://img.shields.io/badge/Donate-WebMoney-1f7b1f)](https://donate.webmoney.com/w/QhKJqu7opsg0fCmcNt4uLm)
 
 ## License
 

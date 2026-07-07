@@ -5,6 +5,20 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [v2.4.0] — 2026-07-07
+
+### Public Release Readiness
+
+#### Added
+
+- **`WarmupCommand` registered in service provider** — `php artisan redis-model-cache:warmup` now available as a registered console command matching README documentation
+- **GitHub Actions CI workflow** — `.github/workflows/run-tests.yml` with PHP 8.3/8.4 × Laravel 11/12 matrix, including prefer-lowest on PHP 8.3 + Laravel 11; runs Pint, PHPStan, and PHPUnit
+- **Provider validation test suite** — `ServiceProviderTest` covers config key presence, default values, scan_strategy validation, TTL validation, stampede protection validation, and SWR validation
+
+#### Changed
+
+- **Service provider boot** — `Console\WarmupCommand::class` added to the commands registered in `runningInConsole()` block
+
 ## [v2.3.0] — 2026-07-06
 
 ### Production Polish

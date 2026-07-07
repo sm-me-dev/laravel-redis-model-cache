@@ -95,6 +95,7 @@ class RedisModelCacheServiceProvider extends ServiceProvider
             $this->commands([
                 Console\MonitorCacheCommand::class,
                 Console\DebugCommand::class,
+                Console\WarmupCommand::class,
             ]);
         }
 
