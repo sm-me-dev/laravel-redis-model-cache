@@ -26,4 +26,4 @@
 - Developers using SWR must avoid passing closures capturing variables that hold resource descriptors, DB connections, or instances of classes that explicitly forbid serialization.
 
 ## Commit SHA
-96eae8bbeed05f8af6a256446f04771c1f85cd71
+7c47356c6b33f02d6de56e1d1564589fc791f44b
