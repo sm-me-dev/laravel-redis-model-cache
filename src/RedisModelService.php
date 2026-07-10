@@ -1784,26 +1784,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         // then strip it from results so downstream commands (like DEL) don't double-prefix.
         $fullPattern = $this->redisPrefix ? "{$this->redisPrefix}{$pattern}" : $pattern;
 
-        if (is_a($this->redis, 'Predis\Client')) {
-            $cursor = '0';
-            do {
-                // @phpstan-ignore-next-line Predis\Client is optional
-                $result = $this->redis->scan($cursor, ['match' => $fullPattern, 'count' => $count]);
-                if (! is_array($result) || count($result) < 2) {
-                    break;
-                }
-                $cursor = (string) ($result[0] ?? '0');
-                $chunk = $result[1] ?? [];
-                if (! empty($chunk)) {
-                    /** @var array<int, string> $chunk */
-                    $keys = array_merge($keys, $this->stripPrefix($chunk));
-                }
-            } while ($cursor !== '0');
-
-            return array_values(array_unique($keys));
-        }
-
-        if (method_exists($this->redis, 'scan')) {
+        if ($this->redis instanceof \Redis || $this->redis instanceof \RedisCluster) {
             $iterator = null;
             do {
                 // @phpstan-ignore-next-line phpredis uses by-reference iterator
@@ -1819,10 +1800,22 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
             return array_values(array_unique($keys));
         }
 
-        throw new RuntimeException(
-            'SCAN command is not available. The Redis client must support SCAN for production use. '
-            .'Ensure phpredis extension is installed or use Predis.'
-        );
+        // Treat as Predis-compatible
+        $cursor = '0';
+        do {
+            $result = $this->redis->scan($cursor, ['match' => $fullPattern, 'count' => $count]);
+            if (! is_array($result) || count($result) < 2) {
+                break;
+            }
+            $cursor = (string) ($result[0] ?? '0');
+            $chunk = $result[1] ?? [];
+            if (! empty($chunk)) {
+                /** @var array<int, string> $chunk */
+                $keys = array_merge($keys, $this->stripPrefix($chunk));
+            }
+        } while ($cursor !== '0');
+
+        return array_values(array_unique($keys));
     }
 
     /**
