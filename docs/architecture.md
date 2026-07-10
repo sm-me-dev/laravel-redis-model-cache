@@ -136,12 +136,12 @@ Relations are serialized recursively. On hydration, `newFromBuilder()` sets attr
 ### Single model store (`store()` / `storeModel()`)
 
 ```
-1. Read old hash data via HGET (for stale index detection)
+1. Read old hash data via HGET (for stale index and sorted set detection)
 2. If Lua enabled:
-   → Execute EVAL with KEYS=[hash, stale-rem, new-sadd, ...] ARGV=[id, payload]
-   → Atomic: HSET + SREM(stale) + SADD(new) + ZADD + EXPIRE(all)
+   → Execute EVAL with KEYS=[hash, stale-rem, new-sadd, stale-zrem, new-zadd] ARGV=[id, payload, ttl, ...]
+   → Atomic: HSET + SREM(stale) + SADD(new) + ZREM(stale) + ZADD(new) + EXPIRE(all)
 3. If Lua disabled or pipeline batch:
-   → Pipeline: HSET + SREM(stale) + SADD(new) + ZADD + EXPIRE(all)
+   → Pipeline: HSET + SREM(stale) + SADD(new) + ZREM(stale) + ZADD(new) + EXPIRE(all)
    → executePipeline()
 4. Update cache metadata (cached_at timestamp)
 ```
@@ -150,9 +150,9 @@ Relations are serialized recursively. On hydration, `newFromBuilder()` sets attr
 
 ```
 1. HMGET all old data in one call (instead of N individual HGETs)
-2. Compute stale index keys for each model from old data
+2. Compute stale index and sorted set keys for each model from old data
 3. If Lua enabled: primeAtomicStoreScript() → SCRIPT LOAD
-4. Pipeline: EVALSHA × N (one per model) or HSET + SREM + SADD + ZADD × N
+4. Pipeline: EVALSHA × N (one per model) or HSET + SREM + SADD + ZREM + ZADD × N
 5. executePipeline()
 6. Apply TTL to hash
 7. Store cache metadata
@@ -163,7 +163,7 @@ command in the pipeline. The script is loaded into the Redis cache before the pi
 begins (`primeAtomicStoreScript()`), eliminating NOSCRIPT fallback within the batch.
 The pipeline guarantees atomic execution of all EVALSHA commands from the caller's
 perspective — no partial writes. When Lua is disabled, individual Redis commands
-(HSET, SREM, SADD, ZADD, EXPIRE) are queued in the pipeline as before.
+(HSET, SREM, SADD, ZREM, ZADD, EXPIRE) are queued in the pipeline as before.
 
 If pipeline execution or any post-pipeline step fails, the partial writes are automatically cleaned up by calling `clear()` to prevent inconsistent state, and the original exception is rethrown.
 
