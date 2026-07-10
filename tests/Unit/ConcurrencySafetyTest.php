@@ -68,7 +68,7 @@ class ConcurrencySafetyTest extends TestCase
         $lockKey = $this->hashKey.':lock';
 
         $this->redis->shouldReceive('exists')->with($this->hashKey)->andReturn(false);
-        $this->redis->shouldReceive('set')->with($lockKey, '1', 'EX', 10, 'NX')->andReturn(true);
+        $this->redis->shouldReceive('set')->with($lockKey, '1', ['NX', 'EX' => 10])->andReturn(true);
         $this->redis->shouldReceive('del')->with($lockKey)->andReturn(1);
 
         $this->mockStoreAndHydrate(['1' => false], ['1' => $this->serializedModel()]);
@@ -84,7 +84,7 @@ class ConcurrencySafetyTest extends TestCase
         $lockKey = $this->hashKey.':lock';
 
         $this->redis->shouldReceive('exists')->with($this->hashKey)->andReturn(false, true);
-        $this->redis->shouldReceive('set')->with($lockKey, '1', 'EX', 10, 'NX')->andReturn(false);
+        $this->redis->shouldReceive('set')->with($lockKey, '1', ['NX', 'EX' => 10])->andReturn(false);
         $this->redis->shouldReceive('exists')->with($lockKey)->andReturn(false);
 
         $this->redis->shouldReceive('smembers')->with('{concurrency_models}:index:role_id:1')->andReturn(['1']);
@@ -103,7 +103,7 @@ class ConcurrencySafetyTest extends TestCase
         $lockKey = $this->hashKey.':lock';
 
         $this->redis->shouldReceive('exists')->with($this->hashKey)->andReturn(false);
-        $this->redis->shouldReceive('set')->with($lockKey, '1', 'EX', 10, 'NX')->andReturn(false);
+        $this->redis->shouldReceive('set')->with($lockKey, '1', ['NX', 'EX' => 10])->andReturn(false);
 
         $this->redis->shouldReceive('exists')->with($lockKey)->andReturn(true, true, true, true);
         $this->redis->shouldReceive('exists')->with($this->hashKey)->andReturn(false);
@@ -171,7 +171,7 @@ class ConcurrencySafetyTest extends TestCase
     {
         $lockKey = $this->hashKey.':lock';
 
-        $this->redis->shouldReceive('set')->with($lockKey, Mockery::type('string'), 'EX', 10, 'NX')->andReturn(true);
+        $this->redis->shouldReceive('set')->with($lockKey, Mockery::type('string'), ['NX', 'EX' => 10])->andReturn(true);
         $this->redis->shouldReceive('eval')->andReturn(1);
 
         $value = StampedeProtection::acquireLockWithValue($this->redis, $lockKey, 10);
@@ -187,7 +187,7 @@ class ConcurrencySafetyTest extends TestCase
     {
         $lockKey = $this->hashKey.':lock';
 
-        $this->redis->shouldReceive('set')->with($lockKey, Mockery::type('string'), 'EX', 10, 'NX')->andReturn(true);
+        $this->redis->shouldReceive('set')->with($lockKey, Mockery::type('string'), ['NX', 'EX' => 10])->andReturn(true);
         $this->redis->shouldReceive('eval')->andReturn(0);
 
         $value = StampedeProtection::acquireLockWithValue($this->redis, $lockKey, 10);
@@ -229,7 +229,7 @@ class ConcurrencySafetyTest extends TestCase
         $lockKey = $this->hashKey.':lock';
 
         $this->redis->shouldReceive('exists')->with($this->hashKey)->andReturn(false);
-        $this->redis->shouldReceive('set')->with($lockKey, '1', 'EX', 10, 'NX')->andReturn(true);
+        $this->redis->shouldReceive('set')->with($lockKey, '1', ['NX', 'EX' => 10])->andReturn(true);
         $this->redis->shouldReceive('del')->with($lockKey)->andReturn(1);
 
         $this->mockStoreAndHydrate(['1' => false], ['1' => $this->serializedModel()]);

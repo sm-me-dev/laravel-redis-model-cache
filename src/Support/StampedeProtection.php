@@ -32,8 +32,7 @@ LUA;
      */
     public static function acquireLock($redis, string $lockKey, int $timeout): bool
     {
-        // SET NX EX - Set if Not eXists with EXpiration
-        $result = $redis->set($lockKey, '1', 'EX', $timeout, 'NX');
+        $result = $redis->set($lockKey, '1', ['NX', 'EX' => $timeout]);
 
         return $result === true || $result === 'OK';
     }
@@ -53,7 +52,7 @@ LUA;
     {
         $value = bin2hex(random_bytes(16));
 
-        $result = $redis->set($lockKey, $value, 'EX', $timeout, 'NX');
+        $result = $redis->set($lockKey, $value, ['NX', 'EX' => $timeout]);
 
         return ($result === true || $result === 'OK') ? $value : null;
     }
@@ -95,7 +94,7 @@ LUA;
                     return (int) $result === 1;
                 }
             } catch (\Exception $e) {
-                // Fall through to EVAL
+                // Log exception if logging is available
             }
         }
 

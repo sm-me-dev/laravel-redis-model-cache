@@ -114,26 +114,26 @@ class EdgeCaseTest extends TestCase
     // Serialization / Compression Edge Cases
     // =========================================================================
 
-    public function test_corrupted_json_payload_throws(): void
+    public function test_corrupted_json_payload_returns_null(): void
     {
         $this->redis->shouldReceive('hget')
             ->with($this->hashKey, '42')
             ->andReturn('{corrupted json');
 
-        $this->expectException(\JsonException::class);
+        $result = $this->service->find(42);
 
-        $this->service->find(42);
+        $this->assertNull($result);
     }
 
-    public function test_non_json_payload_throws(): void
+    public function test_non_json_payload_returns_null(): void
     {
         $this->redis->shouldReceive('hget')
             ->with($this->hashKey, '42')
             ->andReturn('not-json-at-all');
 
-        $this->expectException(\JsonException::class);
+        $result = $this->service->find(42);
 
-        $this->service->find(42);
+        $this->assertNull($result);
     }
 
     public function test_empty_payload_returns_null(): void

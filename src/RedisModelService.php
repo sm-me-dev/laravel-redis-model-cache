@@ -172,12 +172,20 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
 
         return collect($results)
             ->filter()
-            ->map(function (string $payload): Model {
-                /** @var array{attributes: array<string, mixed>, relations: array<string, mixed>} $data */
-                $data = $this->deserialize($payload);
+            ->map(function (mixed $payload): ?Model {
+                if (! is_string($payload)) {
+                    return null;
+                }
+                try {
+                    /** @var array{attributes: array<string, mixed>, relations: array<string, mixed>} $data */
+                    $data = $this->deserialize($payload);
 
-                return $this->hydrateModelFromPayload($data);
+                    return $this->hydrateModelFromPayload($data);
+                } catch (\JsonException $e) {
+                    return null;
+                }
             })
+            ->filter()
             ->values();
     }
 
@@ -1762,21 +1770,27 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         $count = $this->configuration->scanCount;
         $keys = [];
 
+        // phpredis auto-prefixes keys for SET/GET/DEL/EXISTS but NOT for SCAN.
+        // We need to add the prefix to the SCAN pattern to find matching keys,
+        // then strip it from results so downstream commands (like DEL) don't double-prefix.
+        $fullPattern = $this->redisPrefix ? "{$this->redisPrefix}{$pattern}" : $pattern;
+
         if (is_a($this->redis, 'Predis\Client')) {
             $cursor = '0';
             do {
                 // @phpstan-ignore-next-line Predis\Client is optional
-                $result = $this->redis->scan($cursor, ['match' => $pattern, 'count' => $count]);
-                /** @var array{cursor?: string, 0?: string, 1?: array<int, string>} $result */
+                $result = $this->redis->scan($cursor, ['match' => $fullPattern, 'count' => $count]);
+                if (! is_array($result) || count($result) < 2) {
+                    break;
+                }
                 $cursor = (string) ($result[0] ?? '0');
                 $chunk = $result[1] ?? [];
                 if (! empty($chunk)) {
-                    /** @var list<string> $keys */
-                    $keys = array_merge($keys, $chunk);
+                    /** @var array<int, string> $chunk */
+                    $keys = array_merge($keys, $this->stripPrefix($chunk));
                 }
             } while ($cursor !== '0');
 
-            // @phpstan-ignore-next-line Predis keys() returns mixed
             return array_values(array_unique($keys));
         }
 
@@ -1784,15 +1798,15 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
             $iterator = null;
             do {
                 // @phpstan-ignore-next-line phpredis uses by-reference iterator
-                $chunk = $this->redis->scan($iterator, $pattern, $count);
-                if (is_array($chunk)) {
-                    /** @var list<string> $keys */
-                    $keys = array_merge($keys, $chunk);
+                $chunk = $this->redis->scan($iterator, $fullPattern, $count);
+                if (! is_array($chunk)) {
+                    break;
                 }
+                /** @var array<int, string> $chunk */
+                $keys = array_merge($keys, $this->stripPrefix($chunk));
                 // @phpstan-ignore-next-line scan() modifies $iterator by reference
             } while ($iterator !== 0 && $iterator !== '0' && $iterator !== null);
 
-            // @phpstan-ignore-next-line scan() returns mixed
             return array_values(array_unique($keys));
         }
 
@@ -1800,6 +1814,35 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
             'SCAN command is not available. The Redis client must support SCAN for production use. '
             .'Ensure phpredis extension is installed or use Predis.'
         );
+    }
+
+    /**
+     * Strip the connection-level prefix from keys returned by SCAN.
+     *
+     * phpredis auto-prefixes SET/GET/DEL/EXISTS but NOT SCAN results, so keys
+     * returned by SCAN include the full prefixed name. Other commands (DEL, etc.)
+     * auto-prefix their arguments, so we must remove the prefix here to avoid
+     * double-prefixing.
+     *
+     * @param  array<int, string>  $keys
+     * @return array<int, string>
+     */
+    protected function stripPrefix(array $keys): array
+    {
+        if ($this->redisPrefix === '') {
+            return $keys;
+        }
+        $prefixLen = strlen($this->redisPrefix);
+        $result = [];
+        foreach ($keys as $key) {
+            if (str_starts_with($key, $this->redisPrefix)) {
+                $result[] = substr($key, $prefixLen);
+            } else {
+                $result[] = $key;
+            }
+        }
+
+        return $result;
     }
 
     /**
@@ -2148,10 +2191,14 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
             return null;
         }
 
-        /** @var array{attributes: array<string, mixed>, relations: array<string, mixed>} $data */
-        $data = $this->deserialize($payload);
+        try {
+            /** @var array{attributes: array<string, mixed>, relations: array<string, mixed>} $data */
+            $data = $this->deserialize($payload);
 
-        return $this->hydrateModelFromPayload($data);
+            return $this->hydrateModelFromPayload($data);
+        } catch (\JsonException $e) {
+            return null;
+        }
     }
 
     /**

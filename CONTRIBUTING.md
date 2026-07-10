@@ -11,8 +11,17 @@ composer install
 ## Running Tests
 
 ```bash
-# All tests
+# All tests (Unit + Feature + Integration)
 vendor/bin/phpunit
+
+# Unit tests only (mocked Redis, no external deps)
+vendor/bin/phpunit --testsuite=Unit
+
+# Feature tests (use real Redis)
+vendor/bin/phpunit --testsuite=Feature
+
+# Integration tests (REQUIRE Redis on 127.0.0.1:6379)
+vendor/bin/phpunit --testsuite=Integration
 
 # Specific test file
 vendor/bin/phpunit --filter=ConcurrencySafety
@@ -20,6 +29,21 @@ vendor/bin/phpunit --filter=ConcurrencySafety
 # Test with testdox output
 vendor/bin/phpunit --testdox
 ```
+
+### Redis Requirements
+
+Integration and Feature tests require a running Redis server:
+
+```bash
+# Start Redis (if not running)
+redis-server --daemonize yes
+
+# Verify connection
+redis-cli ping
+# → PONG
+```
+
+Integration tests auto-skip if Redis is unavailable.
 
 ## Code Quality
 

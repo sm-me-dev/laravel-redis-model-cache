@@ -51,6 +51,7 @@ Thumbs.db
 /workbench/database/*.sqlite-*
 
 # AI tooling (local only)
+.ai/
 .agents
 .codex
 .cursor

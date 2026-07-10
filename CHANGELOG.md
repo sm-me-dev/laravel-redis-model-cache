@@ -5,6 +5,46 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [v2.7.2] — 2026-07-10
+
+### Integration Test Fixes & Production Hardening (Phase 3E Fix)
+
+#### Fixed
+
+- **Stampede protection lock acquisition** — `acquireLock()` and `acquireLockWithValue()` now use `['NX', 'EX' => $timeout]` options array format, which is correctly honored by the installed phpredis version. The lowercase associative format `['nx' => true, 'ex' => $timeout]` was silently ignored, causing NX to never block concurrent lock attempts.
+- **SCAN + Redis prefix mismatch** — `collectKeysByPattern()` now properly strips the Laravel Redis connection prefix from SCAN results before passing them to DEL and other commands that auto-prefix. Without this, SCAN returned full-prefixed keys that were double-prefixed on deletion.
+- **Corrupted JSON handling** — `find()` and `hydrateIds()` now catch `JsonException` from corrupted payloads and gracefully return null / skip the entry instead of propagating the exception.
+
+#### Changed
+
+- **Test assertions aligned with phpredis return types** — `exists()` returns integer (1/0), not boolean. `hget()` returns `false` for missing fields, not `null`. Integration tests now use `(bool)` casts and `assertFalse` where appropriate.
+- **Stampede protection unit tests updated** — Mock expectations for `set()` now match the corrected options array format.
+- **Edge case tests updated** — `test_corrupted_json_payload_throws` and `test_non_json_payload_throws` changed to `_returns_null` since `find()` now gracefully handles corruption.
+
+#### Integration Tests
+
+- All 39 integration tests pass against real Redis (basic lifecycle, TTL, stampede protection, failure scenarios)
+- Full test suite: 275/275 passing across Unit, Feature, and Integration suites
+
+## [v2.7.1] — 2026-07-08
+
+### Redis Integration Test Suite (Phase 3E)
+
+#### Added
+
+- **Integration test suite** (`tests/Integration/`) — production-grade tests using real Redis connection:
+  - `BasicLifecycleIntegrationTest` — store, retrieve, invalidate, rebuild, update, count, clear
+  - `TtlExpiryIntegrationTest` — TTL enforcement on hash, meta, index, and custom index keys
+  - `StampedeProtectionIntegrationTest` — lock acquire/release/auto-expiry, service-level lock integration
+  - `FailureScenarioIntegrationTest` — corrupted JSON, invalid payloads, empty cache, edge cases
+- **phpunit.xml** — added `Integration` testsuite for selective execution
+- **Documentation** — CONTRIBUTING.md updated with Redis requirements and test suite commands
+- **Tests auto-skip** — integration tests gracefully skip when Redis unavailable
+
+#### Changed
+
+- Test organization now clearly separates Unit (mocked), Feature (real Redis, existing), and Integration (real Redis, new)
+
 ## [v2.7.0] — 2026-07-07
 
 ### API Consistency — Deprecations & Command Naming (Phase 3D)

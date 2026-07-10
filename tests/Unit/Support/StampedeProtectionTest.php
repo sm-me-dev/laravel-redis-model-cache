@@ -20,7 +20,7 @@ class StampedeProtectionTest extends TestCase
     {
         $redis = Mockery::mock();
         $redis->shouldReceive('set')
-            ->with('cache:lock', '1', 'EX', 10, 'NX')
+            ->with('cache:lock', '1', ['NX', 'EX' => 10])
             ->andReturn(true);
 
         $result = StampedeProtection::acquireLock($redis, 'cache:lock', 10);
@@ -32,7 +32,7 @@ class StampedeProtectionTest extends TestCase
     {
         $redis = Mockery::mock();
         $redis->shouldReceive('set')
-            ->with('cache:lock', '1', 'EX', 10, 'NX')
+            ->with('cache:lock', '1', ['NX', 'EX' => 10])
             ->andReturn(null); // Lock already exists
 
         $result = StampedeProtection::acquireLock($redis, 'cache:lock', 10);
@@ -44,7 +44,7 @@ class StampedeProtectionTest extends TestCase
     {
         $redis = Mockery::mock();
         $redis->shouldReceive('set')
-            ->with('cache:lock', '1', 'EX', 10, 'NX')
+            ->with('cache:lock', '1', ['NX', 'EX' => 10])
             ->andReturn('OK'); // Some Redis clients return 'OK'
 
         $result = StampedeProtection::acquireLock($redis, 'cache:lock', 10);
