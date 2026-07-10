@@ -76,28 +76,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - README partial hydration section updated to recommend `pluck()` over deprecated `selective()`.
 - API reference table marks `selective()` as deprecated.
 
-## [v2.6.0] — 2026-07-07
+## [v2.6.0] — 2026-07-10
 
-### Typed Configuration DTO (Phase 3C)
+### Full Refactoring & Hardening Release (Phases 1–12)
 
 #### Added
+- **Configuration Versioning** (Phase 12) — Introduced `config_version` to track configuration drift and warn on outdated configuration files.
+- **Accurate @throws PHPDoc annotations** (Phase 11) — Comprehensive annotations across public contract interface and implementation classes for better IDE static analysis.
+- **Incremental Index updates & stale sorted-set cleanup** (Phase 7) — Clean up stale index and sorted-set keys atomically during model saving and updates via Lua.
+- **Background queue revalidation stampede protection** (Phase 6) — Prevents duplicate revalidation jobs using Redis locks during SWR cache revalidation.
+- **Fallback mechanisms** (Phase 5) — Support both phpredis and predis clients dynamically during SCAN/pattern operations.
+- **Multi-Tenant key namespacing** (Phase 4) — Isolate cache per tenant.
 
-- **`Configuration` typed DTO** (`src/Support/Configuration.php`) — 28 typed readonly properties covering all `redis-model-cache` config keys with proper `int`, `string`, `bool`, and `?int`/`?string` types. Factory method `Configuration::fromConfig()` reads from Laravel's config with full type coercion.
-- **Configuration test suite** — 7 tests covering defaults, custom values, `fromConfig()` round-trip, empty config fallback, explicit null handling, and nullable fields.
+#### Fixed
+- **Workbench Namespace Hygiene** (Phase 9) — Corrected triple-nested namespaces for factory imports in the workbench setup.
+- **Benchmark configuration bootstrap** (Phase 10) — Hardened the benchmark bootstrap configuration order to prevent app boot crashes.
+- **Redis connection verification warning fallback** (Phase 1) — Wrap Redis connection checks in try-catch to log warnings rather than throwing blocking exceptions during provider boot.
+- **Incremental updates edge-case checks** (Phase 2) — Corrected attribute type handling and meta tracking during incremental updates.
 
 #### Changed
+- **API Visibility Hardening** (Phase 8) — Changed `$redis` property visibility to `protected` in `RedisBaseService` and cleaned up external accesses in tests with `getRedis()`.
+- **Command prefix canonicalization** (Phase 3) — Canonicalized all commands to use `redis-model-cache:` prefix with legacy fallback aliases.
 
-- **`RedisBaseService`** — accepts optional `?Configuration $configuration` parameter; resolves via `Configuration::fromConfig()` when omitted. All internal config reads use typed properties instead of raw `config()` calls.
-- **`RedisModelService`** — accepts optional `?Configuration $configuration` parameter (passed through to parent). `metricsEnabled`, `hydrateBatchSize`, `scanCount`, `debugMode`, compression, lua, SWR, stampede protection, and observability dispatch all read from the typed DTO.
-- **`DefaultConnectionResolver`** — accepts optional `?Configuration $configuration`; resolves connection name from DTO.
-- **`HasRedisModelCache` trait** — `resolveInvalidationManager()` reads invalidation config from `Configuration::fromConfig()` instead of raw `config()` array access.
-- **`DebugCommand`** — `renderConfig()` takes a typed `Configuration` parameter; all display values from typed properties.
-- **`RevalidateCacheJob`** / **`InvalidateModelCacheJob`** — config reads via `Configuration::fromConfig()`.
-- **ServiceProvider** — bindings resolve config via `Configuration::fromConfig()`; `registerEventSubscribers()` uses typed DTO.
-
-#### PHPStan
-
-- Removed 9 suppression patterns related to mixed config access; updated comments for remaining mixed-value suppressions (covers Redis responses, model attributes, deserialized payloads — inherent to dynamic data). PHPStan level max: 0 errors.
 
 ## [v2.5.1] — 2026-07-07
 
