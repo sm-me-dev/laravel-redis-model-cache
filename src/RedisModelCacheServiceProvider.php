@@ -223,5 +223,15 @@ class RedisModelCacheServiceProvider extends ServiceProvider
                 );
             }
         }
+
+        $configVersion = config('redis-model-cache.config_version');
+        if ($configVersion !== '2.5') {
+            Log::warning(
+                "Published configuration version mismatch. Expected '2.5', got "
+                .var_export($configVersion, true)
+                .'. Please re-publish your configuration file using: '
+                .'php artisan vendor:publish --tag=redis-model-cache-config --force'
+            );
+        }
     }
 }

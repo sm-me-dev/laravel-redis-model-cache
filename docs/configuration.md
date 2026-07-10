@@ -6,6 +6,7 @@ The package provides a typed `Configuration` DTO (`Sm_mE\RedisModelCache\Support
 
 | Key | Default | Description |
 |-----|---------|-------------|
+| `config_version` | `'2.5'` | Configuration file schema version (triggers warning on mismatch) |
 | `connection` | `'cache'` | Redis connection from `config/database.php` |
 | `default_ttl` | `86400` | Default cache TTL in seconds (null = no expiry) |
 | `hydrate_batch_size` | `5000` | Models per pipeline batch for hydrate/pluck |
@@ -48,3 +49,14 @@ protected static function redisModelCacheConfig(): array
     ];
 }
 ```
+
+## Configuration Versioning
+
+The configuration file contains a `config_version` key (e.g. `'2.5'`). When the package boots, it checks this version key. If the configuration version does not match the expected version, a warning log is emitted.
+
+To update an outdated published configuration file, run:
+
+```bash
+php artisan vendor:publish --tag=redis-model-cache-config --force
+```
+

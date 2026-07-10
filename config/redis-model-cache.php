@@ -5,6 +5,17 @@ declare(strict_types=1);
 return [
     /*
     |--------------------------------------------------------------------------
+    | Configuration Version
+    |--------------------------------------------------------------------------
+    |
+    | The configuration version of the package. This is used to warn when
+    | the published configuration file is out of date.
+    |
+    */
+    'config_version' => '2.5',
+
+    /*
+    |--------------------------------------------------------------------------
     | Redis Connection
     |--------------------------------------------------------------------------
     |

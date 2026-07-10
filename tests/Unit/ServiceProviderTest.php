@@ -23,6 +23,7 @@ class ServiceProviderTest extends TestCase
         $config = config('redis-model-cache');
 
         $this->assertIsArray($config);
+        $this->assertArrayHasKey('config_version', $config);
         $this->assertArrayHasKey('connection', $config);
         $this->assertArrayHasKey('default_ttl', $config);
         $this->assertArrayHasKey('scan_strategy', $config);
@@ -162,6 +163,16 @@ class ServiceProviderTest extends TestCase
             ->never();
 
         config()->set('redis-model-cache.connection', null);
+        $this->bootProvider();
+    }
+
+    public function test_mismatched_config_version_logs_warning(): void
+    {
+        Log::shouldReceive('warning')
+            ->once()
+            ->with(\Mockery::on(fn (string $message) => str_contains($message, 'Published configuration version mismatch')));
+
+        config()->set('redis-model-cache.config_version', '2.4');
         $this->bootProvider();
     }
 
