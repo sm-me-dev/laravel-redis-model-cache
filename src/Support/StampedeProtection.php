@@ -58,7 +58,12 @@ LUA;
     }
 
     /**
-     * Release a stampede protection lock.
+     * Release a stampede protection lock (non-CAS, simple delete).
+     *
+     * Use this only for locks that were acquired without a value token
+     * (via acquireLock(), not acquireLockWithValue()).  For value-based
+     * locks always use releaseLockCas() to preserve compare-and-swap
+     * semantics.
      *
      * @param  mixed  $redis  Redis connection instance
      * @param  string  $lockKey  The lock key
@@ -75,30 +80,51 @@ LUA;
      * value, preventing accidental release of another process' lock
      * (e.g. when our lock timed out and another process acquired it).
      *
+     * Safety contract:
+     *  - Returns `true`  → lock deleted because stored value matched.
+     *  - Returns `false` → value mismatch (lock owned by another process) OR
+     *                      Lua execution failed.  In both cases the lock is
+     *                      intentionally left in Redis; TTL expiry will clean it up.
+     *
+     * NEVER performs a blind DEL as a fallback.  An unsafe delete could
+     * remove a lock that now belongs to a different process after the
+     * original lock expired and was re-acquired.
+     *
+     * When Lua scripting is disabled globally in config the method returns
+     * `false` (safe: rely on TTL) rather than attempting an unsafe delete.
+     *
      * @param  mixed  $redis  Redis connection instance
      * @param  string  $lockKey  The lock key
      * @param  string  $expectedValue  The value stored when the lock was acquired
-     * @param  string|null  $sha  Cached SHA reference for EVALSHA
-     * @return bool True if lock was released, false if value didn't match
+     * @param  string|null  $sha  Cached SHA reference for EVALSHA fast-path; updated via reference after first EVAL
+     * @return bool True if lock was released (CAS matched), false otherwise
      */
     public static function releaseLockCas($redis, string $lockKey, string $expectedValue, ?string &$sha = null): bool
     {
         $numKeys = 1;
         $allArgs = [$lockKey, $expectedValue];
 
-        // EVALSHA fast path
+        // EVALSHA fast path — only when we have a cached SHA
         if ($sha !== null) {
             try {
                 $result = self::executeEvalSha($redis, $sha, $allArgs, $numKeys);
                 if ($result !== false) {
                     return (int) $result === 1;
                 }
+                // false from executeEvalSha means NOSCRIPT; fall through to EVAL
             } catch (\Exception $e) {
-                // Log exception if logging is available
+                // Lua execution failed for an unexpected reason.
+                // Do NOT fall back to DEL — return false and let TTL expire the lock.
+                logger()->debug('[RedisModelCache] releaseLockCas EVALSHA failed; deferring to TTL', [
+                    'lock_key' => $lockKey,
+                    'error' => $e->getMessage(),
+                ]);
+
+                return false;
             }
         }
 
-        // EVAL
+        // EVAL path (also loads the script onto the server, caches SHA for next call)
         try {
             $result = self::executeEval($redis, self::LUA_LOCK_CAS, $allArgs, $numKeys);
 
@@ -108,10 +134,16 @@ LUA;
 
             return (int) $result === 1;
         } catch (\Exception $e) {
-            // Lua unavailable — fall back to simple DEL
-            $redis->del($lockKey);
+            // Lua unavailable (NOSCRIPT, cluster config, etc.).
+            // Returning false is the ONLY safe option here:
+            //   - A blind DEL could release a lock that now belongs to another process.
+            //   - The original lock will expire via its TTL automatically.
+            logger()->debug('[RedisModelCache] releaseLockCas EVAL failed; lock left to expire via TTL', [
+                'lock_key' => $lockKey,
+                'error' => $e->getMessage(),
+            ]);
 
-            return true;
+            return false;
         }
     }
 

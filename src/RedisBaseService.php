@@ -25,34 +25,45 @@ class RedisBaseService
      * (e.g. Laravel's "laravel_database_") is applied correctly.
      *
      * KEYS[1]                        = hashKey
-     * KEYS[2..1+N]                   = stale SREM index keys
-     * KEYS[2+N..1+N+M]               = new SADD index keys
-     * KEYS[2+N+M..1+N+M+P]           = stale ZREM sorted keys
-     * KEYS[2+N+M+P..1+N+M+P+Q]       = new ZADD sorted keys
+     * KEYS[2]                        = metaKey
+     * KEYS[3..2+N]                   = stale SREM index keys
+     * KEYS[3+N..2+N+M]               = new SADD index keys
+     * KEYS[3+N+M..2+N+M+P]           = stale ZREM sorted keys
+     * KEYS[3+N+M+P..2+N+M+P+Q]       = new ZADD sorted keys
      *
      * ARGV[1] = modelId
      * ARGV[2] = serialized payload
      * ARGV[3] = ttl (0 = no expiry)
-     * ARGV[4] = N (count of stale SREM keys)
-     * ARGV[5] = M (count of new SADD keys)
-     * ARGV[6] = P (count of stale ZREM keys)
-     * ARGV[7] = Q (count of new ZADD keys)
-     * ARGV[8..7+Q] = individual scores for ZADD entries
+     * ARGV[4] = revalidation_started_at (0 = bypass SWR freshness check)
+     * ARGV[5] = N (count of stale SREM keys)
+     * ARGV[6] = M (count of new SADD keys)
+     * ARGV[7] = P (count of stale ZREM keys)
+     * ARGV[8] = Q (count of new ZADD keys)
+     * ARGV[9..8+Q] = individual scores for ZADD entries
      */
     protected const LUA_ATOMIC_STORE = <<<'LUA'
 local hashKey = KEYS[1]
+local metaKey = KEYS[2]
 local modelId = ARGV[1]
 local payload = ARGV[2]
 local ttl = tonumber(ARGV[3])
+local revalidationToken = tonumber(ARGV[4]) or 0
 
-local numStaleSrem = tonumber(ARGV[4]) or 0
-local numNewSadd   = tonumber(ARGV[5]) or 0
-local numStaleZrem = tonumber(ARGV[6]) or 0
-local numNewZadd   = tonumber(ARGV[7]) or 0
+if revalidationToken > 0 then
+    local lastInvalidated = tonumber(redis.call('HGET', metaKey, '_last_invalidated_at')) or 0
+    if lastInvalidated > revalidationToken then
+        return 0 -- Skip stale write
+    end
+end
+
+local numStaleSrem = tonumber(ARGV[5]) or 0
+local numNewSadd   = tonumber(ARGV[6]) or 0
+local numStaleZrem = tonumber(ARGV[7]) or 0
+local numNewZadd   = tonumber(ARGV[8]) or 0
 
 redis.call('HSET', hashKey, modelId, payload)
 
-local ki = 2
+local ki = 3
 
 for i = 1, numStaleSrem do
     redis.call('SREM', KEYS[ki], modelId)
@@ -73,7 +84,7 @@ for i = 1, numStaleZrem do
 end
 
 for i = 1, numNewZadd do
-    redis.call('ZADD', KEYS[ki], tonumber(ARGV[7 + i]), modelId)
+    redis.call('ZADD', KEYS[ki], tonumber(ARGV[8 + i]), modelId)
     if ttl > 0 then
         redis.call('EXPIRE', KEYS[ki], ttl)
     end

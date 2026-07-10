@@ -34,6 +34,7 @@ class InvalidationManagerTest extends TestCase
 
         $this->service->shouldReceive('delete')->with(5)->once();
         $this->service->shouldReceive('removeCustomIndexes')->with(5, $model->getAttributes())->once();
+        $this->service->shouldReceive('touchInvalidationTimestamp')->once();
 
         $manager = new InvalidationManager(
             service: $this->service,
@@ -52,6 +53,7 @@ class InvalidationManagerTest extends TestCase
 
         $this->service->shouldReceive('delete')->with(1)->once();
         $this->service->shouldReceive('removeCustomIndexes')->with(1, $model->getAttributes())->once();
+        $this->service->shouldReceive('touchInvalidationTimestamp')->once();
         $this->service->shouldReceive('bustVersion')->once();
 
         $manager = new InvalidationManager(
@@ -69,6 +71,7 @@ class InvalidationManagerTest extends TestCase
     {
         $model = new InvalidationTestModel(['id' => 1, 'role_id' => 1, 'status' => 'active']);
 
+        $this->service->shouldReceive('touchInvalidationTimestamp')->once();
         $this->service->shouldReceive('bustVersion')->once();
 
         $manager = new InvalidationManager(
@@ -88,6 +91,7 @@ class InvalidationManagerTest extends TestCase
 
         $this->service->shouldNotReceive('delete');
         $this->service->shouldNotReceive('removeCustomIndexes');
+        $this->service->shouldReceive('touchInvalidationTimestamp')->once();
 
         $manager = new InvalidationManager(
             service: $this->service,
@@ -107,6 +111,7 @@ class InvalidationManagerTest extends TestCase
         $this->service->shouldNotReceive('delete');
         $this->service->shouldNotReceive('removeCustomIndexes');
         $this->service->shouldNotReceive('bustVersion');
+        $this->service->shouldReceive('touchInvalidationTimestamp')->once();
 
         $manager = new InvalidationManager(
             service: $this->service,

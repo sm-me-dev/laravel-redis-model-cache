@@ -991,7 +991,7 @@ class RedisModelServiceTest extends TestCase
                     return false;
                 }
 
-                if ($luaArgs[5] !== '1') {
+                if ($luaArgs[6] !== '1') {
                     return false;
                 }
 

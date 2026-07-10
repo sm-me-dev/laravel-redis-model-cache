@@ -23,6 +23,7 @@ use Sm_mE\RedisModelCache\Support\DefaultConnectionResolver;
 use Sm_mE\RedisModelCache\Support\ExplainResult;
 use Sm_mE\RedisModelCache\Support\IndexResolver;
 use Sm_mE\RedisModelCache\Support\QueryPlanner;
+use Sm_mE\RedisModelCache\Support\RedisKeyBuilder;
 use Sm_mE\RedisModelCache\Support\StampedeProtection;
 
 /** @implements ModelCacheService<int, Model> */
@@ -35,6 +36,8 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
     protected array $custom_indexes = [];
 
     protected string $prefix;
+
+    protected RedisKeyBuilder $keyBuilder;
 
     /** @var array<int, string> */
     protected array $indexes = [];
@@ -95,7 +98,22 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         }
 
         $this->model_class = $model_class;
-        $this->prefix = $this->buildPrefix((new $model_class)->getTable());
+        $table = (new $model_class)->getTable();
+
+        $tenantId = null;
+        if ($this->configuration->multiTenantEnabled) {
+            try {
+                /** @var TenantResolverInterface $resolver */
+                $resolver = app(TenantResolverInterface::class);
+                $tenantId = $resolver->getTenantId();
+            } catch (\Throwable $e) {
+                // fallback to null
+            }
+        }
+
+        $this->keyBuilder = RedisKeyBuilder::for($table, $tenantId);
+        $this->prefix = $this->keyBuilder->tag();
+
         $this->indexes = $indexes;
         $this->sorted = $sorted;
         $this->custom_indexes = $custom_indexes;
@@ -214,7 +232,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
 
     protected function hashKey(): string
     {
-        return "{$this->prefix}:hash";
+        return $this->keyBuilder->hashKey();
     }
 
     /**
@@ -222,28 +240,12 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
      *
      * Wraps the prefix in Redis cluster hash tags ({...}) so all keys for a
      * single model type land on the same cluster node.
+     *
+     * @deprecated Use RedisKeyBuilder instead.
      */
     protected function buildPrefix(string $table): string
     {
-        if (! $this->configuration->multiTenantEnabled) {
-            return '{'.$table.'}';
-        }
-
-        try {
-            /** @var TenantResolverInterface $resolver */
-            $resolver = app(TenantResolverInterface::class);
-            $tenantId = $resolver->getTenantId();
-
-            if ($tenantId === null) {
-                return '{'.$table.'}';
-            }
-
-            $sanitized = str_replace(['{', '}', ':'], ['', '', '_'], (string) $tenantId);
-
-            return '{'.'tenant:'.$sanitized.':'.$table.'}';
-        } catch (\Throwable $e) {
-            return '{'.$table.'}';
-        }
+        return $this->keyBuilder->tag();
     }
 
     /**
@@ -251,7 +253,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
      */
     protected function metaKey(): string
     {
-        return "{$this->prefix}:meta";
+        return $this->keyBuilder->metaKey();
     }
 
     /**
@@ -261,6 +263,20 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
     {
         $metaKey = $this->metaKey();
         $this->redis->hset($metaKey, 'cached_at', (string) time());
+
+        if ($this->ttl !== null) {
+            $this->redis->expire($metaKey, $this->ttl);
+        }
+    }
+
+    /**
+     * Touch the invalidation timestamp to mark any concurrent or previous
+     * SWR builds as stale.
+     */
+    public function touchInvalidationTimestamp(): void
+    {
+        $metaKey = $this->metaKey();
+        $this->redis->hset($metaKey, '_last_invalidated_at', (string) microtime(true));
 
         if ($this->ttl !== null) {
             $this->redis->expire($metaKey, $this->ttl);
@@ -322,7 +338,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
 
     public function customIndexKey(string $name): string
     {
-        return "{$this->prefix}:custom:{$name}";
+        return $this->keyBuilder->customIndexKey($name);
     }
 
     /**
@@ -360,7 +376,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
 
     protected function sortedKey(string $field): string
     {
-        return "{$this->prefix}:sorted:{$field}";
+        return $this->keyBuilder->sortedKey($field);
     }
 
     public function delete(int|string $id): void
@@ -398,7 +414,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
 
     protected function indexKey(string $field, string|int $value): string
     {
-        return "{$this->prefix}:index:{$field}:{$value}";
+        return $this->keyBuilder->indexKey($field, $value);
     }
 
     protected function removeSorted(int|string $id): void
@@ -436,7 +452,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
 
     public function clearAll(): void
     {
-        $keys = $this->collectKeysByPattern("{$this->prefix}:*");
+        $keys = $this->collectKeysByPattern("{$this->keyBuilder->tag()}:*");
 
         if ($keys !== []) {
             $this->redis->del(...$keys);
@@ -448,7 +464,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         $keys = [$this->hashKey(), $this->metaKey()];
 
         foreach ($this->indexes as $field) {
-            $keys = array_merge($keys, $this->collectKeysByPattern("{$this->prefix}:index:{$field}:*"));
+            $keys = array_merge($keys, $this->collectKeysByPattern("{$this->keyBuilder->tag()}:index:{$field}:*"));
         }
 
         foreach ($this->sorted as $field) {
@@ -482,7 +498,8 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         bool $refresh = false,
         ?array $only = null,
         bool $stampede = false,
-        bool $swr = false
+        bool $swr = false,
+        ?float $revalidationTime = null
     ): Collection {
         $startTime = microtime(true);
         $hashKey = $this->hashKey();
@@ -511,8 +528,9 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
                     $result = $this->where($where, hydrate: $hydrate, only: $only);
 
                     if ($result->isNotEmpty()) {
-                        $lockKey = "{$this->prefix}:swr:lock";
                         $gracePeriod = $this->configuration->swrGracePeriod;
+                        $lockKey = $this->keyBuilder->swrLockKey();
+
                         if (StampedeProtection::acquireLock($this->redis, $lockKey, $gracePeriod)) {
                             // Dispatch background job to revalidate cache
                             dispatch(new RevalidateCacheJob(
@@ -526,6 +544,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
                                 redisConnection: $this->connectionResolver instanceof DefaultConnectionResolver
                                     ? null
                                     : $this->configuration->connection,
+                                revalidationTime: microtime(true),
                             ));
                         }
 
@@ -594,7 +613,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
 
         try {
             $models = collect($callback());
-            $this->storeMany($models);
+            $this->storeMany($models, $revalidationTime);
             $models = $this->filterModelsByKey($models, $only);
 
             // Dispatch cache miss event
@@ -665,7 +684,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
      *
      * @param  Collection<int, Model>  $models
      */
-    public function storeMany(Collection $models): void
+    public function storeMany(Collection $models, ?float $revalidationTime = null): void
     {
         if ($models->isEmpty()) {
             return;
@@ -708,7 +727,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
 
         foreach ($models as $model) {
             $key = (string) $model->getKey();
-            $this->storeModel($model, $pipeline, $staleKeysMap[$key] ?? [], $staleZremMap[$key] ?? []);
+            $this->storeModel($model, $pipeline, $staleKeysMap[$key] ?? [], $staleZremMap[$key] ?? [], $revalidationTime);
         }
 
         try {
@@ -1172,9 +1191,9 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
      * Delegates to storeModel() which uses atomic Lua scripting
      * when enabled, falling back to pipelined commands.
      */
-    public function store(Model $model): void
+    public function store(Model $model, ?float $revalidationTime = null): void
     {
-        $this->storeModel($model);
+        $this->storeMany(collect([$model]), $revalidationTime);
     }
 
     /**
@@ -1190,7 +1209,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
      * @param  array<int, string>|null  $precomputedStaleKeys  Pre-computed stale SREM keys (avoids extra HGET)
      * @param  array<int, string>|null  $precomputedStaleZremKeys  Pre-computed stale ZREM keys
      */
-    protected function storeModelAtomic(Model $model, $pipeline = null, ?array $precomputedStaleKeys = null, ?array $precomputedStaleZremKeys = null): void
+    protected function storeModelAtomic(Model $model, $pipeline = null, ?array $precomputedStaleKeys = null, ?array $precomputedStaleZremKeys = null, ?float $revalidationTime = null): void
     {
         $key = (string) $model->getKey();
         $staleSremKeys = $precomputedStaleKeys ?? $this->computeStaleIndexKeys($model);
@@ -1198,6 +1217,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         $payload = [
             'attributes' => $model->getAttributes(),
             'relations' => $this->extractRelations($model),
+            'revalidation_time' => $revalidationTime,
         ];
         $serialized = $this->serializeResult($payload);
         $hashKey = $this->hashKey();
@@ -1224,7 +1244,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
             }
         }
 
-        $keys = [$hashKey];
+        $keys = [$hashKey, $this->metaKey()];
         $keys = array_merge($keys, $staleSremKeys);
         $keys = array_merge($keys, $newSadd);
         $keys = array_merge($keys, $staleZrem);
@@ -1234,6 +1254,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
             $key,
             $serialized,
             (string) $ttl,
+            $revalidationTime !== null ? (string) $revalidationTime : '0',
             (string) count($staleSremKeys),
             (string) count($newSadd),
             (string) count($staleZrem),
@@ -1325,10 +1346,10 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
      * @param  array<int, string>|null  $precomputedStaleKeys
      * @param  array<int, string>|null  $precomputedStaleZremKeys
      */
-    protected function storeModel(Model $model, $pipeline = null, ?array $precomputedStaleKeys = null, ?array $precomputedStaleZremKeys = null): void
+    protected function storeModel(Model $model, $pipeline = null, ?array $precomputedStaleKeys = null, ?array $precomputedStaleZremKeys = null, ?float $revalidationTime = null): void
     {
         if ($this->luaEnabled()) {
-            $this->storeModelAtomic($model, $pipeline, $precomputedStaleKeys, $precomputedStaleZremKeys);
+            $this->storeModelAtomic($model, $pipeline, $precomputedStaleKeys, $precomputedStaleZremKeys, $revalidationTime);
 
             return;
         }
@@ -1343,6 +1364,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         $payload = [
             'attributes' => $model->getAttributes(),
             'relations' => $this->extractRelations($model),
+            'revalidation_time' => $revalidationTime,
         ];
 
         $client->hset($this->hashKey(), $key, $this->serializeResult($payload));
@@ -1646,7 +1668,8 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         bool $refresh = false,
         string|Expression|null $findBy = null,
         mixed $findValue = null,
-        string $findOperator = '='
+        string $findOperator = '=',
+        ?float $revalidationTime = null
     ): ?Model {
         // Fast path: if findBy is indexed AND not refresh, try index lookup
         if (! $refresh && $findBy !== null && $this->isIndexed($findBy)) {
@@ -1665,7 +1688,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
             return null;
         }
 
-        $this->storeMany($models);
+        $this->storeMany($models, $revalidationTime);
 
         // Post-store lookup (guaranteed to hit index if indexed)
         if ($findBy !== null && $this->isIndexed($findBy)) {
@@ -1823,7 +1846,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
 
     protected function sortedCustomKey(string $custom, string $field): string
     {
-        return $this->customIndexKey($custom).":sorted:{$field}";
+        return $this->keyBuilder->sortedCustomKey($custom, $field);
     }
 
     /**
@@ -2183,7 +2206,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
             'meta' => [],
         ];
 
-        $pattern = "{$this->prefix}:index:*";
+        $pattern = "{$this->keyBuilder->tag()}:index:*";
         $indexKeys = $this->collectKeysByPattern($pattern);
 
         foreach ($indexKeys as $indexKey) {

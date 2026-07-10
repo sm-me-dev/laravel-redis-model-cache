@@ -15,7 +15,7 @@ final class InvalidationManager
     private readonly InvalidationStrategy $strategy;
 
     public function __construct(
-        RedisModelService $service,
+        private readonly RedisModelService $service,
         string $strategy = 'sync',
         bool $versioned = false,
         string $queue = 'default',
@@ -37,6 +37,8 @@ final class InvalidationManager
             original: $model->getOriginal(),
             timestamp: microtime(true),
         );
+
+        $this->service->touchInvalidationTimestamp();
 
         $this->strategy->invalidate($context);
     }

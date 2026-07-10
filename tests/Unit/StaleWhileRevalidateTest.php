@@ -42,7 +42,7 @@ class StaleWhileRevalidateTest extends TestCase
             '{dummy_models}:meta',
             '{dummy_models}:index:status:active',
             '{dummy_models}:index:status:inactive',
-            '{dummy_models}:swr:lock'
+            '{dummy_models}:lock:swr'
         );
         Mockery::close();
         parent::tearDown();
@@ -335,7 +335,7 @@ class StaleWhileRevalidateTest extends TestCase
         ]);
 
         $redis = $this->service->getRedis();
-        $redis->del('{dummy_models}:swr:lock');
+        $redis->del('{dummy_models}:lock:swr');
 
         // Populate cache
         $this->service->rememberAll(
@@ -368,7 +368,7 @@ class StaleWhileRevalidateTest extends TestCase
         Queue::assertPushed(RevalidateCacheJob::class, 1);
 
         // Manually release the lock (simulating job completing and releasing the lock)
-        $redis->del('{dummy_models}:swr:lock');
+        $redis->del('{dummy_models}:lock:swr');
 
         // Third call - should dispatch the job again
         $this->service->rememberAll(

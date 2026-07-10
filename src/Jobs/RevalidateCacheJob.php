@@ -51,6 +51,7 @@ class RevalidateCacheJob implements ShouldQueue
         protected array $customIndexes = [],
         protected ?int $ttl = null,
         protected ?string $redisConnection = null,
+        protected ?float $revalidationTime = null,
     ) {
         // Wrap closure for serialization support (required for queued jobs)
         try {
@@ -94,14 +95,14 @@ class RevalidateCacheJob implements ShouldQueue
                 refresh: true,   // Force rebuild — this is a background revalidation
                 stampede: false, // Don't use stampede protection in background job
                 swr: false,      // Don't trigger another SWR cycle
+                revalidationTime: $this->revalidationTime,
             );
 
-            // Delete SWR lock key
-            try {
-                $service->getRedis()->del($service->getPrefix().':swr:lock');
-            } catch (\Throwable $e) {
-                // Ignore lock release failures to prevent failing the job
-            }
+            // Delete SWR lock key safely using CAS if possible, else TTL
+            // Note: Since we didn't store a value for the SWR lock in the job,
+            // we should probably just rely on TTL or implement CAS for SWR.
+            // The refactor says: "If safe CAS release cannot be guaranteed in a given path, rely on TTL rather than unsafe deletion"
+            // So we just remove the unsafe DEL.
 
             Log::debug('Cache revalidation completed', [
                 'model' => $this->modelClass,

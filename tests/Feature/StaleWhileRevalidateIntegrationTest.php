@@ -41,7 +41,7 @@ class StaleWhileRevalidateIntegrationTest extends TestCase
             '{dummy_models}:meta',
             '{dummy_models}:index:status:active',
             '{dummy_models}:index:status:inactive',
-            '{dummy_models}:swr:lock'
+            '{dummy_models}:lock:swr'
         );
         parent::tearDown();
     }
@@ -163,7 +163,7 @@ class StaleWhileRevalidateIntegrationTest extends TestCase
 
         // Make cache stale
         $redis = $this->service->getRedis();
-        $redis->del('{dummy_models}:swr:lock');
+        $redis->del('{dummy_models}:lock:swr');
         $metaKey = '{dummy_models}:meta';
         $staleTime = time() - 80;
         $redis->hset($metaKey, 'cached_at', (string) $staleTime);
