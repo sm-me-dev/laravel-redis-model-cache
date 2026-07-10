@@ -51,7 +51,7 @@ jobs:
         run: |
           if [ "${{ matrix.laravel }}" = "11" ]; then
             echo "LARAVEL_VERSION=^11.0" >> $GITHUB_ENV
-            echo "TESTBENCH_VERSION=^9.0" >> $GITHUB_ENV
+            echo "TESTBENCH_VERSION=^9.1.0" >> $GITHUB_ENV
           else
             echo "LARAVEL_VERSION=^12.0" >> $GITHUB_ENV
             echo "TESTBENCH_VERSION=^10.11" >> $GITHUB_ENV
