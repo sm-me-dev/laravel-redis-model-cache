@@ -70,8 +70,9 @@ class MonitorCacheCommand extends Command
     /**
      * @return array<int, string>
      */
-    private function scanKeys(mixed $redis, string $pattern, int $count = 500): array
+    private function scanKeys(mixed $redis, ?string $pattern, int $count = 500): array
     {
+        $pattern = (string) $pattern;
         $keys = [];
 
         if ($redis instanceof \Redis) {
