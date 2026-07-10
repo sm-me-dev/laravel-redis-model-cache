@@ -41,7 +41,8 @@ class StaleWhileRevalidateTest extends TestCase
             '{dummy_models}:hash',
             '{dummy_models}:meta',
             '{dummy_models}:index:status:active',
-            '{dummy_models}:index:status:inactive'
+            '{dummy_models}:index:status:inactive',
+            '{dummy_models}:swr:lock'
         );
         Mockery::close();
         parent::tearDown();
@@ -318,5 +319,65 @@ class StaleWhileRevalidateTest extends TestCase
             modelClass: DummyModel::class,
             callback: $closure
         );
+    }
+
+    public function test_swr_prevents_duplicate_dispatches_using_lock(): void
+    {
+        Queue::fake();
+
+        $initialModels = collect([
+            $this->createDummyModel(1, 'active'),
+        ]);
+
+        $updatedModels = collect([
+            $this->createDummyModel(1, 'active'),
+            $this->createDummyModel(2, 'active'),
+        ]);
+
+        $redis = $this->service->redis;
+        $redis->del('{dummy_models}:swr:lock');
+
+        // Populate cache
+        $this->service->rememberAll(
+            callback: fn () => $initialModels,
+            where: ['status' => 'active']
+        );
+
+        // Make cache stale
+        $metaKey = '{dummy_models}:meta';
+        $staleTime = time() - 80;
+        $redis->hset($metaKey, 'cached_at', (string) $staleTime);
+
+        $this->service->rememberAll(
+            callback: fn () => $updatedModels,
+            where: ['status' => 'active'],
+            swr: true
+        );
+
+        // Verify job was pushed
+        Queue::assertPushed(RevalidateCacheJob::class, 1);
+
+        // Second call - should NOT dispatch the job again (due to lock)
+        $this->service->rememberAll(
+            callback: fn () => $updatedModels,
+            where: ['status' => 'active'],
+            swr: true
+        );
+
+        // Verify job is still only pushed once
+        Queue::assertPushed(RevalidateCacheJob::class, 1);
+
+        // Manually release the lock (simulating job completing and releasing the lock)
+        $redis->del('{dummy_models}:swr:lock');
+
+        // Third call - should dispatch the job again
+        $this->service->rememberAll(
+            callback: fn () => $updatedModels,
+            where: ['status' => 'active'],
+            swr: true
+        );
+
+        // Verify job was pushed again (total 2 times now)
+        Queue::assertPushed(RevalidateCacheJob::class, 2);
     }
 }

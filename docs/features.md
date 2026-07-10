@@ -67,6 +67,13 @@ $users = $cacheService->rememberAll(
 > - All variables captured via `use (...)` must be serializable.
 > - An `InvalidArgumentException` is thrown early during the background job's construction if serialization fails, helping debug serialization issues before they hit the queue.
 
+### SWR Dispatch Deduplication
+To prevent concurrent requests from flooding the queue with multiple background revalidation jobs when the cache becomes stale, the package implements an SWR dispatch lock.
+- A lock is acquired at `"{prefix}:swr:lock"` using the configured `grace_period` as its TTL.
+- Only the first request to trigger revalidation will successfully acquire the lock and dispatch the background queue job.
+- Subsequent concurrent requests will continue to be served stale data immediately but will not trigger additional background jobs.
+- Once the background revalidation job completes successfully, it releases the lock.
+
 ## Incremental Updates
 
 Update specific attributes without full serialization (50-80% faster):

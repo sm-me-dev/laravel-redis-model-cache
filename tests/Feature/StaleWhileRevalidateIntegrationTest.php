@@ -40,7 +40,8 @@ class StaleWhileRevalidateIntegrationTest extends TestCase
             '{dummy_models}:hash',
             '{dummy_models}:meta',
             '{dummy_models}:index:status:active',
-            '{dummy_models}:index:status:inactive'
+            '{dummy_models}:index:status:inactive',
+            '{dummy_models}:swr:lock'
         );
         parent::tearDown();
     }
@@ -162,6 +163,7 @@ class StaleWhileRevalidateIntegrationTest extends TestCase
 
         // Make cache stale
         $redis = $this->service->redis;
+        $redis->del('{dummy_models}:swr:lock');
         $metaKey = '{dummy_models}:meta';
         $staleTime = time() - 80;
         $redis->hset($metaKey, 'cached_at', (string) $staleTime);
@@ -181,8 +183,8 @@ class StaleWhileRevalidateIntegrationTest extends TestCase
             $this->assertCount(1, $result);
         }
 
-        // Multiple jobs may be dispatched (one per request)
-        Queue::assertPushed(RevalidateCacheJob::class, 3);
+        // Only one job should be dispatched due to SWR lock deduplication
+        Queue::assertPushed(RevalidateCacheJob::class, 1);
     }
 
     public function test_swr_respects_ttl_expiration_beyond_grace(): void

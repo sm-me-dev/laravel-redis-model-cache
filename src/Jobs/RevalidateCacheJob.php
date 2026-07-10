@@ -96,6 +96,13 @@ class RevalidateCacheJob implements ShouldQueue
                 swr: false,      // Don't trigger another SWR cycle
             );
 
+            // Delete SWR lock key
+            try {
+                $service->getRedis()->del($service->getPrefix().':swr:lock');
+            } catch (\Throwable $e) {
+                // Ignore lock release failures to prevent failing the job
+            }
+
             Log::debug('Cache revalidation completed', [
                 'model' => $this->modelClass,
                 'where' => $this->where,

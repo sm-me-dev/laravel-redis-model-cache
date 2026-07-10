@@ -103,6 +103,11 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         $this->queryPlanner = new QueryPlanner;
     }
 
+    public function getPrefix(): string
+    {
+        return $this->prefix;
+    }
+
     /**
      * Enable explain mode - returns query plan instead of executing query.
      *
@@ -501,19 +506,23 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
                     $result = $this->where($where, hydrate: $hydrate, only: $only);
 
                     if ($result->isNotEmpty()) {
-                        // Dispatch background job to revalidate cache
-                        dispatch(new RevalidateCacheJob(
-                            modelClass: $this->model_class,
-                            callback: $callback instanceof \Closure ? $callback : \Closure::fromCallable($callback),
-                            where: $where,
-                            indexes: $this->indexes,
-                            sorted: $this->sorted,
-                            customIndexes: $this->custom_indexes,
-                            ttl: $this->ttl,
-                            redisConnection: $this->connectionResolver instanceof DefaultConnectionResolver
-                                ? null
-                                : $this->configuration->connection,
-                        ));
+                        $lockKey = "{$this->prefix}:swr:lock";
+                        $gracePeriod = $this->configuration->swrGracePeriod;
+                        if (StampedeProtection::acquireLock($this->redis, $lockKey, $gracePeriod)) {
+                            // Dispatch background job to revalidate cache
+                            dispatch(new RevalidateCacheJob(
+                                modelClass: $this->model_class,
+                                callback: $callback instanceof \Closure ? $callback : \Closure::fromCallable($callback),
+                                where: $where,
+                                indexes: $this->indexes,
+                                sorted: $this->sorted,
+                                customIndexes: $this->custom_indexes,
+                                ttl: $this->ttl,
+                                redisConnection: $this->connectionResolver instanceof DefaultConnectionResolver
+                                    ? null
+                                    : $this->configuration->connection,
+                            ));
+                        }
 
                         // Return stale data immediately
                         /** @var Collection<int, Model> $result */
