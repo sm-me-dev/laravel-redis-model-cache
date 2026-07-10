@@ -70,6 +70,8 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
      * @param  array<int, string>  $indexes
      * @param  array<int, string>  $sorted
      * @param  array<string, array<int, string>>  $custom_indexes
+     *
+     * @throws InvalidArgumentException If $model_class does not extend Model.
      */
     public function __construct(
         RedisConnectionResolver $connectionResolver,
@@ -469,6 +471,9 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
      * @param  array<string, mixed>  $where
      * @param  array<string>|null  $only
      * @return Collection<int, Model>
+     *
+     * @throws BadMethodCallException If $where is empty (global unindexed fetch).
+     * @throws InvalidArgumentException If where fields are not indexed.
      */
     public function rememberAll(
         callable $callback,
@@ -1152,6 +1157,8 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
      * @param  array<string, mixed>  $where  WHERE conditions (indexed fields only)
      * @param  array<string>|null  $only  Optional filter for specific primary keys
      * @return Collection<int, array<string, mixed>>
+     *
+     * @throws InvalidArgumentException If where fields are not indexed.
      */
     public function selective(array $fields, array $where = [], ?array $only = null): Collection
     {
@@ -2262,6 +2269,8 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
      *
      * Resolves via IndexResolver, executes SMEMBERS/SINTER for the
      * first matching ID, then HGET to hydrate. No O(N) hydration.
+     *
+     * @throws InvalidArgumentException If where fields are not indexed.
      */
     public function first(array $where): ?Model
     {
@@ -2301,6 +2310,8 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
      * Multi-index: uses SINTER + count (O(N)).
      *
      * No hydration — counts from indexes only.
+     *
+     * @throws InvalidArgumentException If where fields are not indexed.
      */
     public function count(array $where): int
     {
@@ -2325,6 +2336,8 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
      * Multi-index: uses SINTER + check (O(N)).
      *
      * No hydration — existence from indexes only.
+     *
+     * @throws InvalidArgumentException If where fields are not indexed.
      */
     public function exists(array $where): bool
     {

@@ -21,6 +21,8 @@ interface ModelCacheService
      *
      * @param  array<string>|null  $only
      * @return Collection<int, Model>
+     *
+     * @throws \BadMethodCallException Full hash scans are prohibited for memory safety.
      */
     public function all(bool $hydrate = true, ?array $only = null): Collection;
 
@@ -28,6 +30,8 @@ interface ModelCacheService
      * @param  array<string, mixed>  $where
      * @param  array<string>|null  $only
      * @return Collection<int, Model>|ExplainResult
+     *
+     * @throws \InvalidArgumentException If any field is not indexed.
      */
     public function where(array $where, bool $hydrate = true, ?array $only = null): Collection|ExplainResult;
 
@@ -36,11 +40,16 @@ interface ModelCacheService
      * @param  array<string, mixed>  $where
      * @param  array<string>|null  $only
      * @return Collection<int, Model>
+     *
+     * @throws \BadMethodCallException If $where is empty (global unindexed fetch).
+     * @throws \InvalidArgumentException If where fields are not indexed.
      */
     public function rememberAll(callable $callback, bool $hydrate = true, array $where = [], bool $refresh = false, ?array $only = null): Collection;
 
     /**
      * @param  callable(): (Collection<int, Model>|Model|null)  $callback
+     *
+     * @throws \InvalidArgumentException If findBy field is not indexed.
      */
     public function remember(callable $callback, bool $refresh = false, string|Expression|null $findBy = null, mixed $findValue = null, string $findOperator = '='): ?Model;
 
@@ -87,6 +96,8 @@ interface ModelCacheService
      * @param  bool  $hydrate  Whether to return full models or just IDs
      * @param  array<string>|null  $only  Optional filter for specific primary keys
      * @return Collection<int, Model>|ExplainResult
+     *
+     * @throws \InvalidArgumentException If field is not indexed or values array is empty.
      */
     public function whereIn(string $field, array $values, bool $hydrate = true, ?array $only = null): Collection|ExplainResult;
 
@@ -99,6 +110,8 @@ interface ModelCacheService
      * @param  bool  $hydrate  Whether to return full models or just IDs
      * @param  array<string>|null  $only  Optional filter for specific primary keys
      * @return Collection<int, Model>|ExplainResult
+     *
+     * @throws \InvalidArgumentException If field is not a sorted index.
      */
     public function whereBetween(string $field, int|float $min, int|float $max, bool $hydrate = true, ?array $only = null): Collection|ExplainResult;
 
@@ -109,6 +122,8 @@ interface ModelCacheService
      * @param  array<string>  $baseIds  IDs from previous where() call
      * @param  bool  $hydrate  Whether to return full models or just IDs
      * @return Collection<int, Model>
+     *
+     * @throws \InvalidArgumentException If fields are not indexed.
      */
     public function orWhere(array $where, array $baseIds = [], bool $hydrate = true): Collection;
 
@@ -119,6 +134,8 @@ interface ModelCacheService
      * @param  array<string, mixed>  $where  WHERE conditions (indexed fields)
      * @param  array<string>|null  $only  Optional filter for specific primary keys
      * @return Collection<int, array<string, mixed>> Collection of associative arrays
+     *
+     * @throws \InvalidArgumentException If where fields are not indexed.
      */
     public function pluck(array $attributes, array $where = [], ?array $only = null): Collection;
 
@@ -132,6 +149,8 @@ interface ModelCacheService
      * @param  array<string, mixed>  $where  WHERE conditions (indexed fields)
      * @param  array<string>|null  $only  Optional filter for specific primary keys
      * @return Collection<int, array<string, mixed>>
+     *
+     * @throws \InvalidArgumentException If where fields are not indexed.
      */
     public function selective(array $fields, array $where = [], ?array $only = null): Collection;
 
@@ -172,6 +191,8 @@ interface ModelCacheService
      * Return the first model matching the where clause.
      *
      * @param  array<string, mixed>  $where  Equality conditions (field => value)
+     *
+     * @throws \InvalidArgumentException If where fields are not indexed.
      */
     public function first(array $where): ?Model;
 
@@ -182,6 +203,8 @@ interface ModelCacheService
      * Uses SINTER + count for multi-index queries (O(N)).
      *
      * @param  array<string, mixed>  $where  Equality conditions (field => value)
+     *
+     * @throws \InvalidArgumentException If where fields are not indexed.
      */
     public function count(array $where): int;
 
@@ -192,6 +215,8 @@ interface ModelCacheService
      * Uses SINTER + check for multi-index queries (O(N)).
      *
      * @param  array<string, mixed>  $where  Equality conditions (field => value)
+     *
+     * @throws \InvalidArgumentException If where fields are not indexed.
      */
     public function exists(array $where): bool;
 }
