@@ -29,6 +29,9 @@ The package provides a typed `Configuration` DTO (`Sm_mE\RedisModelCache\Support
 | `observability.pulse` | `true` | Pulse integration |
 | `observability.debug` | `false` | Debug logging |
 
+> [!NOTE]
+> During boot, the configuration is validated. If the configured `connection` is explicitly set to a non-null value but is not defined in `config/database.php`, a warning log will be emitted using `Log::warning()` instead of throwing an `InvalidArgumentException`, allowing the application boot to continue.
+
 ## Model-level configuration
 
 Via `redisModelCacheConfig()` on the Eloquent trait:

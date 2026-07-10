@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Sm_mE\RedisModelCache;
 
 use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Octane\Events\WorkerTickStarting;
 use Sm_mE\RedisModelCache\Contracts\HashCacheService;
@@ -149,12 +150,16 @@ class RedisModelCacheServiceProvider extends ServiceProvider
 
     protected function validateConfiguration(): void
     {
-        $connection = config('redis-model-cache.connection');
-        if (! config("database.redis.{$connection}")) {
-            throw new \InvalidArgumentException(
-                "Redis connection '{$connection}' is not defined in config/database.php. "
-                .'Define it or change REDIS_MODEL_CACHE_CONNECTION.'
-            );
+        try {
+            $connection = config('redis-model-cache.connection');
+            if ($connection !== null && ! config("database.redis.{$connection}")) {
+                throw new \InvalidArgumentException(
+                    "Redis connection '{$connection}' is not defined in config/database.php. "
+                    .'Define it or change REDIS_MODEL_CACHE_CONNECTION.'
+                );
+            }
+        } catch (\InvalidArgumentException $e) {
+            Log::warning($e->getMessage());
         }
 
         $ttl = config('redis-model-cache.default_ttl');

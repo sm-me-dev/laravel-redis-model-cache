@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Sm_mE\RedisModelCache\Tests\Unit;
 
+use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
 use Sm_mE\RedisModelCache\RedisModelCacheServiceProvider;
 use Sm_mE\RedisModelCache\Tests\TestCase;
@@ -143,6 +144,25 @@ class ServiceProviderTest extends TestCase
         $provider = $this->app->getProvider(RedisModelCacheServiceProvider::class);
 
         $this->assertInstanceOf(RedisModelCacheServiceProvider::class, $provider);
+    }
+
+    public function test_invalid_connection_logs_warning_instead_of_throwing(): void
+    {
+        Log::shouldReceive('warning')
+            ->once()
+            ->with("Redis connection 'invalid_connection' is not defined in config/database.php. Define it or change REDIS_MODEL_CACHE_CONNECTION.");
+
+        config()->set('redis-model-cache.connection', 'invalid_connection');
+        $this->bootProvider();
+    }
+
+    public function test_null_connection_does_not_log_or_throw(): void
+    {
+        Log::shouldReceive('warning')
+            ->never();
+
+        config()->set('redis-model-cache.connection', null);
+        $this->bootProvider();
     }
 
     protected function bootProvider(): void
