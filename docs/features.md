@@ -76,6 +76,7 @@ $cacheService->updateAttributes(1, [
 - Automatically updates indexes when indexed fields change
 - Preserves eager-loaded relations
 - Uses pipelines for atomicity
+- Validates that all updated keys exist on the model (checks cached payload keys, fillables, casts, and accessors/mutators) to prevent invalid attributes from slipping through
 
 ## Atomic Store via Lua
 

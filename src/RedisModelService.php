@@ -1906,13 +1906,17 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         $currentAttributes = $data['attributes'] ?? $data; // Support both old and new format
         $relations = $data['relations'] ?? [];
 
-        // Validate all attributes exist on model — check against cached attribute keys
-        // (We cannot use new $model->getAttributes() on an empty instance as it returns [])
+        // Validate all attributes exist on model — check against cached attribute keys, fillables, casts, and mutators
         $modelInstance = new $this->model_class;
         foreach (array_keys($attributes) as $attribute) {
+            $isMutated = $modelInstance->hasGetMutator($attribute)
+                || $modelInstance->hasSetMutator($attribute)
+                || $modelInstance->hasAttributeMutator($attribute);
+
             if (! array_key_exists($attribute, $currentAttributes)
-                && ! $modelInstance->hasGetMutator($attribute)
-                && ! $modelInstance->hasAttributeMutator($attribute)) {
+                && ! in_array($attribute, $modelInstance->getFillable(), true)
+                && ! array_key_exists($attribute, $modelInstance->getCasts())
+                && ! $isMutated) {
                 throw new InvalidArgumentException(
                     "Attribute '{$attribute}' does not exist on model {$this->model_class}."
                 );

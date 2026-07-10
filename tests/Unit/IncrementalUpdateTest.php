@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Sm_mE\RedisModelCache\Tests\Unit;
 
+use Illuminate\Database\Eloquent\Model;
 use InvalidArgumentException;
 use Sm_mE\RedisModelCache\RedisModelService;
 use Sm_mE\RedisModelCache\Tests\Fixtures\DummyModel;
@@ -264,5 +265,62 @@ class IncrementalUpdateTest extends TestCase
         );
 
         return $model;
+    }
+
+    public function test_update_attributes_validation_with_fillable_casts_and_mutators(): void
+    {
+        $service = app(RedisModelService::class, [
+            'model_class' => IncrementalUpdateTestModel::class,
+            'indexes' => [],
+            'sorted' => [],
+            'ttl' => 3600,
+        ]);
+        $service->clear();
+
+        // Create and cache model
+        $model = new IncrementalUpdateTestModel;
+        $model->id = 1;
+        $model->cached_field = 'cached';
+        $model->exists = true;
+        $service->store($model);
+
+        // 1. Updating cached attribute key (cached_field) works
+        $service->updateAttributes(1, ['cached_field' => 'new_cached']);
+
+        // 2. Updating fillable attribute key (fillable_field) works
+        $service->updateAttributes(1, ['fillable_field' => 'new_fillable']);
+
+        // 3. Updating cast attribute key (cast_field) works
+        $service->updateAttributes(1, ['cast_field' => 123]);
+
+        // 4. Updating mutated attribute key (mutated_field) works
+        $service->updateAttributes(1, ['mutated_field' => 'new_mutated']);
+
+        // 5. Updating invalid attribute throws exception
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('does not exist on model');
+        $service->updateAttributes(1, ['invalid_field' => 'value']);
+
+        $service->clear();
+    }
+}
+
+class IncrementalUpdateTestModel extends Model
+{
+    protected $table = 'incremental_update_test_models';
+
+    protected $guarded = ['id'];
+
+    protected $fillable = ['fillable_field'];
+
+    protected $casts = [
+        'cast_field' => 'integer',
+    ];
+
+    public $timestamps = false;
+
+    public function getMutatedFieldAttribute(): string
+    {
+        return 'mutated';
     }
 }
