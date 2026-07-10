@@ -886,6 +886,65 @@ class RedisModelServiceTest extends TestCase
 
         $this->service->selective(['name'], ['email' => 'test@example.com']);
     }
+
+    public function test_store_many_clears_partial_writes_on_pipeline_failure(): void
+    {
+        $pipelineMock = Mockery::mock('Illuminate\Redis\Connections\Pipeline');
+        $this->redis->shouldReceive('pipeline')->andReturn($pipelineMock);
+
+        // Batch-read old data
+        $this->redis->shouldReceive('hmget')
+            ->with('{test_models}:hash', Mockery::type('array'))
+            ->andReturn(['1' => false]);
+
+        $pipelineMock->shouldReceive('hset')->once();
+        $pipelineMock->shouldReceive('expire')->with('{test_models}:hash', 3600)->once();
+        $pipelineMock->shouldReceive('sadd')->times(2);
+        $pipelineMock->shouldReceive('expire')->with('{test_models}:index:role_id:1', 3600)->once();
+        $pipelineMock->shouldReceive('expire')->with('{test_models}:index:status:active', 3600)->once();
+        $pipelineMock->shouldReceive('zadd')->once();
+        $pipelineMock->shouldReceive('expire')->with('{test_models}:sorted:created_at', 3600)->once();
+
+        // pipeline->execute() will throw exception
+        $pipelineMock->shouldReceive('execute')
+            ->once()
+            ->andThrow(new \RedisException('Pipeline failed'));
+
+        // Expect clear() actions:
+        // scan matches {test_models}:index:role_id:*
+        $this->redis->shouldReceive('scan')
+            ->with('0', ['match' => '{test_models}:index:role_id:*', 'count' => 1000])
+            ->once()
+            ->andReturn(['0', ['{test_models}:index:role_id:1']]);
+
+        // scan matches {test_models}:index:status:*
+        $this->redis->shouldReceive('scan')
+            ->with('0', ['match' => '{test_models}:index:status:*', 'count' => 1000])
+            ->once()
+            ->andReturn(['0', ['{test_models}:index:status:active']]);
+
+        // del deletes hash, meta, index keys, custom index keys, sorted keys
+        $this->redis->shouldReceive('del')
+            ->with(
+                '{test_models}:hash',
+                '{test_models}:meta',
+                '{test_models}:index:role_id:1',
+                '{test_models}:index:status:active',
+                '{test_models}:sorted:created_at',
+                '{test_models}:custom:active_admins'
+            )
+            ->once()
+            ->andReturn(1);
+
+        $models = new Collection([
+            new TestModel(['id' => 1, 'role_id' => 1, 'status' => 'active', 'created_at' => '2024-01-01']),
+        ]);
+
+        $this->expectException(\RedisException::class);
+        $this->expectExceptionMessage('Pipeline failed');
+
+        $this->service->callStoreMany($models);
+    }
 }
 
 class TestableRedisModelService extends RedisModelService

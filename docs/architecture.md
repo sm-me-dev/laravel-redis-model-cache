@@ -165,6 +165,8 @@ The pipeline guarantees atomic execution of all EVALSHA commands from the caller
 perspective — no partial writes. When Lua is disabled, individual Redis commands
 (HSET, SREM, SADD, ZADD, EXPIRE) are queued in the pipeline as before.
 
+If pipeline execution or any post-pipeline step fails, the partial writes are automatically cleaned up by calling `clear()` to prevent inconsistent state, and the original exception is rethrown.
+
 ## Stampede Protection Flow
 
 ```

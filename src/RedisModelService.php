@@ -693,13 +693,22 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
             $this->storeModel($model, $pipeline, $staleKeysMap[$key] ?? []);
         }
 
-        // Execute pipeline and exit pipeline mode
-        $this->executePipeline($pipeline);
+        try {
+            // Execute pipeline and exit pipeline mode
+            $this->executePipeline($pipeline);
 
-        $this->applyTTL($hashKey);
+            $this->applyTTL($hashKey);
 
-        // Store cache metadata for SWR stale detection
-        $this->storeCacheMetadata();
+            // Store cache metadata for SWR stale detection
+            $this->storeCacheMetadata();
+        } catch (\Throwable $e) {
+            try {
+                $this->clear();
+            } catch (\Throwable) {
+                // Ignore secondary errors to preserve the original exception
+            }
+            throw $e;
+        }
     }
 
     /**
