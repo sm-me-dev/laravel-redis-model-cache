@@ -53,7 +53,16 @@ class RevalidateCacheJob implements ShouldQueue
         protected ?string $redisConnection = null,
     ) {
         // Wrap closure for serialization support (required for queued jobs)
-        $this->callback = new SerializableClosure($callback);
+        try {
+            $this->callback = new SerializableClosure($callback);
+            serialize($this->callback);
+        } catch (\Throwable $e) {
+            throw new \InvalidArgumentException(
+                "Unable to serialize SWR callback closure. Ensure the closure does not capture any non-serializable objects or resources. Error: {$e->getMessage()}",
+                0,
+                $e
+            );
+        }
 
         // Use the configured SWR queue
         $this->onQueue(Configuration::fromConfig()->swrQueue);

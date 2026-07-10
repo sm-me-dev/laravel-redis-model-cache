@@ -60,6 +60,13 @@ $users = $cacheService->rememberAll(
 ],
 ```
 
+> [!WARNING]
+> The cache population callback closure passed to `rememberAll()` in SWR mode must be serializable using `Laravel\SerializableClosure`.
+> 
+> - Do **not** capture any non-serializable objects (such as database connection instances, PDO objects, anonymous classes, or open file/network resources).
+> - All variables captured via `use (...)` must be serializable.
+> - An `InvalidArgumentException` is thrown early during the background job's construction if serialization fails, helping debug serialization issues before they hit the queue.
+
 ## Incremental Updates
 
 Update specific attributes without full serialization (50-80% faster):

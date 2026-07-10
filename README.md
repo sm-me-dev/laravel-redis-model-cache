@@ -274,6 +274,16 @@ All options with defaults:
 ],
 ```
 
+### Stale-While-Revalidate (SWR) Serialization
+
+> [!WARNING]
+> When using the Stale-While-Revalidate (SWR) pattern, the callback closure passed to `rememberAll()` must be serializable because it is serialized using `Laravel\SerializableClosure` to be processed by a background queue job. 
+> 
+> Ensure that:
+> - The closure does **not** capture any non-serializable objects (such as database connection instances, open file resources, anonymous classes, or socket handles).
+> - Any external variables captured by the closure (`use ($var)`) are fully serializable.
+> - If serialization fails, an `InvalidArgumentException` will be thrown immediately during the job's construction.
+
 ### Operations Matrix
 
 | Command | Action | Safe for Production? | Redis Impact |

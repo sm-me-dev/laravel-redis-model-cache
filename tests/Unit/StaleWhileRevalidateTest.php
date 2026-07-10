@@ -301,4 +301,22 @@ class StaleWhileRevalidateTest extends TestCase
 
         return $model;
     }
+
+    public function test_revalidate_cache_job_constructor_throws_invalid_argument_exception_on_non_serializable_closure(): void
+    {
+        // An anonymous class instance is not serializable
+        $nonSerializable = new class {};
+
+        $closure = function () use ($nonSerializable) {
+            return $nonSerializable;
+        };
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Unable to serialize SWR callback closure');
+
+        new RevalidateCacheJob(
+            modelClass: DummyModel::class,
+            callback: $closure
+        );
+    }
 }
