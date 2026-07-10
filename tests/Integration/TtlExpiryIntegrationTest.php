@@ -36,7 +36,7 @@ class TtlExpiryIntegrationTest extends IntegrationTestCase
 
     protected function tearDown(): void
     {
-        $redis = $this->service->redis;
+        $redis = $this->service->getRedis();
         $redis->del($this->hashKey, $this->metaKey);
 
         parent::tearDown();
@@ -57,7 +57,7 @@ class TtlExpiryIntegrationTest extends IntegrationTestCase
     {
         $this->service->store($this->createDummyModel(1, 'active'));
 
-        $ttl = $this->service->redis->ttl($this->hashKey);
+        $ttl = $this->service->getRedis()->ttl($this->hashKey);
 
         $this->assertGreaterThan(0, $ttl);
         $this->assertLessThanOrEqual(3600, $ttl);
@@ -88,7 +88,7 @@ class TtlExpiryIntegrationTest extends IntegrationTestCase
             where: ['status' => 'active'],
         );
 
-        $meta = $this->service->redis->hget($this->metaKey, 'cached_at');
+        $meta = $this->service->getRedis()->hget($this->metaKey, 'cached_at');
         $this->assertNotNull($meta);
         $this->assertGreaterThan(0, (int) $meta);
     }
@@ -103,7 +103,7 @@ class TtlExpiryIntegrationTest extends IntegrationTestCase
         $this->assertCount(1, $this->service->where(['status' => 'active']));
 
         $staleTime = time() - 7200;
-        $this->service->redis->hset($this->metaKey, 'cached_at', (string) $staleTime);
+        $this->service->getRedis()->hset($this->metaKey, 'cached_at', (string) $staleTime);
 
         $callCount = 0;
         $result = $this->service->rememberAll(
@@ -133,8 +133,8 @@ class TtlExpiryIntegrationTest extends IntegrationTestCase
             where: ['status' => 'active'],
         );
 
-        $this->assertGreaterThan(0, $service->redis->ttl($this->hashKey));
-        $this->assertGreaterThan(0, $service->redis->ttl($this->metaKey));
+        $this->assertGreaterThan(0, $service->getRedis()->ttl($this->hashKey));
+        $this->assertGreaterThan(0, $service->getRedis()->ttl($this->metaKey));
     }
 
     public function test_index_keys_expire_with_ttl_when_set_via_store(): void
@@ -152,9 +152,9 @@ class TtlExpiryIntegrationTest extends IntegrationTestCase
 
         $indexKey = '{dummy_models}:index:status:active';
 
-        $this->assertTrue((bool) $service->redis->exists($indexKey));
+        $this->assertTrue((bool) $service->getRedis()->exists($indexKey));
 
-        $ttl = $service->redis->ttl($indexKey);
+        $ttl = $service->getRedis()->ttl($indexKey);
 
         $this->assertGreaterThan(0, $ttl);
         $this->assertLessThanOrEqual(3600, $ttl);
@@ -176,6 +176,6 @@ class TtlExpiryIntegrationTest extends IntegrationTestCase
         );
 
         $customKey = '{dummy_models}:custom:active';
-        $this->assertGreaterThan(0, $service->redis->ttl($customKey));
+        $this->assertGreaterThan(0, $service->getRedis()->ttl($customKey));
     }
 }

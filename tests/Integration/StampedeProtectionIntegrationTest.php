@@ -41,7 +41,7 @@ class StampedeProtectionIntegrationTest extends IntegrationTestCase
 
     protected function tearDown(): void
     {
-        $redis = $this->service->redis;
+        $redis = $this->service->getRedis();
         $redis->del($this->hashKey, $this->metaKey);
         $redis->del($this->hashKey.':lock');
 
@@ -63,37 +63,37 @@ class StampedeProtectionIntegrationTest extends IntegrationTestCase
     {
         $lockKey = StampedeProtection::lockKey($this->hashKey);
 
-        $acquired = StampedeProtection::acquireLock($this->service->redis, $lockKey, 10);
+        $acquired = StampedeProtection::acquireLock($this->service->getRedis(), $lockKey, 10);
         $this->assertTrue($acquired);
 
-        $secondAttempt = StampedeProtection::acquireLock($this->service->redis, $lockKey, 10);
+        $secondAttempt = StampedeProtection::acquireLock($this->service->getRedis(), $lockKey, 10);
         $this->assertFalse($secondAttempt);
 
-        StampedeProtection::releaseLock($this->service->redis, $lockKey);
+        StampedeProtection::releaseLock($this->service->getRedis(), $lockKey);
 
-        $reacquired = StampedeProtection::acquireLock($this->service->redis, $lockKey, 10);
+        $reacquired = StampedeProtection::acquireLock($this->service->getRedis(), $lockKey, 10);
         $this->assertTrue($reacquired);
 
-        StampedeProtection::releaseLock($this->service->redis, $lockKey);
+        StampedeProtection::releaseLock($this->service->getRedis(), $lockKey);
     }
 
     public function test_lock_auto_expires_after_timeout(): void
     {
         $lockKey = StampedeProtection::lockKey($this->hashKey);
 
-        StampedeProtection::acquireLock($this->service->redis, $lockKey, 1);
-        $this->assertTrue((bool) $this->service->redis->exists($lockKey));
+        StampedeProtection::acquireLock($this->service->getRedis(), $lockKey, 1);
+        $this->assertTrue((bool) $this->service->getRedis()->exists($lockKey));
 
         sleep(2);
 
-        $this->assertFalse((bool) $this->service->redis->exists($lockKey));
+        $this->assertFalse((bool) $this->service->getRedis()->exists($lockKey));
     }
 
     public function test_wait_for_lock_returns_true_when_lock_absent(): void
     {
         $lockKey = StampedeProtection::lockKey($this->hashKey);
 
-        $result = StampedeProtection::waitForLock($this->service->redis, $lockKey, 1, 50);
+        $result = StampedeProtection::waitForLock($this->service->getRedis(), $lockKey, 1, 50);
 
         $this->assertTrue($result);
     }
@@ -102,20 +102,20 @@ class StampedeProtectionIntegrationTest extends IntegrationTestCase
     {
         $lockKey = StampedeProtection::lockKey($this->hashKey);
 
-        StampedeProtection::acquireLock($this->service->redis, $lockKey, 5);
+        StampedeProtection::acquireLock($this->service->getRedis(), $lockKey, 5);
 
-        $result = StampedeProtection::waitForLock($this->service->redis, $lockKey, 1, 100);
+        $result = StampedeProtection::waitForLock($this->service->getRedis(), $lockKey, 1, 100);
 
         $this->assertFalse($result);
 
-        StampedeProtection::releaseLock($this->service->redis, $lockKey);
+        StampedeProtection::releaseLock($this->service->getRedis(), $lockKey);
     }
 
     public function test_stampede_lock_is_set_and_released_by_remember_all(): void
     {
         $lockKey = StampedeProtection::lockKey($this->hashKey);
 
-        $this->assertFalse((bool) $this->service->redis->exists($lockKey));
+        $this->assertFalse((bool) $this->service->getRedis()->exists($lockKey));
 
         $this->service->rememberAll(
             callback: fn () => collect([$this->createDummyModel(1, 'active')]),
@@ -123,7 +123,7 @@ class StampedeProtectionIntegrationTest extends IntegrationTestCase
             stampede: true,
         );
 
-        $this->assertFalse((bool) $this->service->redis->exists($lockKey));
+        $this->assertFalse((bool) $this->service->getRedis()->exists($lockKey));
     }
 
     public function test_remember_all_with_stampede_acquires_lock_when_cache_empty(): void
@@ -137,7 +137,7 @@ class StampedeProtectionIntegrationTest extends IntegrationTestCase
         );
 
         $this->assertNotNull($this->service->find(1));
-        $this->assertFalse((bool) $this->service->redis->exists($lockKey));
+        $this->assertFalse((bool) $this->service->getRedis()->exists($lockKey));
     }
 
     public function test_stampede_lock_in_use_causes_waiter_to_use_cached_result(): void
@@ -149,7 +149,7 @@ class StampedeProtectionIntegrationTest extends IntegrationTestCase
 
         $lockKey = StampedeProtection::lockKey($this->hashKey);
 
-        StampedeProtection::acquireLock($this->service->redis, $lockKey, 10);
+        StampedeProtection::acquireLock($this->service->getRedis(), $lockKey, 10);
 
         $callCount = 0;
         $result = $this->service->rememberAll(
@@ -165,7 +165,7 @@ class StampedeProtectionIntegrationTest extends IntegrationTestCase
         $this->assertCount(1, $result);
         $this->assertSame(0, $callCount);
 
-        StampedeProtection::releaseLock($this->service->redis, $lockKey);
+        StampedeProtection::releaseLock($this->service->getRedis(), $lockKey);
     }
 
     public function test_lock_key_generation(): void

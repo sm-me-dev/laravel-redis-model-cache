@@ -36,7 +36,7 @@ class BasicLifecycleIntegrationTest extends IntegrationTestCase
 
     protected function tearDown(): void
     {
-        $redis = $this->service->redis;
+        $redis = $this->service->getRedis();
         $redis->del($this->hashKey, $this->metaKey);
 
         parent::tearDown();

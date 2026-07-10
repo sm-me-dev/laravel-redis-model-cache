@@ -679,13 +679,17 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
 
         $oldDataAll = $this->redis->hmget($hashKey, $modelKeys);
         $staleKeysMap = [];
+        $staleZremMap = [];
         foreach ($keyedModels as $key => $model) {
             $oldRaw = $oldDataAll[$key] ?? null;
             if ($oldRaw !== null && $oldRaw !== false) {
+                /** @var array<string, mixed> $oldParsed */
                 $oldParsed = $this->deserialize($oldRaw);
                 $staleKeysMap[$key] = $this->computeStaleIndexKeysFromData($model, $oldParsed);
+                $staleZremMap[$key] = $this->computeStaleZremKeysFromData($model, $oldParsed);
             } else {
                 $staleKeysMap[$key] = [];
+                $staleZremMap[$key] = [];
             }
         }
 
@@ -699,7 +703,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
 
         foreach ($models as $model) {
             $key = (string) $model->getKey();
-            $this->storeModel($model, $pipeline, $staleKeysMap[$key] ?? []);
+            $this->storeModel($model, $pipeline, $staleKeysMap[$key] ?? [], $staleZremMap[$key] ?? []);
         }
 
         try {
@@ -1177,8 +1181,9 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
      *
      * @param  mixed  $pipeline  Pipeline client or null for direct execution
      * @param  array<int, string>|null  $precomputedStaleKeys  Pre-computed stale SREM keys (avoids extra HGET)
+     * @param  array<int, string>|null  $precomputedStaleZremKeys  Pre-computed stale ZREM keys
      */
-    protected function storeModelAtomic(Model $model, $pipeline = null, ?array $precomputedStaleKeys = null): void
+    protected function storeModelAtomic(Model $model, $pipeline = null, ?array $precomputedStaleKeys = null, ?array $precomputedStaleZremKeys = null): void
     {
         $key = (string) $model->getKey();
         $staleSremKeys = $precomputedStaleKeys ?? $this->computeStaleIndexKeys($model);
@@ -1192,7 +1197,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         $ttl = $this->ttl ?? 0;
 
         $newSadd = [];
-        $staleZrem = [];
+        $staleZrem = $precomputedStaleZremKeys ?? $this->computeStaleZremKeysFromData($model, []);
         $newZadd = [];
         $zaddScores = [];
 
@@ -1311,11 +1316,12 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
      *
      * @param  mixed  $pipeline
      * @param  array<int, string>|null  $precomputedStaleKeys
+     * @param  array<int, string>|null  $precomputedStaleZremKeys
      */
-    protected function storeModel(Model $model, $pipeline = null, ?array $precomputedStaleKeys = null): void
+    protected function storeModel(Model $model, $pipeline = null, ?array $precomputedStaleKeys = null, ?array $precomputedStaleZremKeys = null): void
     {
         if ($this->luaEnabled()) {
-            $this->storeModelAtomic($model, $pipeline, $precomputedStaleKeys);
+            $this->storeModelAtomic($model, $pipeline, $precomputedStaleKeys, $precomputedStaleZremKeys);
 
             return;
         }
@@ -1396,6 +1402,41 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         }
 
         return $staleKeys;
+    }
+
+    /**
+     * Compute stale sorted-set keys from already-deserialized old data.
+     * Avoids an extra HGET round-trip when batch-reading in storeMany().
+     *
+     * @param  array<string, mixed>  $oldData  Deserialized old payload
+     * @return array<int, string>
+     */
+    protected function computeStaleZremKeysFromData(Model $model, array $oldData): array
+    {
+        $oldAttributes = $oldData['attributes'] ?? $oldData;
+        $staleZrem = [];
+
+        foreach ($this->sorted as $field) {
+            $oldValue = $oldAttributes[$field] ?? null;
+
+            if ($oldValue === null) {
+                continue;
+            }
+
+            $currentValue = $model->{$field};
+
+            if ((string) $oldValue === (string) $currentValue) {
+                continue;
+            }
+
+            if ($this->extractScore($oldValue) === $this->extractScore($currentValue)) {
+                continue;
+            }
+
+            $staleZrem[] = $this->sortedKey($field);
+        }
+
+        return $staleZrem;
     }
 
     /**

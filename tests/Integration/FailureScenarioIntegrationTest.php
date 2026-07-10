@@ -36,7 +36,7 @@ class FailureScenarioIntegrationTest extends IntegrationTestCase
 
     protected function tearDown(): void
     {
-        $redis = $this->service->redis;
+        $redis = $this->service->getRedis();
         $redis->del($this->hashKey, $this->metaKey);
 
         parent::tearDown();
@@ -56,7 +56,7 @@ class FailureScenarioIntegrationTest extends IntegrationTestCase
 
     public function test_corrupted_json_in_hash_returns_null_on_find(): void
     {
-        $this->service->redis->hset($this->hashKey, '1', 'not-valid-json');
+        $this->service->getRedis()->hset($this->hashKey, '1', 'not-valid-json');
 
         $result = $this->service->find(1);
 
@@ -66,7 +66,7 @@ class FailureScenarioIntegrationTest extends IntegrationTestCase
     public function test_invalid_json_in_hash_skipped_during_where(): void
     {
         $this->service->store($this->createDummyModel(1, 'active'));
-        $this->service->redis->hset($this->hashKey, '2', '{corrupted:');
+        $this->service->getRedis()->hset($this->hashKey, '2', '{corrupted:');
 
         $result = $this->service->where(['status' => 'active']);
 
@@ -118,17 +118,17 @@ class FailureScenarioIntegrationTest extends IntegrationTestCase
 
     public function test_bust_version_increments_counter(): void
     {
-        $version = $this->service->redis->hget($this->metaKey, 'version');
+        $version = $this->service->getRedis()->hget($this->metaKey, 'version');
         $this->assertFalse($version);
 
         $this->service->bustVersion();
 
-        $version = $this->service->redis->hget($this->metaKey, 'version');
+        $version = $this->service->getRedis()->hget($this->metaKey, 'version');
         $this->assertSame('1', $version);
 
         $this->service->bustVersion();
 
-        $version = $this->service->redis->hget($this->metaKey, 'version');
+        $version = $this->service->getRedis()->hget($this->metaKey, 'version');
         $this->assertSame('2', $version);
     }
 
@@ -183,11 +183,11 @@ class FailureScenarioIntegrationTest extends IntegrationTestCase
         $this->service->store($model);
 
         $sortedKey = '{dummy_models}:sorted:created_at';
-        $this->assertSame(1, $this->service->redis->zcard($sortedKey));
+        $this->assertSame(1, $this->service->getRedis()->zcard($sortedKey));
 
         $this->service->delete(1);
 
         $this->assertNull($this->service->find(1));
-        $this->assertSame(0, $this->service->redis->zcard($sortedKey));
+        $this->assertSame(0, $this->service->getRedis()->zcard($sortedKey));
     }
 }

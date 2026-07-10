@@ -9,8 +9,7 @@ use Sm_mE\RedisModelCache\Support\Configuration;
 
 class RedisBaseService
 {
-    /** @deprecated Will become protected in v2.0. Use a service-specific facade instead of accessing $redis directly. */
-    public mixed $redis;
+    protected mixed $redis;
 
     protected ?int $ttl = null;
 

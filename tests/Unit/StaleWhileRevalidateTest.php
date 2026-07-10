@@ -36,7 +36,7 @@ class StaleWhileRevalidateTest extends TestCase
     protected function tearDown(): void
     {
         // Manually clean up keys to avoid SCAN issue
-        $redis = $this->service->redis;
+        $redis = $this->service->getRedis();
         $redis->del(
             '{dummy_models}:hash',
             '{dummy_models}:meta',
@@ -61,7 +61,7 @@ class StaleWhileRevalidateTest extends TestCase
         );
 
         // Verify metadata exists
-        $redis = $this->service->redis;
+        $redis = $this->service->getRedis();
         $metaKey = '{dummy_models}:meta';
         $cachedAt = $redis->hget($metaKey, 'cached_at');
 
@@ -105,7 +105,7 @@ class StaleWhileRevalidateTest extends TestCase
         );
 
         // Manually set cached_at to simulate stale but within grace
-        $redis = $this->service->redis;
+        $redis = $this->service->getRedis();
         $metaKey = '{dummy_models}:meta';
         $staleTime = time() - 80; // 80 seconds ago (TTL is 60s, grace is 300s)
         $redis->hset($metaKey, 'cached_at', (string) $staleTime);
@@ -134,7 +134,7 @@ class StaleWhileRevalidateTest extends TestCase
         );
 
         // Manually set cached_at to simulate expired beyond grace
-        $redis = $this->service->redis;
+        $redis = $this->service->getRedis();
         $metaKey = '{dummy_models}:meta';
         $expiredTime = time() - 400; // 400 seconds ago (TTL 60s + grace 300s = 360s)
         $redis->hset($metaKey, 'cached_at', (string) $expiredTime);
@@ -167,7 +167,7 @@ class StaleWhileRevalidateTest extends TestCase
         );
 
         // Make cache stale but within grace period
-        $redis = $this->service->redis;
+        $redis = $this->service->getRedis();
         $metaKey = '{dummy_models}:meta';
         $staleTime = time() - 80; // Stale but within grace
         $redis->hset($metaKey, 'cached_at', (string) $staleTime);
@@ -236,7 +236,7 @@ class StaleWhileRevalidateTest extends TestCase
         );
 
         // Make cache stale
-        $redis = $this->service->redis;
+        $redis = $this->service->getRedis();
         $metaKey = '{dummy_models}:meta';
         $staleTime = time() - 80;
         $redis->hset($metaKey, 'cached_at', (string) $staleTime);
@@ -273,7 +273,7 @@ class StaleWhileRevalidateTest extends TestCase
         );
 
         // Make cache stale
-        $redis = $this->service->redis;
+        $redis = $this->service->getRedis();
         $metaKey = '{dummy_models}:meta';
         $staleTime = time() - 80;
         $redis->hset($metaKey, 'cached_at', (string) $staleTime);
@@ -334,7 +334,7 @@ class StaleWhileRevalidateTest extends TestCase
             $this->createDummyModel(2, 'active'),
         ]);
 
-        $redis = $this->service->redis;
+        $redis = $this->service->getRedis();
         $redis->del('{dummy_models}:swr:lock');
 
         // Populate cache

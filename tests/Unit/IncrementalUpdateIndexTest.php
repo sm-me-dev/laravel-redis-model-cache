@@ -29,7 +29,7 @@ class IncrementalUpdateIndexTest extends TestCase
     protected function tearDown(): void
     {
         // Manually clean up keys to avoid SCAN issue
-        $redis = $this->service->redis;
+        $redis = $this->service->getRedis();
         $redis->del(
             '{dummy_models}:hash',
             '{dummy_models}:meta',
@@ -49,7 +49,7 @@ class IncrementalUpdateIndexTest extends TestCase
         $model = $this->createAndCacheModel(1, 'John Doe', 'active');
 
         // Verify initial index
-        $redis = $this->service->redis;
+        $redis = $this->service->getRedis();
         $activeMembers = $redis->smembers('{dummy_models}:index:status:active');
         $inactiveMembers = $redis->smembers('{dummy_models}:index:status:inactive');
 
@@ -72,7 +72,7 @@ class IncrementalUpdateIndexTest extends TestCase
         $model = $this->createAndCacheModel(1, 'John Doe', 'active');
 
         // Get index state before update
-        $redis = $this->service->redis;
+        $redis = $this->service->getRedis();
         $activeMembers = $redis->smembers('{dummy_models}:index:status:active');
         $this->assertContains('1', $activeMembers);
 
@@ -130,7 +130,7 @@ class IncrementalUpdateIndexTest extends TestCase
     {
         $model = $this->createAndCacheModel(1, 'John Doe', 'active');
 
-        $redis = $this->service->redis;
+        $redis = $this->service->getRedis();
 
         // Verify model is in active index
         $this->assertContains('1', $redis->smembers('{dummy_models}:index:status:active'));
@@ -148,7 +148,7 @@ class IncrementalUpdateIndexTest extends TestCase
     {
         $model = $this->createAndCacheModel(1, 'John Doe', 'active');
 
-        $redis = $this->service->redis;
+        $redis = $this->service->getRedis();
 
         // Update with same value
         $this->service->updateAttribute(1, 'status', 'active');
@@ -167,7 +167,7 @@ class IncrementalUpdateIndexTest extends TestCase
         $this->service->updateAttribute(1, 'status', 'inactive');
 
         // Verify TTL set on new index key
-        $redis = $this->service->redis;
+        $redis = $this->service->getRedis();
         $ttl = $redis->ttl('{dummy_models}:index:status:inactive');
 
         $this->assertGreaterThan(0, $ttl);
@@ -177,7 +177,7 @@ class IncrementalUpdateIndexTest extends TestCase
     public function test_handles_null_to_value_index_change(): void
     {
         // Create model with null status
-        $redis = $this->service->redis;
+        $redis = $this->service->getRedis();
         $data = [
             'attributes' => [
                 'id' => 1,
@@ -200,7 +200,7 @@ class IncrementalUpdateIndexTest extends TestCase
     {
         $model = $this->createAndCacheModel(1, 'John Doe', 'active');
 
-        $redis = $this->service->redis;
+        $redis = $this->service->getRedis();
 
         // Update from value to null
         $this->service->updateAttribute(1, 'status', null);
@@ -254,7 +254,7 @@ class IncrementalUpdateIndexTest extends TestCase
         $model2 = $this->createAndCacheModel(2, 'Jane', 'active');
 
         // Both models in active index
-        $redis = $this->service->redis;
+        $redis = $this->service->getRedis();
         $activeMembers = $redis->smembers('{dummy_models}:index:status:active');
         $this->assertContains('1', $activeMembers);
         $this->assertContains('2', $activeMembers);

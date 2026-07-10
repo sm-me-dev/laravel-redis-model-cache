@@ -942,8 +942,74 @@ class RedisModelServiceTest extends TestCase
 
         $this->expectException(\RedisException::class);
         $this->expectExceptionMessage('Pipeline failed');
-
         $this->service->callStoreMany($models);
+    }
+
+    public function test_stale_zrem_occurs_on_sorted_field_update(): void
+    {
+        config()->set('redis-model-cache.lua_scripting.enabled', true);
+
+        $matchStrategy = Mockery::mock(ModelMatchStrategy::class);
+        $matchStrategy->shouldReceive('normalize')->andReturnUsing(fn ($v) => $v);
+        $matchStrategy->shouldReceive('matches')->andReturnUsing(fn ($a, $b) => $a === $b);
+
+        $service = new TestableRedisModelService(
+            connectionResolver: $this->connectionResolver,
+            model_class: TestModel::class,
+            indexes: ['role_id', 'status'],
+            sorted: ['created_at'],
+            custom_indexes: ['active_admins' => ['role_id' => 1, 'status' => 'active']],
+            ttl: 3600,
+            matchStrategy: $matchStrategy
+        );
+
+        $oldPayload = [
+            'attributes' => ['id' => 1, 'role_id' => 1, 'status' => 'active', 'created_at' => '2024-01-01'],
+            'relations' => [],
+        ];
+
+        $model = new TestModel(['id' => 1, 'role_id' => 1, 'status' => 'active', 'created_at' => '2024-01-02']);
+
+        $pipelineMock = Mockery::mock('Illuminate\Redis\Connections\Pipeline');
+        $this->redis->shouldReceive('pipeline')->once()->andReturn($pipelineMock);
+        $this->redis->shouldReceive('hmget')
+            ->with('{test_models}:hash', ['1'])
+            ->once()
+            ->andReturn(['1' => json_encode($oldPayload, JSON_THROW_ON_ERROR)]);
+
+        $this->redis->shouldReceive('script')
+            ->with('load', Mockery::any())
+            ->once()
+            ->andReturn('dummy_sha');
+
+        $pipelineMock->shouldReceive('evalSha')
+            ->withArgs(function ($sha, $numKeys, ...$args) {
+                $keys = array_slice($args, 0, $numKeys);
+                $luaArgs = array_slice($args, $numKeys);
+
+                if (! in_array('{test_models}:sorted:created_at', $keys)) {
+                    return false;
+                }
+
+                if ($luaArgs[5] !== '1') {
+                    return false;
+                }
+
+                return true;
+            })
+            ->once()
+            ->andReturn($pipelineMock);
+
+        $pipelineMock->shouldReceive('expire')->andReturn($pipelineMock);
+        $pipelineMock->shouldReceive('execute')->andReturn([]);
+        $pipelineMock->shouldReceive('hset')->andReturn(1);
+        $this->redis->shouldReceive('hset')->andReturn(1);
+        $this->redis->shouldReceive('ttl')->andReturn(-1);
+        $this->redis->shouldReceive('expire')->andReturn(1);
+
+        $models = new Collection([$model]);
+        $service->callStoreMany($models);
+        $this->addToAssertionCount(1);
     }
 }
 

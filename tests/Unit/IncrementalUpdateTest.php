@@ -31,7 +31,7 @@ class IncrementalUpdateTest extends TestCase
     protected function tearDown(): void
     {
         // Manually clean up keys to avoid SCAN issue in pipeline mode
-        $redis = $this->service->redis;
+        $redis = $this->service->getRedis();
         $redis->del(
             '{dummy_models}:hash',
             '{dummy_models}:meta',
@@ -49,7 +49,7 @@ class IncrementalUpdateTest extends TestCase
         $this->service->updateAttribute(1, 'name', 'Jane Doe');
 
         // Verify the change
-        $redis = $this->service->redis;
+        $redis = $this->service->getRedis();
         $data = json_decode($redis->hget('{dummy_models}:hash', '1'), true);
 
         $this->assertEquals('Jane Doe', $data['attributes']['name']);
@@ -67,7 +67,7 @@ class IncrementalUpdateTest extends TestCase
         ]);
 
         // Verify the changes
-        $redis = $this->service->redis;
+        $redis = $this->service->getRedis();
         $data = json_decode($redis->hget('{dummy_models}:hash', '1'), true);
 
         $this->assertEquals('Jane Doe', $data['attributes']['name']);
@@ -118,7 +118,7 @@ class IncrementalUpdateTest extends TestCase
         $model = $this->createAndCacheModel(1, 'John Doe', 'active');
 
         // Manually add a relation to the cached data
-        $redis = $this->service->redis;
+        $redis = $this->service->getRedis();
         $data = json_decode($redis->hget('{dummy_models}:hash', '1'), true);
         $data['relations'] = [
             'posts' => [
@@ -144,7 +144,7 @@ class IncrementalUpdateTest extends TestCase
         $model = $this->createAndCacheModel(1, 'John Doe', 'active');
 
         // Get initial metadata timestamp
-        $redis = $this->service->redis;
+        $redis = $this->service->getRedis();
         $metaKey = '{dummy_models}:meta';
         $initialCachedAt = $redis->hget($metaKey, 'cached_at');
 
@@ -172,7 +172,7 @@ class IncrementalUpdateTest extends TestCase
         ]);
 
         // All changes should be applied atomically
-        $redis = $this->service->redis;
+        $redis = $this->service->getRedis();
         $data = json_decode($redis->hget('{dummy_models}:hash', '1'), true);
 
         $this->assertEquals('Jane Doe', $data['attributes']['name']);
@@ -187,7 +187,7 @@ class IncrementalUpdateTest extends TestCase
         $this->service->updateAttribute(1, 'name', null);
 
         // Verify the change
-        $redis = $this->service->redis;
+        $redis = $this->service->getRedis();
         $data = json_decode($redis->hget('{dummy_models}:hash', '1'), true);
 
         $this->assertNull($data['attributes']['name']);
@@ -198,7 +198,7 @@ class IncrementalUpdateTest extends TestCase
         $model = $this->createAndCacheModel(1, 'John Doe', 'active');
 
         // Add an id attribute to the data
-        $redis = $this->service->redis;
+        $redis = $this->service->getRedis();
         $data = json_decode($redis->hget('{dummy_models}:hash', '1'), true);
         $data['attributes']['id'] = 1;
         $redis->hset('{dummy_models}:hash', '1', json_encode($data));
@@ -224,7 +224,7 @@ class IncrementalUpdateTest extends TestCase
         $this->service->updateAttribute(1, 'name', 'Jane Doe');
 
         // Verify TTL is set on hash key
-        $redis = $this->service->redis;
+        $redis = $this->service->getRedis();
         $ttl = $redis->ttl('{dummy_models}:hash');
 
         $this->assertGreaterThan(0, $ttl);
@@ -234,7 +234,7 @@ class IncrementalUpdateTest extends TestCase
     public function test_update_supports_old_data_format_without_relations(): void
     {
         // Create model with old format (no relations key)
-        $redis = $this->service->redis;
+        $redis = $this->service->getRedis();
         $oldFormatData = [
             'id' => 1,
             'name' => 'John Doe',

@@ -35,7 +35,7 @@ class StaleWhileRevalidateIntegrationTest extends TestCase
     protected function tearDown(): void
     {
         // Manually clean up keys to avoid SCAN issue
-        $redis = $this->service->redis;
+        $redis = $this->service->getRedis();
         $redis->del(
             '{dummy_models}:hash',
             '{dummy_models}:meta',
@@ -68,7 +68,7 @@ class StaleWhileRevalidateIntegrationTest extends TestCase
         $this->assertCount(2, $result);
 
         // Step 2: Make cache stale but within grace period
-        $redis = $this->service->redis;
+        $redis = $this->service->getRedis();
         $metaKey = '{dummy_models}:meta';
         $staleTime = time() - 80; // Stale (TTL 60s) but within grace (300s)
         $redis->hset($metaKey, 'cached_at', (string) $staleTime);
@@ -123,7 +123,7 @@ class StaleWhileRevalidateIntegrationTest extends TestCase
         $this->service->updateAttribute(1, 'name', 'Updated User 1');
 
         // Make cache stale
-        $redis = $this->service->redis;
+        $redis = $this->service->getRedis();
         $metaKey = '{dummy_models}:meta';
         $staleTime = time() - 80;
 
@@ -162,7 +162,7 @@ class StaleWhileRevalidateIntegrationTest extends TestCase
         );
 
         // Make cache stale
-        $redis = $this->service->redis;
+        $redis = $this->service->getRedis();
         $redis->del('{dummy_models}:swr:lock');
         $metaKey = '{dummy_models}:meta';
         $staleTime = time() - 80;
@@ -205,7 +205,7 @@ class StaleWhileRevalidateIntegrationTest extends TestCase
         );
 
         // Make cache expired beyond grace period
-        $redis = $this->service->redis;
+        $redis = $this->service->getRedis();
         $metaKey = '{dummy_models}:meta';
         $expiredTime = time() - 400; // Beyond TTL (60s) + grace (300s)
         $redis->hset($metaKey, 'cached_at', (string) $expiredTime);
@@ -236,7 +236,7 @@ class StaleWhileRevalidateIntegrationTest extends TestCase
         $this->assertCount(1, $result);
 
         // Verify cache was populated
-        $redis = $this->service->redis;
+        $redis = $this->service->getRedis();
         $data = $redis->hget('{dummy_models}:hash', '1');
         $this->assertNotNull($data);
     }
