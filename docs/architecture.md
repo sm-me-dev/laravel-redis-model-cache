@@ -230,7 +230,8 @@ Every Redis command used by this package:
 |---|---|---|
 | `EXISTS` | Check key existence | `rememberAll`, `rememberIndex`, `rememberCustom`, `exists()`, `applyTTL`, Stampede wait |
 | `HGET` | Read single payload | `find()`, `first()`, `computeStaleIndexKeys()`, `inspect()`, `updateAttributes()` |
-| `HMGET` | Read batch payloads | `hydrateIds()`, `pluck()`, `selective()`, `storeMany()` |
+| `HMGET` | Read batch payloads | `hydrateIds()`, `pluck()`, `storeMany()` |
+    | `selective()` | **DEPRECATED** — use `pluck()` instead. Thin wrapper for backward compatibility.
 | `HSET` | Store payload | `storeModel()`, `updateAttributes()` |
 | `HDEL` | Remove payload | `delete()` |
 | `HLEN` | Count hash fields | `analyzeIndexes()` |
@@ -271,7 +272,7 @@ Redis cluster distributes keys across nodes based on hash slots. Without hash ta
 
 ### Why `prefer-stable` over `prefer-lowest` in CI?
 
-The package uses modern PHP 8.4 features (constructor property promotion, typed properties) and Laravel 12 APIs. Lowest-dependency testing would fail on PHP 8.3 or Laravel 11. The matrix covers both stability modes for compatibility breadth within the supported range.
+The package uses modern PHP 8.4 features (constructor property promotion, typed properties) and Laravel 13 APIs. Lowest-dependency testing would fail on PHP 8.3 or Laravel 11. The matrix covers both stability modes for compatibility breadth within the supported range.
 
 ## Octane & Long-Running Worker Isolation (v2.5)
 

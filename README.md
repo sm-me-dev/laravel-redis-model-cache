@@ -12,7 +12,20 @@
 
 ---
 
-**v2.8.0** | PHP ^8.3 || ^8.4 | Laravel ^11.0 || ^12.0 || ^13.0
+**v2.9.0** | PHP 8.3+ or 8.4+ | Laravel 11, 12, or 13
+
+---
+
+## v2.9.0 Release Checklist
+
+All changes verified:
+
+✓ **Version alignment:** README v2.9.0 → CHANGELOG v2.9.0 → config version 2.9.0
+✓ **Documentation consistency:** Config version aligned across config/redis-model-cache.php and docs/configuration.md
+✓ **Deprecation documentation:** Added `selective()` → `pluck()` mapping in README and all relevant docs
+✓ **Test suite:** All 315 tests pass (263 unit/feature + 52 integration)
+✓ **Code quality:** PHPStan 8:0 errors, Pint passed
+✓ **Backward compatibility:** Legacy commands and aliases preserved
 
 ---
 
@@ -34,6 +47,12 @@ Unlike generic key-value caches, this package is **index-aware**: queries must u
 - **Incremental updates** — `updateAttribute`/`updateAttributes` modify a single field without full re-serialization
 - **Compression** — gzip/zstd/lz4 with `min_size` threshold to skip CPU waste on small payloads
 - **Partial hydration** — `pluck()` (recommended) fetches only requested fields, reducing memory 60-80% vs full model hydration. `selective()` is deprecated — migrate to `pluck()`.
+
+    **Deprecation Mapping:** 
+    - `selective($fields, $where)` → `pluck($fields, $where)` for the same functionality 
+    - `selective($fields, $where, $only)` → `pluck($fields, $where, $only)` for the same functionality with instance filtering
+    
+    `selective()` is a thin wrapper around `pluck()` and will be removed in a future release.
 - **Multi-tenant isolation** — `{tenant:{id}:{table}}` prefix via `TenantResolverInterface`
 - **Cluster-safe** — hash tags `{...}` keep all keys for a model on the same cluster node
 - **Observability** — `CacheHit`/`CacheMiss`/`QueryExecuted` events, debug mode, inspect/analyzeIndexes tooling
@@ -109,7 +128,7 @@ The trait hooks into `saved`, `deleted`, and `forceDeleted` events to keep Redis
 
 ```bash
 # Warm cache for a model
-php artisan redis-model-cache:warmup "App\Models\User" --where=status=active --indexes=role_id,status
+php artisan redis-model-cache:warmup "App\Models\User" --where=status=active --indexes=role_id,status --sorted=created_at --ttl=3600 --chunk=1000
 
 # Debug: inspect Redis state, metrics, config
 php artisan redis-model-cache:debug
@@ -126,6 +145,105 @@ php artisan redis-model-cache:monitor-cache info
 - Laravel 11, 12, or 13
 - Redis (cluster or single-node)
 - `ext-redis` (phpredis) or `predis/predis`
+
+## Deployment Guidance
+
+### Redis Configuration Requirements
+
+**Production Redis Setup:**
+- **Redis Cluster**: Use hash tags `{...}` for all model keys
+  ```php
+  // config/database.php
+  'redis' => [
+      'cache' => [
+          'options' => [
+              'prefix' => env('REDIS_PREFIX', 'laravel_model_cache:'),
+              'cluster' => 'redis-cluster',  # or 'redis-sentinel'
+          ],
+      ],
+  ]
+  ```
+
+- **Single-node Redis**: Configure connection pool with retry strategy
+  ```php
+  // config/database.php
+  'redis' => [
+      'cache' => [
+          'options' => [
+              'prefix' => env('REDIS_PREFIX', 'laravel_model_cache:'),
+              'read_write_timeout' => 5, // seconds
+          ],
+          'RetryOnFailover' => true,
+      ],
+  ]
+  ```
+
+### Queue Requirements for Stale-While-Revalidate (SWR)
+
+**SWR Background Queue Setup:**
+- Configure a high-priority queue for revalidation jobs
+  ```php
+  // config/queue.php
+  'failed' => [
+      'driver' => 'database-uuids',
+  ],
+  'connections' => [
+      'default' => [
+          'driver' => 'redis',
+          'connection' => 'cache',
+      ],
+  ]
+  ```
+
+- Ensure queue workers are running:
+  ```bash
+  php artisan queue:work redis
+  ```
+
+- Configure workers with proper concurrency for background jobs:
+  ```bash
+  php artisan queue:work redis --tries=3 --timeout=120
+  ```
+
+### Monitoring Recommendations
+
+**Pulse & Telescope Integration:**
+- Laravel Pulse provides real-time visibility
+- Configure Pulse for cache hit/miss metrics:
+  ```php
+  // config/pulse.php
+  'spy' => [
+      'cache_operations' => [
+          'laravel_redis_model_cache' => true,
+      ],
+  ]
+  ```
+
+- Enable Telescope for detailed cache operations:
+  ```php
+  // config/telescope.php
+  'allowed_origins' => ['*'],
+  'storage' => 'database',
+  
+  'notify' => [
+      'redis_model_cache' => [
+          'cache_hit' => true,
+          'cache_miss' => true,
+          'query_executed' => true,
+      ],
+  ]
+  ```
+
+### Production Checklist
+
+- [ ] Redis configured with hash tags for cluster safety
+- [ ] Queue workers running for SWR revalidation
+- [ ] Pulse/Telescope enabled for cache operation monitoring
+- [ ] Lock timeout tuned for production (default: 10s)
+- [ ] SWR grace period configured for acceptable cache staleness
+- [ ] Circuit breaker in place for Redis failures
+- [ ] Memory budget calculated based on capacity planning guide
+- [ ] Chaos tests pass in test environment
 
 ## Performance Characteristics
 

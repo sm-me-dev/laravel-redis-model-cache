@@ -12,7 +12,7 @@ return [
     | the published configuration file is out of date.
     |
     */
-    'config_version' => '2.5',
+    'config_version' => '2.9.0',
 
     /*
     |--------------------------------------------------------------------------

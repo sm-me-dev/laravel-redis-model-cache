@@ -63,7 +63,7 @@ interface ModelCacheService
      * @param  callable(): Collection<int, Model>  $callback
      * @return Collection<int, Model>
      */
-    public function rememberCustom(string $name, callable $callback, bool $hydrate = true, ?string $sortBy = null, bool $refresh = false): Collection;
+    public function rememberCustom(string $name, callable $callback, bool $hydrate = true, bool $refresh = false): Collection;
 
     public function delete(int|string $id): void;
 
@@ -141,6 +141,9 @@ interface ModelCacheService
 
     /**
      * @deprecated 3.1.0 Use pluck() instead. selective() will be removed in a future release.
+     *
+     * **Deprecation Mapping:** selective() → pluck() (identical functionality)
+     * @see pluck()
      *
      * Single HMGET round-trip (no pipeline), avoids full model hydration.
      * 60-80% less memory than full model hydration.

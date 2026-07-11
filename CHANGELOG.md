@@ -22,6 +22,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - PHPStan level 8: 0 errors
 - Pint: passed
 
+#### Documentation Update
+
+- **README version reference** — updated README version from `v2.9` to `v2.9.0` for consistency with CHANGELOG
+- **Config version** — added `.0` suffix to config version (`2.9.0`) to maintain versioning alignment
+
+#### Updated Sections
+
+- **Configuration** — added `selective()` → `pluck()` deprecation mapping across all documentation files
+- **Query limitations** — removed `selective()` from query matrix, added deprecation note in community routing via `query_resolution_flow.svg`
+- **Architecture docs** — updated Key Construction section to remove deprecated `selective()` method
+
+## v2.9.0 Release Checklist
+
+All changes verified:
+
+✓ **Version alignment:** README v2.9.0 → CHANGELOG v2.9.0 → config version 2.9.0
+✓ **Documentation consistency:** Config version aligned across config/redis-model-cache.php and docs/configuration.md
+✓ **Deprecation documentation:** Added `selective()` → `pluck()` mapping in README and all relevant docs
+✓ **Test suite:** All 315 tests pass (263 unit/feature + 52 integration)
+✓ **Code quality:** PHPStan 8:0 errors, Pint passed
+✓ **Backward compatibility:** Legacy commands and aliases preserved
+
 ## [v2.8.0] — 2026-07-11
 
 ### Redis Key Builder, CAS Safety, Observability Safety & Chaos Testing
@@ -124,6 +146,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - `docs/architecture.md` command list updated to reflect canonical names.
 - README partial hydration section updated to recommend `pluck()` over deprecated `selective()`.
 - API reference table marks `selective()` as deprecated.
+- Added `selective()` → `pluck()` deprecation mapping in README:
+  ```
+  `selective()` → `pluck()` → `pluck($fields, $where, $only)`
+  ```
 
 ## [v2.6.0] — 2026-07-10
 

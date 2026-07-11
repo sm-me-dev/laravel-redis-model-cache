@@ -1170,6 +1170,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
      *             that delegates to pluck() and will be removed in a future release.
      * @see pluck()
      *
+     * **Deprecation Mapping:** selective() → pluck()
      * @param  array<string>  $fields  Field names to retrieve
      * @param  array<string, mixed>  $where  WHERE conditions (indexed fields only)
      * @param  array<string>|null  $only  Optional filter for specific primary keys
