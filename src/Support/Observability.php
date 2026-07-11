@@ -18,6 +18,16 @@ class Observability
      */
     private const MAX_PIPELINE = 1000;
 
+    /**
+     * When any unbounded counter reaches this threshold all counters are
+     * halved to prevent integer overflow while preserving hit/miss ratios.
+     *
+     * Set to PHP_INT_MAX >> 2 (approx 2.3e18 on 64-bit, 5.3e8 on 32-bit).
+     * In practice this is a safety net — under normal web traffic it would
+     * take centuries to reach.
+     */
+    private const COUNTER_NORMALIZE_THRESHOLD = PHP_INT_MAX >> 2;
+
     private int $hits = 0;
 
     private int $misses = 0;
@@ -48,11 +58,13 @@ class Observability
 
     public function recordHit(): void
     {
+        $this->normalizeCounters();
         $this->hits++;
     }
 
     public function recordMiss(): void
     {
+        $this->normalizeCounters();
         $this->misses++;
     }
 
@@ -92,12 +104,14 @@ class Observability
 
     public function recordStaleCleanup(int $keysRemoved = 0): void
     {
+        $this->normalizeCounters();
         $this->staleCleanupCount++;
         $this->staleCleanupKeysRemoved += $keysRemoved;
     }
 
     public function recordLockContention(): void
     {
+        $this->normalizeCounters();
         $this->lockContentionCount++;
     }
 
@@ -349,6 +363,35 @@ class Observability
             ],
             'lock_contention' => $this->lockContentionCount,
         ];
+    }
+
+    /**
+     * Halve all unbounded counters when any one reaches the normalisation
+     * threshold, preventing integer overflow under sustained production load.
+     *
+     * Bitwise right-shift division preserves the relative ratios between
+     * counters (hit rate, miss rate, etc.) and uses O(1) overhead per write.
+     *
+     * The threshold is PHP_INT_MAX >> 2 which on 64-bit is ~2.3 quintillion
+     * — far beyond any realistic counter value.  This guard exists purely as
+     * a safety net against pathological or decades-long uptime scenarios.
+     */
+    private function normalizeCounters(): void
+    {
+        if ($this->hits < self::COUNTER_NORMALIZE_THRESHOLD
+            && $this->misses < self::COUNTER_NORMALIZE_THRESHOLD
+            && $this->staleCleanupCount < self::COUNTER_NORMALIZE_THRESHOLD
+            && $this->lockContentionCount < self::COUNTER_NORMALIZE_THRESHOLD
+            && $this->staleCleanupKeysRemoved < self::COUNTER_NORMALIZE_THRESHOLD
+        ) {
+            return;
+        }
+
+        $this->hits >>= 1;
+        $this->misses >>= 1;
+        $this->staleCleanupCount >>= 1;
+        $this->lockContentionCount >>= 1;
+        $this->staleCleanupKeysRemoved >>= 1;
     }
 
     /**

@@ -97,4 +97,69 @@ class StampedeProtectionTest extends TestCase
 
         $this->assertEquals('users:hash:lock', $lockKey);
     }
+
+    public function test_release_lock_cas_returns_false_on_lua_failure_no_del_fallback(): void
+    {
+        $redis = Mockery::mock();
+        $redis->shouldReceive('evalSha')
+            ->with('some-sha', 1, 'lock:key', 'expected-value')
+            ->andThrow(new \RedisException('Lua script not found'));
+        $redis->shouldReceive('del') // Ensure DEL is NEVER called
+            ->never();
+
+        $sha = 'some-sha';
+        $result = StampedeProtection::releaseLockCas($redis, 'lock:key', 'expected-value', $sha);
+
+        $this->assertFalse($result);
+    }
+
+    public function test_release_lock_cas_fallthrough_to_eval_on_noscript(): void
+    {
+        $redis = Mockery::mock();
+        // EVALSHA returns false for NOSCRIPT (Predis format: sha, numKeys, ...args)
+        $redis->shouldReceive('evalSha')
+            ->with('some-sha', 1, 'lock:key', 'expected-value')
+            ->andReturn(false);
+        // EVAL executes successfully (Predis format: script, numKeys, ...args)
+        $redis->shouldReceive('eval')
+            ->with(StampedeProtection::LUA_LOCK_CAS, 1, 'lock:key', 'expected-value')
+            ->andReturn(1);
+
+        $sha = 'some-sha';
+        $result = StampedeProtection::releaseLockCas($redis, 'lock:key', 'expected-value', $sha);
+
+        $this->assertTrue($result);
+    }
+
+    public function test_release_lock_cas_returns_false_on_eval_failure_no_del_fallback(): void
+    {
+        $redis = Mockery::mock();
+        // No SHA cached: go straight to EVAL (Predis format)
+        $redis->shouldReceive('eval')
+            ->with(StampedeProtection::LUA_LOCK_CAS, 1, 'lock:key', 'expected-value')
+            ->andThrow(new \RedisException('NOSCRIPT'));
+        $redis->shouldReceive('del') // Ensure DEL is NEVER called
+            ->never();
+
+        $sha = null;
+        $result = StampedeProtection::releaseLockCas($redis, 'lock:key', 'expected-value', $sha);
+
+        $this->assertFalse($result);
+    }
+
+    public function test_release_lock_cas_returns_false_on_value_mismatch(): void
+    {
+        $redis = Mockery::mock();
+        // No SHA cached: go straight to EVAL (Predis format)
+        $redis->shouldReceive('eval')
+            ->with(StampedeProtection::LUA_LOCK_CAS, 1, 'lock:key', 'expected-value')
+            ->andReturn(0); // Lua returns 0 (value didn't match)
+        $redis->shouldReceive('del')
+            ->never();
+
+        $sha = null;
+        $result = StampedeProtection::releaseLockCas($redis, 'lock:key', 'expected-value', $sha);
+
+        $this->assertFalse($result);
+    }
 }

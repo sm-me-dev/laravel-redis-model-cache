@@ -12,7 +12,7 @@
 
 ---
 
-**v2.5.1** | PHP ^8.3 | Laravel ^11.0 || ^12.0
+**v2.8.0** | PHP ^8.3 | Laravel ^11.0 || ^12.0
 
 ---
 
@@ -357,6 +357,115 @@ If using async invalidation, ensure your queue worker is running:
 ```bash
 php artisan queue:work
 ```
+
+## Enterprise Deployment
+
+Production deployment guidance for operators and SRE teams.
+
+### Redis Configuration
+
+```php
+// config/database.php
+'redis' => [
+    'cache' => [
+        'url' => env('REDIS_CACHE_URL'),
+        'host' => env('REDIS_CACHE_HOST', '127.0.0.1'),
+        'password' => env('REDIS_CACHE_PASSWORD'),
+        'port' => env('REDIS_CACHE_PORT', 6379),
+        'database' => env('REDIS_CACHE_DB', 1),
+        'options' => [
+            'prefix' => env('REDIS_PREFIX', 'laravel_model_cache:'),
+        ],
+    ],
+],
+```
+
+**Cluster considerations:**
+- Hash tags `{...}` keep all keys for a model on the same cluster node
+- Lock keys use hash tags too: `{table}:lock:stampede`
+- No cross-slot multi-key commands in Lua scripts — all KEYS reference the same hash tag
+- Safe for Redis Cluster without `allow_json_slots` or redirects
+
+### Capacity Planning
+
+| Metric | Formula | Example (1M records, 2KB each) |
+|--------|---------|--------------------------------|
+| Hash storage | `records × payload_size` | 2 GB |
+| Index storage | `records × avg_index_cardinality × 8B` | ~32 MB per index |
+| Sorted set storage | `records × (score 8B + member 8B)` | ~16 MB per sorted set |
+| Total (estimated) | `hash + Σindexes + Σsorted + 30% overhead` | ~3 GB |
+
+Monitor with: `php artisan redis-model-cache:monitor-cache memory`
+
+### Redundancy & Failover
+
+- **Sentinel**: Configure `tcp://sentinel-host:26379` and service name. The package's Lua fallback handles connection changes gracefully.
+- **Cluster**: Use `redis-cluster` driver in Laravel. Hash-tagged keys ensure all ops stay node-local.
+- **Lua replication**: Lua scripts propagate to replicas automatically. Write scripts pass the `--replicate` flags internally.
+- **Backup**: `SAVE`/`BGSAVE` snapshots are safe; RDB restore preserves all hash/set keys.
+
+### Observability & Alerting
+
+| Alert | Trigger | Recommended Threshold |
+|-------|---------|-----------------------|
+| Lock contention | `lock_contention > 0` in metrics snapshot | Any occurrence indicates stampede misses; investigate if persistent |
+| SWR stale writes prevented | Lua returns 0 from freshness guard | Log via debug channel; alert if >5/min per model |
+| Cache hit rate drop | `hit_rate < 90%` | Below 90% suggests cache churn or TTL too short |
+| Redis memory pressure | `used_memory / maxmemory > 80%` | Increase `maxmemory` or reduce TTLs |
+| Revalidation job failures | Queue failed job count > 0 | Check Redis connectivity and callback serialization |
+| Stale data serving time | `stale_cleanup.keys_removed` growing | Indicates TTL/grace mismatch |
+
+```php
+// Example: polling metrics for custom monitoring
+$metrics = RedisModelCache::metrics();
+
+if ($metrics->lockContention > 0) {
+    alert('Stampede lock contention detected');
+}
+
+if ($metrics->requests['hit_rate'] < 90.0) {
+    alert('Cache hit rate below 90%');
+}
+```
+
+### Circuit Breaker Recommendations
+
+The package does **not** implement a circuit breaker for Redis failures by design (per ADR-0004: no silent DB fallback). Production deployments should:
+
+1. **Health check**: Monitor `RedisModelCache::metrics()` alongside Redis `PING`
+2. **Graceful degradation**: Wrap cache reads in try/catch and fall back to DB queries at the application level
+3. **Connection pooling**: Configure phpredis with `persistent` connections for sub-millisecond reconnect
+4. **Timeouts**: Set read/write timeouts in `config/database.php` to bound hang time
+
+```php
+// config/database.php
+'redis' => [
+    'options' => [
+        'prefix' => env('REDIS_PREFIX', 'laravel_model_cache:'),
+        'read_write_timeout' => 5, // seconds
+    ],
+],
+```
+
+### Upgrading & Migrations
+
+- **Minor versions**: Backward compatible. Run `composer update` and verify `php artisan redis-model-cache:debug` still works.
+- **Major versions**: Follow `UPGRADE.md` (if present) or CHANGELOG. Key layout changes are documented in `docs/architecture.md`.
+- **Cache flush**: After a schema change, run `php artisan redis-model-cache:warmup` to repopulate.
+
+### Production Checklist
+
+- [ ] Redis connection configured with `read_write_timeout`
+- [ ] `lua_scripting.enabled` is `true` (default) for atomic stores and CAS
+- [ ] `stampede_protection.enabled` is `true` for high-traffic endpoints
+- [ ] `scan_count` tuned for your key space (1000 default is safe)
+- [ ] Observability events enabled for monitoring
+- [ ] Sentinel or Cluster configured for HA Redis
+- [ ] Queue worker running if using async invalidation or SWR
+- [ ] Chaos tests pass: `vendor/bin/phpunit tests/Integration/ChaosResilienceIntegrationTest.php`
+- [ ] Memory budget calculated per capacity planning guide
+
+---
 
 ## Why This Package Exists
 

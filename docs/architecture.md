@@ -71,24 +71,35 @@ Every model type gets its own key prefix. All keys use Redis cluster hash tags `
 ### Lock keys (stampede protection)
 
 ```
-{users}:hash:lock                     → String: '1' or UUID value
+{users}:lock:stampede                 → String: '1' or UUID value (stampede lock)
+{users}:lock:swr                      → String: '1' or UUID value (SWR lock)
 ```
+
+All lock keys use a dedicated lock namespace under the same hash tag,
+ensuring cross-slot safety for Lua-based compare-and-swap release.
 
 ## Key Construction
 
-All keys are built through methods on `RedisModelService`:
+All keys are built through the centralized `RedisKeyBuilder` class at `src/Support/RedisKeyBuilder.php`:
 
 | Method | Key Pattern |
 |---|---|
-| `hashKey()` | `{prefix}:hash` |
-| `metaKey()` | `{prefix}:meta` |
-| `indexKey($field, $value)` | `{prefix}:index:{$field}:{$value}` |
-| `sortedKey($field)` | `{prefix}:sorted:{$field}` |
+| `buildModelHashKey()` / `hashKey()` | `{prefix}:hash` |
+| `buildMetaKey()` / `metaKey()` | `{prefix}:meta` |
+| `buildLockKey()` / `lockKey()` | `{prefix}:lock:{suffix}` (default: `stampede`) |
+| `buildSWRLockKey()` / `swrLockKey()` | `{prefix}:lock:swr` |
+| `buildIndexKey($field, $value)` / `indexKey()` | `{prefix}:index:{$field}:{$value}` |
+| `buildSortedIndexKey($field)` / `sortedKey()` | `{prefix}:sorted:{$field}` |
 | `customIndexKey($name)` | `{prefix}:custom:{$name}` |
 | `sortedCustomKey($name, $field)` | `{prefix}:custom:{$name}:sorted:{$field}` |
-| Lock key | `{prefix}:hash:lock` (via `StampedeProtection::lockKey()`) |
 
 Where `{prefix}` is `{table}` for single-tenant or `{tenant:{id}:{table}}` for multi-tenant.
+All keys share the same Redis cluster hash tag, guaranteeing cross-slot safety for
+Lua scripts and multi-key operations.
+
+The `RedisKeyBuilder` is instantiated per model service via `RedisKeyBuilder::for($table, $tenantId)`,
+and all legacy method names (`hashKey()`, `metaKey()`, etc.) are preserved as backward-compatible
+aliases that delegate to the new `build*()` methods.
 
 ## Index Query Resolution
 

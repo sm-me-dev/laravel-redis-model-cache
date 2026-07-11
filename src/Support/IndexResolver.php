@@ -95,6 +95,9 @@ class IndexResolver
      *
      * The {table} placeholder is replaced by the caller with the actual prefix.
      * This keeps the resolver stateless — it only resolves logic, not concrete prefixes.
+     *
+     * @deprecated 3.2.0 Use RedisKeyBuilder::buildIndexKey() for concrete keys.
+     *             This method remains for internal explain/planning placeholder use only.
      */
     public function buildIndexKey(string $field, string|int $value, string $tablePlaceholder): string
     {
@@ -103,6 +106,8 @@ class IndexResolver
 
     /**
      * Build a Redis sorted key path for a given field.
+     *
+     * @deprecated 3.2.0 Use RedisKeyBuilder::buildSortedIndexKey() for concrete keys.
      */
     public function buildSortedKey(string $field, string $tablePlaceholder): string
     {

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Sm_mE\RedisModelCache\Support;
 
+use Illuminate\Support\Facades\Log;
+
 class StampedeProtection
 {
     /**
@@ -60,10 +62,17 @@ LUA;
     /**
      * Release a stampede protection lock (non-CAS, simple delete).
      *
-     * Use this only for locks that were acquired without a value token
-     * (via acquireLock(), not acquireLockWithValue()).  For value-based
-     * locks always use releaseLockCas() to preserve compare-and-swap
-     * semantics.
+     * ⚠️  UNSAFE: This performs a blind DEL without ownership verification.
+     * Use only when you are absolutely certain no other process can hold
+     * the lock (e.g., immediately after acquiring it in the same request).
+     *
+     * For production use, prefer releaseLockCas() with a value-based lock
+     * (acquireLockWithValue()) to prevent releasing another process's lock.
+     *
+     * @deprecated 3.2.0 Use releaseLockCas() with acquireLockWithValue().
+     *             Blind DEL can release a lock owned by another process.
+     *             Prefer CAS release for compare-and-swap safety, or
+     *             rely on TTL to expire the lock automatically.
      *
      * @param  mixed  $redis  Redis connection instance
      * @param  string  $lockKey  The lock key
@@ -115,7 +124,7 @@ LUA;
             } catch (\Exception $e) {
                 // Lua execution failed for an unexpected reason.
                 // Do NOT fall back to DEL — return false and let TTL expire the lock.
-                logger()->debug('[RedisModelCache] releaseLockCas EVALSHA failed; deferring to TTL', [
+                Log::debug('[RedisModelCache] releaseLockCas EVALSHA failed; deferring to TTL', [
                     'lock_key' => $lockKey,
                     'error' => $e->getMessage(),
                 ]);
@@ -138,7 +147,7 @@ LUA;
             // Returning false is the ONLY safe option here:
             //   - A blind DEL could release a lock that now belongs to another process.
             //   - The original lock will expire via its TTL automatically.
-            logger()->debug('[RedisModelCache] releaseLockCas EVAL failed; lock left to expire via TTL', [
+            Log::debug('[RedisModelCache] releaseLockCas EVAL failed; lock left to expire via TTL', [
                 'lock_key' => $lockKey,
                 'error' => $e->getMessage(),
             ]);
@@ -187,6 +196,10 @@ LUA;
 
     /**
      * Generate a stampede lock key for a given cache key.
+     *
+     * @deprecated 3.2.0 Use RedisKeyBuilder::buildLockKey() instead.
+     *             All lock keys in the package now use the centralized
+     *             RedisKeyBuilder for consistent hash-tagging.
      */
     public static function lockKey(string $cacheKey): string
     {

@@ -26,6 +26,8 @@ class ConcurrencySafetyTest extends TestCase
 
     private string $hashKey = '{concurrency_models}:hash';
 
+    private string $lockKey = '{concurrency_models}:lock:stampede';
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -65,11 +67,9 @@ class ConcurrencySafetyTest extends TestCase
 
     public function test_stampede_lock_acquired_by_first_caller(): void
     {
-        $lockKey = $this->hashKey.':lock';
-
         $this->redis->shouldReceive('exists')->with($this->hashKey)->andReturn(false);
-        $this->redis->shouldReceive('set')->with($lockKey, '1', ['NX', 'EX' => 10])->andReturn(true);
-        $this->redis->shouldReceive('del')->with($lockKey)->andReturn(1);
+        $this->redis->shouldReceive('set')->with($this->lockKey, '1', ['NX', 'EX' => 10])->andReturn(true);
+        $this->redis->shouldReceive('del')->with($this->lockKey)->andReturn(1);
 
         $this->mockStoreAndHydrate(['1' => false], ['1' => $this->serializedModel()]);
 
@@ -81,11 +81,9 @@ class ConcurrencySafetyTest extends TestCase
 
     public function test_stampede_second_caller_waits_and_reads(): void
     {
-        $lockKey = $this->hashKey.':lock';
-
         $this->redis->shouldReceive('exists')->with($this->hashKey)->andReturn(false, true);
-        $this->redis->shouldReceive('set')->with($lockKey, '1', ['NX', 'EX' => 10])->andReturn(false);
-        $this->redis->shouldReceive('exists')->with($lockKey)->andReturn(false);
+        $this->redis->shouldReceive('set')->with($this->lockKey, '1', ['NX', 'EX' => 10])->andReturn(false);
+        $this->redis->shouldReceive('exists')->with($this->lockKey)->andReturn(false);
 
         $this->redis->shouldReceive('smembers')->with('{concurrency_models}:index:role_id:1')->andReturn(['1']);
         $this->redis->shouldReceive('hmget')
@@ -100,12 +98,10 @@ class ConcurrencySafetyTest extends TestCase
 
     public function test_stampede_lock_timeout_forces_callback(): void
     {
-        $lockKey = $this->hashKey.':lock';
-
         $this->redis->shouldReceive('exists')->with($this->hashKey)->andReturn(false);
-        $this->redis->shouldReceive('set')->with($lockKey, '1', ['NX', 'EX' => 10])->andReturn(false);
+        $this->redis->shouldReceive('set')->with($this->lockKey, '1', ['NX', 'EX' => 10])->andReturn(false);
 
-        $this->redis->shouldReceive('exists')->with($lockKey)->andReturn(true, true, true, true);
+        $this->redis->shouldReceive('exists')->with($this->lockKey)->andReturn(true, true, true, true);
         $this->redis->shouldReceive('exists')->with($this->hashKey)->andReturn(false);
 
         $this->mockStoreAndHydrate(['1' => false], ['1' => $this->serializedModel()]);
@@ -226,11 +222,9 @@ class ConcurrencySafetyTest extends TestCase
     {
         config(['redis-model-cache.lua_scripting.enabled' => false]);
 
-        $lockKey = $this->hashKey.':lock';
-
         $this->redis->shouldReceive('exists')->with($this->hashKey)->andReturn(false);
-        $this->redis->shouldReceive('set')->with($lockKey, '1', ['NX', 'EX' => 10])->andReturn(true);
-        $this->redis->shouldReceive('del')->with($lockKey)->andReturn(1);
+        $this->redis->shouldReceive('set')->with($this->lockKey, '1', ['NX', 'EX' => 10])->andReturn(true);
+        $this->redis->shouldReceive('del')->with($this->lockKey)->andReturn(1);
 
         $this->mockStoreAndHydrate(['1' => false], ['1' => $this->serializedModel()]);
 
@@ -349,6 +343,41 @@ class ConcurrencySafetyTest extends TestCase
         $this->expectExceptionMessage('not found in cache');
 
         $this->service->updateAttribute(999, 'status', 'active');
+    }
+
+    // ─── Freshness & invalidation tests ─────────────────────────────────
+
+    public function test_touch_invalidation_timestamp_sets_microsecond_precision(): void
+    {
+        $this->redis->shouldReceive('hset')
+            ->with('{concurrency_models}:meta', '_last_invalidated_at', Mockery::type('string'))
+            ->once()
+            ->andReturn(1);
+        $this->redis->shouldReceive('expire')
+            ->with('{concurrency_models}:meta', 3600)
+            ->once()
+            ->andReturn(true);
+
+        $this->service->touchInvalidationTimestamp();
+
+        $this->addToAssertionCount(1);
+    }
+
+    public function test_stampede_lock_ttl_release_when_lua_disabled(): void
+    {
+        config(['redis-model-cache.lua_scripting.enabled' => false]);
+
+        $this->redis->shouldReceive('exists')->with($this->hashKey)->andReturn(false);
+        $this->redis->shouldReceive('set')->with($this->lockKey, '1', ['NX', 'EX' => 10])->andReturn(true);
+        // When Lua is disabled, no DEL should be called — rely on TTL
+        $this->redis->shouldReceive('del')->never();
+
+        $this->mockStoreAndHydrate(['1' => false], ['1' => $this->serializedModel()]);
+
+        $model = $this->makeModel();
+        $result = $this->service->rememberAll(fn () => new EloquentCollection([$model]), where: ['role_id' => 1], stampede: true);
+
+        $this->assertCount(1, $result);
     }
 
     // ─── Helpers ───────────────────────────────────────────────────────

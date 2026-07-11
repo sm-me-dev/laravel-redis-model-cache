@@ -62,6 +62,99 @@ final class RedisKeyBuilder
     }
 
     /**
+     * Build a Redis model hash key with the requested name.
+     *
+     * Pattern: `{table}:hash`
+     */
+    public function buildModelHashKey(): string
+    {
+        return $this->tag.':hash';
+    }
+
+    /**
+     * Build a Redis stampede protection lock key.
+     *
+     * Pattern: `{table}:lock:<suffix>`
+     */
+    public function buildLockKey(string $suffix = 'stampede'): string
+    {
+        return $this->tag.':lock:'.$suffix;
+    }
+
+    /**
+     * Build a Redis Stale-While-Revalidate (SWR) lock key.
+     *
+     * Pattern: `{table}:lock:swr`
+     */
+    public function buildSWRLockKey(): string
+    {
+        return $this->lockKey('swr');
+    }
+
+    /**
+     * Build a Redis index set key for a given field and value.
+     *
+     * Pattern: `{table}:index:<name>:<value>`
+     */
+    public function buildIndexKey(string $name, string|int $value): string
+    {
+        return $this->tag.':index:'.$name.':'.$value;
+    }
+
+    /**
+     * Build a Redis sorted index key for a given field.
+     *
+     * Pattern: `{table}:sorted:<name>`
+     */
+    public function buildSortedIndexKey(string $name): string
+    {
+        return $this->tag.':sorted:'.$name;
+    }
+
+    /**
+     * Build a Redis meta key for storing cache timestamps.
+     *
+     * Pattern: `{table}:meta`
+     */
+    public function buildMetaKey(): string
+    {
+        return $this->tag.':meta';
+    }
+
+    /**
+     * Legacy aliases for backward compatibility
+     */
+    public function hashKey(): string
+    {
+        return $this->buildModelHashKey();
+    }
+
+    public function metaKey(): string
+    {
+        return $this->buildMetaKey();
+    }
+
+    public function swrLockKey(): string
+    {
+        return $this->buildSWRLockKey();
+    }
+
+    public function indexKey(string $name, string|int $value): string
+    {
+        return $this->buildIndexKey($name, $value);
+    }
+
+    public function sortedKey(string $name): string
+    {
+        return $this->buildSortedIndexKey($name);
+    }
+
+    public function lockKey(string $suffix = 'stampede'): string
+    {
+        return $this->buildLockKey($suffix);
+    }
+
+    /**
      * The full hash tag shared by every key in this namespace.
      *
      * e.g. `{users}` or `{tenant:42:users}`
@@ -69,66 +162,6 @@ final class RedisKeyBuilder
     public function tag(): string
     {
         return $this->tag;
-    }
-
-    /**
-     * Redis hash key that stores all model payloads as fields.
-     *
-     * Pattern: `{table}:hash`
-     */
-    public function hashKey(): string
-    {
-        return $this->tag.':hash';
-    }
-
-    /**
-     * Meta hash key that stores `cached_at`, `_last_invalidated_at`, `version`, etc.
-     *
-     * Pattern: `{table}:meta`
-     */
-    public function metaKey(): string
-    {
-        return $this->tag.':meta';
-    }
-
-    /**
-     * Stampede / rebuild lock key.
-     *
-     * Pattern: `{table}:lock:<suffix>`
-     */
-    public function lockKey(string $suffix = 'stampede'): string
-    {
-        return $this->tag.':lock:'.$suffix;
-    }
-
-    /**
-     * SWR (Stale-While-Revalidate) lock key.
-     *
-     * Pattern: `{table}:lock:swr`
-     */
-    public function swrLockKey(): string
-    {
-        return $this->lockKey('swr');
-    }
-
-    /**
-     * Regular (equality) index set key.
-     *
-     * Pattern: `{table}:index:<name>:<value>`
-     */
-    public function indexKey(string $name, string|int $value): string
-    {
-        return $this->tag.':index:'.$name.':'.$value;
-    }
-
-    /**
-     * Sorted-set index key.
-     *
-     * Pattern: `{table}:sorted:<name>`
-     */
-    public function sortedKey(string $name): string
-    {
-        return $this->tag.':sorted:'.$name;
     }
 
     /**

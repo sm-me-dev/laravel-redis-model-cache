@@ -579,7 +579,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         $lockValue = null;
 
         if ($stampedeEnabled && ! $hashExists) {
-            $lockKey = StampedeProtection::lockKey($hashKey);
+            $lockKey = $this->keyBuilder->buildLockKey();
             $lockTimeout = $this->configuration->stampedeProtectionLockTimeout;
 
             if ($this->luaEnabled()) {
@@ -634,15 +634,13 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
 
             return $hydrate ? $models : $models->pluck($this->keyName());
         } finally {
-            // Release stampede lock if acquired
-            if ($lockAcquired && $lockKey !== null) {
-                if ($lockValue !== null && $this->luaEnabled()) {
-                    StampedeProtection::releaseLockCas(
-                        $this->redis, $lockKey, $lockValue, $this->luaLockCasSha
-                    );
-                } else {
-                    StampedeProtection::releaseLock($this->redis, $lockKey);
-                }
+            // Release stampede lock if acquired via CAS (safe).
+            // When CAS is not available (Lua disabled or no value token),
+            // do NOT perform a blind DEL — rely on TTL to expire the lock.
+            if ($lockAcquired && $lockKey !== null && $lockValue !== null && $this->luaEnabled()) {
+                StampedeProtection::releaseLockCas(
+                    $this->redis, $lockKey, $lockValue, $this->luaLockCasSha
+                );
             }
         }
     }

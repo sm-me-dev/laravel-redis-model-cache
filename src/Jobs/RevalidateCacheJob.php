@@ -73,12 +73,21 @@ class RevalidateCacheJob implements ShouldQueue
      * Execute the cache revalidation job.
      *
      * This method instantiates a RedisModelService and calls rememberAll()
-     * to refresh the cache. If the job fails, it logs the error but does not
-     * retry to avoid queue buildup for consistently failing queries.
+     * to rebuild the cache. The atomic store Lua script compares the
+     * revalidation timestamp against _last_invalidated_at in the meta
+     * hash. If an invalidation occurred after the job was dispatched
+     * (meaning the model was saved again), the Lua script skips the
+     * write — the next cache miss will rebuild fresh data.
+     *
+     * This prevents stale-while-revalidate race conditions where a newer
+     * model save triggers invalidation, but a stale background job
+     * overwrites the fresh data.
      */
     public function handle(): void
     {
         try {
+            $revalidationStartedAt = $this->revalidationTime ?? microtime(true);
+
             $service = app(RedisModelService::class, [
                 'model_class' => $this->modelClass,
                 'indexes' => $this->indexes,
@@ -88,21 +97,23 @@ class RevalidateCacheJob implements ShouldQueue
                 'connection' => $this->redisConnection,
             ]);
 
-            // Revalidate cache by calling rememberAll with refresh:true to force rebuild
+            // Revalidate cache by calling rememberAll with refresh:true to force rebuild.
+            // The atomic Lua script inside storeMany() checks _last_invalidated_at
+            // against revalidationStartedAt and skips stale writes atomically.
+            // After storeMany(), storeCacheMetadata() updates the cached_at timestamp.
             $service->rememberAll(
                 callback: $this->callback->getClosure(),
                 where: $this->where,
-                refresh: true,   // Force rebuild — this is a background revalidation
-                stampede: false, // Don't use stampede protection in background job
-                swr: false,      // Don't trigger another SWR cycle
-                revalidationTime: $this->revalidationTime,
+                refresh: true,
+                stampede: false,
+                swr: false,
+                revalidationTime: $revalidationStartedAt,
             );
 
-            // Delete SWR lock key safely using CAS if possible, else TTL
-            // Note: Since we didn't store a value for the SWR lock in the job,
-            // we should probably just rely on TTL or implement CAS for SWR.
-            // The refactor says: "If safe CAS release cannot be guaranteed in a given path, rely on TTL rather than unsafe deletion"
-            // So we just remove the unsafe DEL.
+            // Note: The SWR lock acquired by the dispatcher is NOT released here.
+            // It was acquired without a value token, so we cannot safely perform
+            // CAS release. The lock will expire via its TTL (swrGracePeriod).
+            // Safety: rely on TTL rather than unsafe deletion.
 
             Log::debug('Cache revalidation completed', [
                 'model' => $this->modelClass,
