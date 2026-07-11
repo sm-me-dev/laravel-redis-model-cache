@@ -25,7 +25,7 @@ This roadmap converts the 23-phase production-readiness requirements into 8 orde
 **Status:** ✅ In Progress
 
 ### Scope
-1. ✅ Fix Laravel 12 Eloquent API compatibility (DONE)
+1. ✅ Fix Laravel 13 Eloquent API compatibility (DONE)
 2. ✅ Document architecture audit (DONE)
 3. ⏳ Fix RedisHelperServiceTest mock expectations
 4. ⏳ Add assertions to risky tests

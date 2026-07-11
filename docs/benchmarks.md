@@ -1,6 +1,6 @@
 # Benchmarks
 
-Tested with PHP 8.4, Laravel 12, Redis 7.4, phpredis (localhost).
+Tested with PHP 8.4, Laravel 13, Redis 7.4, phpredis (localhost).
 
 ## Write Throughput
 

@@ -18,7 +18,7 @@ This package replaces Eloquent's query builder with Redis set operations. Unders
 | `count(where)` multi-index | ✅ Supported | `SINTER` + `count` |
 | `exists(where)` single index | ✅ Supported | `EXISTS` — O(1) |
 | `exists(where)` multi-index | ✅ Supported | `SINTER` + check |
-| `selective(fields, where)` | ✅ Supported | `SINTER` + `HMGET` — batch round trip |
+| `selective(fields, where)` | ❌ Deprecated | Use `pluck()` instead |
 | `pluck(attrs, where)` | ✅ Supported | `SINTER` + `HMGET` — batch round trip |
 | `sorted(field, start, end)` | ✅ Supported | `ZREVRANGE` — O(log N + M) |
 | `paginateSorted(field, page, perPage)` | ✅ Supported | `ZREVRANGE` with offset calc |

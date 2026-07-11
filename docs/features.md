@@ -169,7 +169,9 @@ echo $plan->toString();
 php artisan redis-model-cache:warmup "App\Models\User" \
     --where status=active \
     --indexes=status,role_id \
+    --sorted=created_at \
+    --ttl=3600 \
     --chunk=1000
 ```
 
-Options: `--sorted`, `--ttl`, `--verbose` (memory stats). Progress bar with ETA included.
+Options: `--where`, `--indexes`, `--sorted`, `--ttl`, `--chunk` (batch size). Progress bar with ETA included.

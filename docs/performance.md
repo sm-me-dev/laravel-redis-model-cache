@@ -2,8 +2,8 @@
 
 Benchmark results, scaling guidelines, tuning advice, and best practices for `laravel-redis-model-cache`.
 
-> **Version:** 1.2.0  
-> **Tested with:** PHP 8.4, Laravel 12, Redis 7.4, phpredis  
+> **Version:** 2.9.0  
+> **Tested with:** PHP 8.4, Laravel 13, Redis 7.4, phpredis  
 > **Environment:** Local (localhost Redis, no network latency)
 
 ---
