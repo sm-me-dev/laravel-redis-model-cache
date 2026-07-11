@@ -31,3 +31,6 @@ parameters:
         - '~function count expects~'
         # Mock object method dispatch via __call (PHPUnit/Mockery convention)
         - '~Cannot call method [a-zA-Z]+\(\) on mixed~'
+        # Dispatchable trait uses func_get_args() internally — PHPStan cannot
+        # statically analyse named arguments on ::dispatch() calls.
+        - '~Unknown parameter \$.+ in call to static method Sm_mE\\\\RedisModelCache\\\\Events\\\\.+::dispatch\(\)~'
