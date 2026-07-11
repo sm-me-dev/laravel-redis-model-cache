@@ -95,7 +95,7 @@ jobs:
           fi
 
       - name: Dependency audit (composer)
-        run: composer audit --format=plain --no-interactive
+        run: composer audit --format=plain
         continue-on-error: true
 
       - name: Run Pint (code style)
@@ -107,11 +107,9 @@ jobs:
       - name: Run PHPUnit (tests)
         run: vendor/bin/phpunit
 
-      - name: Run PHPUnit with coverage
+      - name: Run PHPUnit with coverage (PHP 8.4 / Laravel 13 / stable only)
         if: matrix.prefer == 'stable' && matrix.laravel == '13' && matrix.php == '8.4'
         run: vendor/bin/phpunit --coverage-clover coverage.xml --coverage-text
-        env:
-          XDEBUG_MODE: coverage
 
       - name: Upload coverage report
         if: matrix.prefer == 'stable' && matrix.laravel == '13' && matrix.php == '8.4'

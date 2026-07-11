@@ -19,8 +19,12 @@ jobs:
         run: |
           echo "# Release ${{ github.ref_name }}" > RELEASE_NOTES.md
           echo "" >> RELEASE_NOTES.md
-          git log --oneline --no-decorate $(git tag --sort=-creatordate | head -2 | tail -1)..HEAD 2>/dev/null \
-            || git log --oneline --no-decorate HEAD~10..HEAD >> RELEASE_NOTES.md
+          PREV_TAG=$(git tag --sort=-creatordate | head -2 | tail -1)
+          if [ -n "$PREV_TAG" ]; then
+            git log --oneline --no-decorate "$PREV_TAG"..HEAD >> RELEASE_NOTES.md
+          else
+            git log --oneline --no-decorate HEAD~10..HEAD >> RELEASE_NOTES.md
+          fi
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
