@@ -12,7 +12,7 @@
 
 ---
 
-**v2.8.0** | PHP ^8.3 | Laravel ^11.0 || ^12.0
+**v2.8.0** | PHP ^8.3 || ^8.4 | Laravel ^11.0 || ^12.0 || ^13.0
 
 ---
 
@@ -122,8 +122,8 @@ php artisan redis-model-cache:monitor-cache info
 
 ## Requirements
 
-- PHP 8.3+
-- Laravel 11 or 12
+- PHP 8.3+ or 8.4+
+- Laravel 11, 12, or 13
 - Redis (cluster or single-node)
 - `ext-redis` (phpredis) or `predis/predis`
 
