@@ -5,6 +5,23 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [v2.9.0] — 2026-07-11
+
+### Laravel 13 & PHP 8.4 Support
+
+#### Changed
+
+- **PHP requirement** — widened to `^8.3 || ^8.4`
+- **Illuminate dependencies** — `illuminate/console`, `illuminate/database`, `illuminate/redis`, `illuminate/support` now accept `^11.0 || ^12.0 || ^13.0`
+- **Orchestra Testbench** — dev requirement widened to `^9.0 || ^10.11 || ^11.0` for Laravel 13 compatibility
+- **CI matrix** — added Laravel 13 test matrix with `orchestra/testbench ^11.0` on PHP 8.3/8.4
+
+#### Tests
+
+- All 315 tests pass (263 unit/feature + 52 integration)
+- PHPStan level 8: 0 errors
+- Pint: passed
+
 ## [v2.8.0] — 2026-07-11
 
 ### Redis Key Builder, CAS Safety, Observability Safety & Chaos Testing
