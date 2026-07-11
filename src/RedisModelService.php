@@ -398,11 +398,11 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
 
         if ($this->metricsEnabled && $this->configuration->observabilityDispatchEvents) {
             CacheWrite::dispatch(
-                modelClass: $this->model_class,
-                operation: 'delete',
-                modelIds: [(int) $id],
-                executionTime: (microtime(true) - $startTime) * 1000,
-                modelCount: 1,
+                $this->model_class,
+                'delete',
+                [(int) $id],
+                (microtime(true) - $startTime) * 1000,
+                1,
             );
         }
     }
@@ -775,11 +775,11 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         if ($this->metricsEnabled && $this->configuration->observabilityDispatchEvents) {
             $executionTime = (microtime(true) - $startTime) * 1000;
             CacheWrite::dispatch(
-                modelClass: $this->model_class,
-                operation: 'storeMany',
-                modelIds: $modelKeys,
-                executionTime: $executionTime,
-                modelCount: count($modelKeys),
+                $this->model_class,
+                'storeMany',
+                $modelKeys,
+                $executionTime,
+                count($modelKeys),
             );
         }
     }

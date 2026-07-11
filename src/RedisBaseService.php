@@ -146,9 +146,9 @@ LUA;
 
         if ($this->configuration->observabilityEnabled && $this->configuration->observabilityDispatchEvents) {
             RedisConnectionFailed::dispatch(
-                operation: $operationName,
-                message: $e->getMessage(),
-                trace: explode("\n", $e->getTraceAsString()),
+                $operationName,
+                $e->getMessage(),
+                explode("\n", $e->getTraceAsString()),
             );
         }
 
@@ -165,10 +165,10 @@ LUA;
 
                 if ($this->configuration->observabilityEnabled && $this->configuration->observabilityDispatchEvents) {
                     CacheOperationFailed::dispatch(
-                        operation: $operationName,
-                        message: $e->getMessage(),
-                        fallbackResult: $result,
-                        strategy: 'fallback',
+                        $operationName,
+                        $e->getMessage(),
+                        $result,
+                        'fallback',
                     );
                 }
 

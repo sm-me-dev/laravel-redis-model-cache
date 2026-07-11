@@ -44,10 +44,10 @@ final class InvalidationManager
         $this->strategy->invalidate($context);
 
         ModelCacheInvalidated::dispatch(
-            modelClass: $model::class,
-            modelId: $model->getKey(),
-            event: $event,
-            timestamp: microtime(true),
+            $model::class,
+            $model->getKey(),
+            $event,
+            microtime(true),
         );
     }
 }
