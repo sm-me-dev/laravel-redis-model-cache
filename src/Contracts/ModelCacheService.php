@@ -61,9 +61,10 @@ interface ModelCacheService
 
     /**
      * @param  callable(): Collection<int, Model>  $callback
+     * @param  string|null  $sortBy  Optional field to sort results by
      * @return Collection<int, Model>
      */
-    public function rememberCustom(string $name, callable $callback, bool $hydrate = true, bool $refresh = false): Collection;
+    public function rememberCustom(string $name, callable $callback, bool $hydrate = true, ?string $sortBy = null, bool $refresh = false): Collection;
 
     public function delete(int|string $id): void;
 

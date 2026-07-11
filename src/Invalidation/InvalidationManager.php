@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Sm_mE\RedisModelCache\Invalidation;
 
 use Illuminate\Database\Eloquent\Model;
+use Sm_mE\RedisModelCache\Events\ModelCacheInvalidated;
 use Sm_mE\RedisModelCache\Invalidation\Contracts\InvalidationStrategy;
 use Sm_mE\RedisModelCache\Invalidation\Strategies\AsyncStrategy;
 use Sm_mE\RedisModelCache\Invalidation\Strategies\SyncStrategy;
@@ -41,5 +42,12 @@ final class InvalidationManager
         $this->service->touchInvalidationTimestamp();
 
         $this->strategy->invalidate($context);
+
+        ModelCacheInvalidated::dispatch(
+            modelClass: $model::class,
+            modelId: $model->getKey(),
+            event: $event,
+            timestamp: microtime(true),
+        );
     }
 }

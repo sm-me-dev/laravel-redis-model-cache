@@ -6,7 +6,11 @@ namespace Sm_mE\RedisModelCache\Listeners;
 
 use Sm_mE\RedisModelCache\Events\CacheHit;
 use Sm_mE\RedisModelCache\Events\CacheMiss;
+use Sm_mE\RedisModelCache\Events\CacheOperationFailed;
+use Sm_mE\RedisModelCache\Events\CacheWrite;
+use Sm_mE\RedisModelCache\Events\ModelCacheInvalidated;
 use Sm_mE\RedisModelCache\Events\QueryExecuted;
+use Sm_mE\RedisModelCache\Events\RedisConnectionFailed;
 use Sm_mE\RedisModelCache\Support\Observability;
 
 class ObservabilitySubscriber
@@ -34,6 +38,26 @@ class ObservabilitySubscriber
         }
     }
 
+    public function handleCacheWrite(CacheWrite $event): void
+    {
+        $this->observability->recordWrite();
+    }
+
+    public function handleModelCacheInvalidated(ModelCacheInvalidated $event): void
+    {
+        $this->observability->recordInvalidation();
+    }
+
+    public function handleRedisConnectionFailed(RedisConnectionFailed $event): void
+    {
+        $this->observability->recordFailure();
+    }
+
+    public function handleCacheOperationFailed(CacheOperationFailed $event): void
+    {
+        $this->observability->recordFailure();
+    }
+
     /**
      * @return array<string, string>
      */
@@ -43,6 +67,10 @@ class ObservabilitySubscriber
             CacheHit::class => 'handleCacheHit',
             CacheMiss::class => 'handleCacheMiss',
             QueryExecuted::class => 'handleQueryExecuted',
+            CacheWrite::class => 'handleCacheWrite',
+            ModelCacheInvalidated::class => 'handleModelCacheInvalidated',
+            RedisConnectionFailed::class => 'handleRedisConnectionFailed',
+            CacheOperationFailed::class => 'handleCacheOperationFailed',
         ];
     }
 }

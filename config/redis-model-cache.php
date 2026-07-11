@@ -208,4 +208,30 @@ return [
         'versioned' => env('REDIS_MODEL_CACHE_VERSIONED', false),
         'queue' => env('REDIS_MODEL_CACHE_INVALIDATION_QUEUE', 'default'),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Redis Failure Strategy
+    |--------------------------------------------------------------------------
+    |
+    | Controls behaviour when Redis operations fail (e.g. connection refused,
+    | timeout, OOM, etc.). Three strategies are available:
+    |
+    | - 'exception' (default): Re-throws the \RedisException. Maintains
+    |   existing "fail-fast" behaviour. Best for dev/staging.
+    | - 'log': Logs the failure through Laravel's logging system and returns
+    |   a safe default value (null/empty collection) without throwing.
+    | - 'fallback': Invokes a user-supplied callback that receives the
+    |   exception and operation name, and returns a fallback value.
+    |
+    | When both 'log' and observability events are enabled, failure events
+    | (RedisConnectionFailed, CacheOperationFailed) are dispatched for
+    | integration with Laravel Telescope, Pulse, or custom monitoring.
+    */
+    'redis_failure' => [
+        'strategy' => env('REDIS_MODEL_CACHE_FAILURE_STRATEGY', 'exception'),
+        'log' => env('REDIS_MODEL_CACHE_FAILURE_LOG', true),
+        'log_channel' => env('REDIS_MODEL_CACHE_FAILURE_LOG_CHANNEL', 'stack'),
+        'fallback_callback' => null,
+    ],
 ];

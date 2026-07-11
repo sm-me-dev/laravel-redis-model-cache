@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace Sm_mE\RedisModelCache;
 
+use Illuminate\Support\Facades\Log;
 use Sm_mE\RedisModelCache\Contracts\RedisConnectionResolver;
+use Sm_mE\RedisModelCache\Events\CacheOperationFailed;
+use Sm_mE\RedisModelCache\Events\RedisConnectionFailed;
 use Sm_mE\RedisModelCache\Support\Configuration;
 
 class RedisBaseService
@@ -116,6 +119,76 @@ LUA;
 
     protected Configuration $configuration;
 
+    protected function redisFailureHandler(callable $operation, string $operationName, mixed $defaultValue = null): mixed
+    {
+        try {
+            return $operation();
+        } catch (\RedisException $e) {
+            $strategy = $this->configuration->redisFailureStrategy;
+
+            return match ($strategy) {
+                'log' => $this->handleLogFailure($e, $operationName, $defaultValue),
+                'fallback' => $this->handleFallbackFailure($e, $operationName, $defaultValue),
+                default => throw $e,
+            };
+        }
+    }
+
+    protected function handleLogFailure(\RedisException $e, string $operationName, mixed $defaultValue): mixed
+    {
+        if ($this->configuration->redisFailureLog) {
+            Log::channel($this->configuration->redisFailureLogChannel)
+                ->error("Redis operation '{$operationName}' failed: ".$e->getMessage(), [
+                    'exception' => $e::class,
+                    'operation' => $operationName,
+                ]);
+        }
+
+        if ($this->configuration->observabilityEnabled && $this->configuration->observabilityDispatchEvents) {
+            RedisConnectionFailed::dispatch(
+                operation: $operationName,
+                message: $e->getMessage(),
+                trace: explode("\n", $e->getTraceAsString()),
+            );
+        }
+
+        return $defaultValue;
+    }
+
+    protected function handleFallbackFailure(\RedisException $e, string $operationName, mixed $defaultValue): mixed
+    {
+        $fallback = $this->configuration->redisFailureFallback;
+
+        if (is_callable($fallback)) {
+            try {
+                $result = $fallback($e, $operationName);
+
+                if ($this->configuration->observabilityEnabled && $this->configuration->observabilityDispatchEvents) {
+                    CacheOperationFailed::dispatch(
+                        operation: $operationName,
+                        message: $e->getMessage(),
+                        fallbackResult: $result,
+                        strategy: 'fallback',
+                    );
+                }
+
+                return $result;
+            } catch (\Exception $fallbackError) {
+                Log::warning("Redis fallback callback failed for '{$operationName}': ".$fallbackError->getMessage());
+            }
+        }
+
+        if ($this->configuration->redisFailureLog) {
+            Log::channel($this->configuration->redisFailureLogChannel)
+                ->error("Redis operation '{$operationName}' failed (no fallback): ".$e->getMessage(), [
+                    'exception' => $e::class,
+                    'operation' => $operationName,
+                ]);
+        }
+
+        return $defaultValue;
+    }
+
     public function __construct(
         protected RedisConnectionResolver $connectionResolver,
         ?int $ttl = null,
@@ -141,11 +214,13 @@ LUA;
             return;
         }
 
-        $ttl = $this->redis->ttl($key);
+        $this->redisFailureHandler(function () use ($key): void {
+            $ttl = $this->redis->ttl($key);
 
-        if ($ttl === -1) {
-            $this->redis->expire($key, $this->ttl);
-        }
+            if ($ttl === -1) {
+                $this->redis->expire($key, $this->ttl);
+            }
+        }, 'applyTTL');
     }
 
     /**
@@ -356,25 +431,25 @@ LUA;
      */
     protected function executeLua(string $script, array $keys, array $args, ?string &$sha = null): mixed
     {
-        $numKeys = count($keys);
-        $allArgs = array_merge($keys, $args);
+        return $this->redisFailureHandler(function () use ($script, $keys, $args, &$sha): mixed {
+            $numKeys = count($keys);
+            $allArgs = array_merge($keys, $args);
 
-        // EVALSHA fast path
-        if ($sha !== null) {
-            $result = $this->evalSha($sha, $allArgs, $numKeys);
-            if ($result !== false) {
-                return $result;
+            if ($sha !== null) {
+                $result = $this->evalSha($sha, $allArgs, $numKeys);
+                if ($result !== false) {
+                    return $result;
+                }
             }
-        }
 
-        // EVAL (also loads the script on the server)
-        $result = $this->evalRaw($script, $allArgs, $numKeys);
+            $result = $this->evalRaw($script, $allArgs, $numKeys);
 
-        if ($sha === null) {
-            $sha = sha1($script);
-        }
+            if ($sha === null) {
+                $sha = sha1($script);
+            }
 
-        return $result;
+            return $result;
+        }, 'executeLua');
     }
 
     /**
@@ -382,11 +457,9 @@ LUA;
      */
     protected function loadScript(string $script): string
     {
-        if ($this->redis instanceof \Redis) {
+        return (string) $this->redisFailureHandler(function () use ($script): string {
             return (string) $this->redis->script('load', $script);
-        }
-
-        return (string) $this->redis->script('load', $script);
+        }, 'loadScript', '');
     }
 
     /**

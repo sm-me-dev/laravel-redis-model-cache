@@ -225,7 +225,7 @@ class RedisModelCacheServiceProvider extends ServiceProvider
         }
 
         $configVersion = config('redis-model-cache.config_version');
-        if ($configVersion !== '2.5') {
+        if ($configVersion !== '2.9.0') {
             Log::warning(
                 "Published configuration version mismatch. Expected '2.5', got "
                 .var_export($configVersion, true)

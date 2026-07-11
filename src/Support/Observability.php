@@ -56,6 +56,12 @@ class Observability
 
     private int $staleCleanupKeysRemoved = 0;
 
+    private int $writes = 0;
+
+    private int $invalidations = 0;
+
+    private int $failures = 0;
+
     public function recordHit(): void
     {
         $this->normalizeCounters();
@@ -113,6 +119,24 @@ class Observability
     {
         $this->normalizeCounters();
         $this->lockContentionCount++;
+    }
+
+    public function recordWrite(): void
+    {
+        $this->normalizeCounters();
+        $this->writes++;
+    }
+
+    public function recordInvalidation(): void
+    {
+        $this->normalizeCounters();
+        $this->invalidations++;
+    }
+
+    public function recordFailure(): void
+    {
+        $this->normalizeCounters();
+        $this->failures++;
     }
 
     public function hits(): int
@@ -307,6 +331,21 @@ class Observability
         return $this->lockContentionCount;
     }
 
+    public function writeCount(): int
+    {
+        return $this->writes;
+    }
+
+    public function invalidationCount(): int
+    {
+        return $this->invalidations;
+    }
+
+    public function failureCount(): int
+    {
+        return $this->failures;
+    }
+
     /**
      * Total number of latency samples written (monotonic; bounded against overflow).
      */
@@ -334,10 +373,13 @@ class Observability
         $this->staleCleanupCount = 0;
         $this->lockContentionCount = 0;
         $this->staleCleanupKeysRemoved = 0;
+        $this->writes = 0;
+        $this->invalidations = 0;
+        $this->failures = 0;
     }
 
     /**
-     * @return array{hits: int, misses: int, total_requests: int, hit_rate: ?float, miss_rate: ?float, latency: array{p50: ?float, p95: ?float, p99: ?float, average: ?float, min: ?float, max: ?float, samples: int}, pipeline_size: array{min: ?float, max: ?float, average: ?float, median: ?float, samples: list<int>}, stale_cleanup: array{count: int, keys_removed: int}, lock_contention: int}
+     * @return array{hits: int, misses: int, total_requests: int, hit_rate: ?float, miss_rate: ?float, writes: int, invalidations: int, failures: int, latency: array{p50: ?float, p95: ?float, p99: ?float, average: ?float, min: ?float, max: ?float, samples: int}, pipeline_size: array{min: ?float, max: ?float, average: ?float, median: ?float, samples: list<int>}, stale_cleanup: array{count: int, keys_removed: int}, lock_contention: int}
      */
     public function snapshot(): array
     {
@@ -347,6 +389,9 @@ class Observability
             'total_requests' => $this->totalRequests(),
             'hit_rate' => $this->hitRate(),
             'miss_rate' => $this->missRate(),
+            'writes' => $this->writes,
+            'invalidations' => $this->invalidations,
+            'failures' => $this->failures,
             'latency' => [
                 'p50' => $this->latencyPercentile(50),
                 'p95' => $this->latencyPercentile(95),
@@ -383,6 +428,9 @@ class Observability
             && $this->staleCleanupCount < self::COUNTER_NORMALIZE_THRESHOLD
             && $this->lockContentionCount < self::COUNTER_NORMALIZE_THRESHOLD
             && $this->staleCleanupKeysRemoved < self::COUNTER_NORMALIZE_THRESHOLD
+            && $this->writes < self::COUNTER_NORMALIZE_THRESHOLD
+            && $this->invalidations < self::COUNTER_NORMALIZE_THRESHOLD
+            && $this->failures < self::COUNTER_NORMALIZE_THRESHOLD
         ) {
             return;
         }
@@ -392,6 +440,9 @@ class Observability
         $this->staleCleanupCount >>= 1;
         $this->lockContentionCount >>= 1;
         $this->staleCleanupKeysRemoved >>= 1;
+        $this->writes >>= 1;
+        $this->invalidations >>= 1;
+        $this->failures >>= 1;
     }
 
     /**

@@ -36,6 +36,10 @@ class Configuration
         public readonly string $invalidationStrategy = 'sync',
         public readonly bool $invalidationVersioned = false,
         public readonly string $invalidationQueue = 'default',
+        public readonly string $redisFailureStrategy = 'exception',
+        public readonly bool $redisFailureLog = true,
+        public readonly string $redisFailureLogChannel = 'stack',
+        public readonly mixed $redisFailureFallback = null,
     ) {}
 
     public static function fromConfig(): self
@@ -50,6 +54,7 @@ class Configuration
         $multiTenant = (array) ($config['multi_tenant'] ?? []);
         $lua = (array) ($config['lua_scripting'] ?? []);
         $invalidation = (array) ($config['invalidation'] ?? []);
+        $redisFailure = (array) ($config['redis_failure'] ?? []);
 
         return new self(
             connection: (string) ($config['connection'] ?? 'cache'),
@@ -81,6 +86,10 @@ class Configuration
             invalidationStrategy: (string) ($invalidation['strategy'] ?? 'sync'),
             invalidationVersioned: (bool) ($invalidation['versioned'] ?? false),
             invalidationQueue: (string) ($invalidation['queue'] ?? 'default'),
+            redisFailureStrategy: (string) ($redisFailure['strategy'] ?? 'exception'),
+            redisFailureLog: (bool) ($redisFailure['log'] ?? true),
+            redisFailureLogChannel: (string) ($redisFailure['log_channel'] ?? 'stack'),
+            redisFailureFallback: $redisFailure['fallback_callback'] ?? null,
         );
     }
 }

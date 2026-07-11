@@ -16,6 +16,7 @@ use Sm_mE\RedisModelCache\Contracts\RedisConnectionResolver;
 use Sm_mE\RedisModelCache\Contracts\TenantResolverInterface;
 use Sm_mE\RedisModelCache\Events\CacheHit;
 use Sm_mE\RedisModelCache\Events\CacheMiss;
+use Sm_mE\RedisModelCache\Events\CacheWrite;
 use Sm_mE\RedisModelCache\Events\QueryExecuted;
 use Sm_mE\RedisModelCache\Jobs\RevalidateCacheJob;
 use Sm_mE\RedisModelCache\Support\Configuration;
@@ -381,6 +382,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
 
     public function delete(int|string $id): void
     {
+        $startTime = microtime(true);
         $old = $this->redis->hget($this->hashKey(), (string) $id);
 
         if (! $old) {
@@ -393,6 +395,16 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
 
         $this->removeIndexes($id, $oldData);
         $this->removeSorted($id);
+
+        if ($this->metricsEnabled && $this->configuration->observabilityDispatchEvents) {
+            CacheWrite::dispatch(
+                modelClass: $this->model_class,
+                operation: 'delete',
+                modelIds: [(int) $id],
+                executionTime: (microtime(true) - $startTime) * 1000,
+                modelCount: 1,
+            );
+        }
     }
 
     /**
@@ -728,6 +740,8 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
             $this->storeModel($model, $pipeline, $staleKeysMap[$key] ?? [], $staleZremMap[$key] ?? [], $revalidationTime);
         }
 
+        $startTime = microtime(true);
+
         try {
             // Execute pipeline and exit pipeline mode
             $this->executePipeline($pipeline);
@@ -743,6 +757,17 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
                 // Ignore secondary errors to preserve the original exception
             }
             throw $e;
+        }
+
+        if ($this->metricsEnabled && $this->configuration->observabilityDispatchEvents) {
+            $executionTime = (microtime(true) - $startTime) * 1000;
+            CacheWrite::dispatch(
+                modelClass: $this->model_class,
+                operation: 'storeMany',
+                modelIds: $modelKeys,
+                executionTime: $executionTime,
+                modelCount: count($modelKeys),
+            );
         }
     }
 
@@ -1171,6 +1196,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
      * @see pluck()
      *
      * **Deprecation Mapping:** selective() → pluck()
+     *
      * @param  array<string>  $fields  Field names to retrieve
      * @param  array<string, mixed>  $where  WHERE conditions (indexed fields only)
      * @param  array<string>|null  $only  Optional filter for specific primary keys
