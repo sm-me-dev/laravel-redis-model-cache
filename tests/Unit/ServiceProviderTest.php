@@ -36,6 +36,7 @@ class ServiceProviderTest extends TestCase
         $this->assertArrayHasKey('lua_scripting', $config);
         $this->assertArrayHasKey('invalidation', $config);
         $this->assertArrayHasKey('observability', $config);
+        $this->assertArrayHasKey('redis_failure', $config);
     }
 
     public function test_scan_strategy_defaults_to_scan(): void
@@ -173,6 +174,114 @@ class ServiceProviderTest extends TestCase
             ->with(\Mockery::on(fn (string $message) => str_contains($message, 'Published configuration version mismatch')));
 
         config()->set('redis-model-cache.config_version', '2.4');
+        $this->bootProvider();
+    }
+
+    public function test_invalid_compression_algorithm_throws(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid compression.algorithm');
+
+        config()->set('redis-model-cache.compression.enabled', true);
+        config()->set('redis-model-cache.compression.algorithm', 'bzip2');
+        $this->bootProvider();
+    }
+
+    public function test_invalid_compression_level_low_throws(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid compression.level');
+
+        config()->set('redis-model-cache.compression.enabled', true);
+        config()->set('redis-model-cache.compression.level', 0);
+        $this->bootProvider();
+    }
+
+    public function test_invalid_compression_level_high_throws(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid compression.level');
+
+        config()->set('redis-model-cache.compression.enabled', true);
+        config()->set('redis-model-cache.compression.level', 23);
+        $this->bootProvider();
+    }
+
+    public function test_invalid_compression_min_size_throws(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid compression.min_size');
+
+        config()->set('redis-model-cache.compression.enabled', true);
+        config()->set('redis-model-cache.compression.min_size', -1);
+        $this->bootProvider();
+    }
+
+    public function test_valid_compression_does_not_throw(): void
+    {
+        config()->set('redis-model-cache.compression.enabled', true);
+        config()->set('redis-model-cache.compression.algorithm', 'zstd');
+        config()->set('redis-model-cache.compression.level', 3);
+        config()->set('redis-model-cache.compression.min_size', 256);
+
+        $this->bootProvider();
+        $this->addToAssertionCount(1);
+    }
+
+    public function test_invalid_multi_tenant_strategy_throws(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid multi_tenant.strategy');
+
+        config()->set('redis-model-cache.multi_tenant.enabled', true);
+        config()->set('redis-model-cache.multi_tenant.strategy', 'cookie');
+        $this->bootProvider();
+    }
+
+    public function test_invalid_multi_tenant_key_throws(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid multi_tenant.key');
+
+        config()->set('redis-model-cache.multi_tenant.enabled', true);
+        config()->set('redis-model-cache.multi_tenant.key', '');
+        $this->bootProvider();
+    }
+
+    public function test_invalid_invalidation_strategy_throws(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid invalidation.strategy');
+
+        config()->set('redis-model-cache.invalidation.strategy', 'invalid');
+        $this->bootProvider();
+    }
+
+    public function test_async_invalidation_with_empty_queue_throws(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid invalidation.queue');
+
+        config()->set('redis-model-cache.invalidation.strategy', 'async');
+        config()->set('redis-model-cache.invalidation.queue', '');
+        $this->bootProvider();
+    }
+
+    public function test_invalid_redis_failure_strategy_throws(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid redis_failure.strategy');
+
+        config()->set('redis-model-cache.redis_failure.strategy', 'silent');
+        $this->bootProvider();
+    }
+
+    public function test_invalid_hydrate_batch_size_throws(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid hydrate_batch_size');
+
+        config()->set('redis-model-cache.hydrate_batch_size', 0);
         $this->bootProvider();
     }
 

@@ -150,6 +150,19 @@ class RedisModelCacheServiceProvider extends ServiceProvider
 
     protected function validateConfiguration(): void
     {
+        $this->validateConnection();
+        $this->validateCoreScalars();
+        $this->validateStampedeProtection();
+        $this->validateStaleWhileRevalidate();
+        $this->validateCompression();
+        $this->validateMultiTenant();
+        $this->validateInvalidation();
+        $this->validateRedisFailure();
+        $this->validateConfigVersion();
+    }
+
+    protected function validateConnection(): void
+    {
         try {
             $connection = config('redis-model-cache.connection');
             if ($connection !== null && ! config("database.redis.{$connection}")) {
@@ -161,7 +174,10 @@ class RedisModelCacheServiceProvider extends ServiceProvider
         } catch (\InvalidArgumentException $e) {
             Log::warning($e->getMessage());
         }
+    }
 
+    protected function validateCoreScalars(): void
+    {
         $ttl = config('redis-model-cache.default_ttl');
         if ($ttl !== null && (! is_int($ttl) || $ttl < 0)) {
             throw new \InvalidArgumentException(
@@ -183,51 +199,157 @@ class RedisModelCacheServiceProvider extends ServiceProvider
             );
         }
 
-        if (config('redis-model-cache.stampede_protection.enabled')) {
-            $lockTimeout = config('redis-model-cache.stampede_protection.lock_timeout');
-            $waitTimeout = config('redis-model-cache.stampede_protection.wait_timeout');
-            $waitInterval = config('redis-model-cache.stampede_protection.wait_interval');
+        $hydrateBatchSize = config('redis-model-cache.hydrate_batch_size');
+        if (! is_int($hydrateBatchSize) || $hydrateBatchSize < 1) {
+            throw new \InvalidArgumentException(
+                'Invalid hydrate_batch_size: must be a positive integer. Got: '.var_export($hydrateBatchSize, true)
+            );
+        }
+    }
 
-            if (! is_int($lockTimeout) || $lockTimeout < 1) {
-                throw new \InvalidArgumentException(
-                    'Invalid stampede_protection.lock_timeout: must be a positive integer. Got: '.var_export($lockTimeout, true)
-                );
-            }
-
-            if (! is_int($waitTimeout) || $waitTimeout < 1) {
-                throw new \InvalidArgumentException(
-                    'Invalid stampede_protection.wait_timeout: must be a positive integer. Got: '.var_export($waitTimeout, true)
-                );
-            }
-
-            if (! is_int($waitInterval) || $waitInterval < 1) {
-                throw new \InvalidArgumentException(
-                    'Invalid stampede_protection.wait_interval: must be a positive integer. Got: '.var_export($waitInterval, true)
-                );
-            }
+    protected function validateStampedeProtection(): void
+    {
+        if (! config('redis-model-cache.stampede_protection.enabled')) {
+            return;
         }
 
-        if (config('redis-model-cache.stale_while_revalidate.enabled')) {
-            $gracePeriod = config('redis-model-cache.stale_while_revalidate.grace_period');
-            $queue = config('redis-model-cache.stale_while_revalidate.queue');
+        $lockTimeout = config('redis-model-cache.stampede_protection.lock_timeout');
+        $waitTimeout = config('redis-model-cache.stampede_protection.wait_timeout');
+        $waitInterval = config('redis-model-cache.stampede_protection.wait_interval');
 
-            if (! is_int($gracePeriod) || $gracePeriod < 1) {
-                throw new \InvalidArgumentException(
-                    'Invalid stale_while_revalidate.grace_period: must be a positive integer. Got: '.var_export($gracePeriod, true)
-                );
-            }
+        if (! is_int($lockTimeout) || $lockTimeout < 1) {
+            throw new \InvalidArgumentException(
+                'Invalid stampede_protection.lock_timeout: must be a positive integer. Got: '.var_export($lockTimeout, true)
+            );
+        }
 
+        if (! is_int($waitTimeout) || $waitTimeout < 1) {
+            throw new \InvalidArgumentException(
+                'Invalid stampede_protection.wait_timeout: must be a positive integer. Got: '.var_export($waitTimeout, true)
+            );
+        }
+
+        if (! is_int($waitInterval) || $waitInterval < 1) {
+            throw new \InvalidArgumentException(
+                'Invalid stampede_protection.wait_interval: must be a positive integer. Got: '.var_export($waitInterval, true)
+            );
+        }
+    }
+
+    protected function validateStaleWhileRevalidate(): void
+    {
+        if (! config('redis-model-cache.stale_while_revalidate.enabled')) {
+            return;
+        }
+
+        $gracePeriod = config('redis-model-cache.stale_while_revalidate.grace_period');
+        $queue = config('redis-model-cache.stale_while_revalidate.queue');
+
+        if (! is_int($gracePeriod) || $gracePeriod < 1) {
+            throw new \InvalidArgumentException(
+                'Invalid stale_while_revalidate.grace_period: must be a positive integer. Got: '.var_export($gracePeriod, true)
+            );
+        }
+
+        if (! is_string($queue) || trim($queue) === '') {
+            throw new \InvalidArgumentException(
+                'Invalid stale_while_revalidate.queue: must be a non-empty string. Got: '.var_export($queue, true)
+            );
+        }
+    }
+
+    protected function validateCompression(): void
+    {
+        if (! config('redis-model-cache.compression.enabled')) {
+            return;
+        }
+
+        $algorithm = config('redis-model-cache.compression.algorithm');
+        $allowed = ['gzip', 'zstd', 'lz4'];
+        if (! in_array($algorithm, $allowed, true)) {
+            throw new \InvalidArgumentException(
+                'Invalid compression.algorithm: must be one of '.implode(', ', $allowed)
+                .'. Got: '.var_export($algorithm, true)
+            );
+        }
+
+        $level = config('redis-model-cache.compression.level');
+        if (! is_int($level) || $level < 1 || $level > 22) {
+            throw new \InvalidArgumentException(
+                'Invalid compression.level: must be an integer between 1 and 22. Got: '.var_export($level, true)
+            );
+        }
+
+        $minSize = config('redis-model-cache.compression.min_size');
+        if (! is_int($minSize) || $minSize < 0) {
+            throw new \InvalidArgumentException(
+                'Invalid compression.min_size: must be a non-negative integer. Got: '.var_export($minSize, true)
+            );
+        }
+    }
+
+    protected function validateMultiTenant(): void
+    {
+        if (! config('redis-model-cache.multi_tenant.enabled')) {
+            return;
+        }
+
+        $strategy = config('redis-model-cache.multi_tenant.strategy');
+        $allowed = ['header', 'subdomain', 'auth', 'session'];
+        if (! in_array($strategy, $allowed, true)) {
+            throw new \InvalidArgumentException(
+                'Invalid multi_tenant.strategy: must be one of '.implode(', ', $allowed)
+                .'. Got: '.var_export($strategy, true)
+            );
+        }
+
+        $key = config('redis-model-cache.multi_tenant.key');
+        if (! is_string($key) || trim($key) === '') {
+            throw new \InvalidArgumentException(
+                'Invalid multi_tenant.key: must be a non-empty string. Got: '.var_export($key, true)
+            );
+        }
+    }
+
+    protected function validateInvalidation(): void
+    {
+        $strategy = config('redis-model-cache.invalidation.strategy');
+        $allowed = ['sync', 'async'];
+        if (! in_array($strategy, $allowed, true)) {
+            throw new \InvalidArgumentException(
+                'Invalid invalidation.strategy: must be one of '.implode(', ', $allowed)
+                .'. Got: '.var_export($strategy, true)
+            );
+        }
+
+        if ($strategy === 'async') {
+            $queue = config('redis-model-cache.invalidation.queue');
             if (! is_string($queue) || trim($queue) === '') {
                 throw new \InvalidArgumentException(
-                    'Invalid stale_while_revalidate.queue: must be a non-empty string. Got: '.var_export($queue, true)
+                    'Invalid invalidation.queue: must be a non-empty string when strategy is async. Got: '.var_export($queue, true)
                 );
             }
         }
+    }
 
+    protected function validateRedisFailure(): void
+    {
+        $strategy = config('redis-model-cache.redis_failure.strategy');
+        $allowed = ['exception', 'log', 'fallback'];
+        if (! in_array($strategy, $allowed, true)) {
+            throw new \InvalidArgumentException(
+                'Invalid redis_failure.strategy: must be one of '.implode(', ', $allowed)
+                .'. Got: '.var_export($strategy, true)
+            );
+        }
+    }
+
+    protected function validateConfigVersion(): void
+    {
         $configVersion = config('redis-model-cache.config_version');
         if ($configVersion !== '2.10.0') {
             Log::warning(
-                "Published configuration version mismatch. Expected '2.5', got "
+                'Published configuration version mismatch. Expected \'2.10.0\', got '
                 .var_export($configVersion, true)
                 .'. Please re-publish your configuration file using: '
                 .'php artisan vendor:publish --tag=redis-model-cache-config --force'
