@@ -51,7 +51,7 @@ jobs:
           php-version: ${{ matrix.php }}
           extensions: redis, json, mbstring, pdo, pdo_sqlite
           tools: composer:v2
-          coverage: none
+          coverage: pcov
 
       - name: Determine Laravel version
         run: |
@@ -94,6 +94,10 @@ jobs:
             composer install --no-interaction --no-progress
           fi
 
+      - name: Dependency audit (composer)
+        run: composer audit --format=plain --no-interactive
+        continue-on-error: true
+
       - name: Run Pint (code style)
         run: vendor/bin/pint --test
 
@@ -102,3 +106,16 @@ jobs:
 
       - name: Run PHPUnit (tests)
         run: vendor/bin/phpunit
+
+      - name: Run PHPUnit with coverage
+        if: matrix.prefer == 'stable' && matrix.laravel == '13' && matrix.php == '8.4'
+        run: vendor/bin/phpunit --coverage-clover coverage.xml --coverage-text
+        env:
+          XDEBUG_MODE: coverage
+
+      - name: Upload coverage report
+        if: matrix.prefer == 'stable' && matrix.laravel == '13' && matrix.php == '8.4'
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage.xml
+          fail_ci_if_error: false

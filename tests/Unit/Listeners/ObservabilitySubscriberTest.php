@@ -7,7 +7,11 @@ namespace Sm_mE\RedisModelCache\Tests\Unit\Listeners;
 use Mockery;
 use Sm_mE\RedisModelCache\Events\CacheHit;
 use Sm_mE\RedisModelCache\Events\CacheMiss;
+use Sm_mE\RedisModelCache\Events\CacheOperationFailed;
+use Sm_mE\RedisModelCache\Events\CacheWrite;
+use Sm_mE\RedisModelCache\Events\ModelCacheInvalidated;
 use Sm_mE\RedisModelCache\Events\QueryExecuted;
+use Sm_mE\RedisModelCache\Events\RedisConnectionFailed;
 use Sm_mE\RedisModelCache\Listeners\ObservabilitySubscriber;
 use Sm_mE\RedisModelCache\Support\Observability;
 use Sm_mE\RedisModelCache\Tests\TestCase;
@@ -90,18 +94,84 @@ class ObservabilitySubscriberTest extends TestCase
         $this->addToAssertionCount(1);
     }
 
-    public function test_subscribe_returns_event_mapping(): void
+    public function test_handle_cache_write_records_write(): void
+    {
+        $observability = Mockery::mock(Observability::class);
+        $observability->shouldReceive('recordWrite')->once();
+
+        $subscriber = new ObservabilitySubscriber($observability);
+        $subscriber->handleCacheWrite(new CacheWrite(
+            modelClass: 'App\Models\User',
+            operation: 'storeMany',
+            modelIds: [1, 2],
+            executionTime: 5.0,
+            modelCount: 2,
+        ));
+
+        $this->addToAssertionCount(1);
+    }
+
+    public function test_handle_model_cache_invalidated_records_invalidation(): void
+    {
+        $observability = Mockery::mock(Observability::class);
+        $observability->shouldReceive('recordInvalidation')->once();
+
+        $subscriber = new ObservabilitySubscriber($observability);
+        $subscriber->handleModelCacheInvalidated(new ModelCacheInvalidated(
+            modelClass: 'App\Models\User',
+            modelId: 1,
+            event: 'saved',
+            timestamp: microtime(true),
+        ));
+
+        $this->addToAssertionCount(1);
+    }
+
+    public function test_handle_redis_connection_failed_records_failure(): void
+    {
+        $observability = Mockery::mock(Observability::class);
+        $observability->shouldReceive('recordFailure')->once();
+
+        $subscriber = new ObservabilitySubscriber($observability);
+        $subscriber->handleRedisConnectionFailed(new RedisConnectionFailed(
+            operation: 'hget',
+            message: 'Connection refused',
+        ));
+
+        $this->addToAssertionCount(1);
+    }
+
+    public function test_handle_cache_operation_failed_records_failure(): void
+    {
+        $observability = Mockery::mock(Observability::class);
+        $observability->shouldReceive('recordFailure')->once();
+
+        $subscriber = new ObservabilitySubscriber($observability);
+        $subscriber->handleCacheOperationFailed(new CacheOperationFailed(
+            operation: 'where',
+            message: 'Failed',
+        ));
+
+        $this->addToAssertionCount(1);
+    }
+
+    public function test_subscribe_returns_complete_event_mapping(): void
     {
         $observability = Mockery::mock(Observability::class);
         $subscriber = new ObservabilitySubscriber($observability);
 
         $map = $subscriber->subscribe();
 
-        $this->assertArrayHasKey(CacheHit::class, $map);
-        $this->assertArrayHasKey(CacheMiss::class, $map);
-        $this->assertArrayHasKey(QueryExecuted::class, $map);
-        $this->assertSame('handleCacheHit', $map[CacheHit::class]);
-        $this->assertSame('handleCacheMiss', $map[CacheMiss::class]);
-        $this->assertSame('handleQueryExecuted', $map[QueryExecuted::class]);
+        $expected = [
+            CacheHit::class => 'handleCacheHit',
+            CacheMiss::class => 'handleCacheMiss',
+            QueryExecuted::class => 'handleQueryExecuted',
+            CacheWrite::class => 'handleCacheWrite',
+            ModelCacheInvalidated::class => 'handleModelCacheInvalidated',
+            RedisConnectionFailed::class => 'handleRedisConnectionFailed',
+            CacheOperationFailed::class => 'handleCacheOperationFailed',
+        ];
+
+        $this->assertSame($expected, $map);
     }
 }

@@ -321,6 +321,52 @@ class StaleWhileRevalidateTest extends TestCase
         );
     }
 
+    public function test_swr_with_empty_cache_falls_back_to_callback(): void
+    {
+        Queue::fake();
+
+        $models = collect([
+            $this->createDummyModel(1, 'active'),
+        ]);
+
+        $redis = $this->service->getRedis();
+        $redis->del('{dummy_models}:hash', '{dummy_models}:meta');
+        $redis->del('{dummy_models}:lock:swr');
+
+        $result = $this->service->rememberAll(
+            callback: fn () => $models,
+            where: ['status' => 'active'],
+            swr: true,
+        );
+
+        $this->assertCount(1, $result);
+        $this->assertEquals(1, $result->first()->id);
+        Queue::assertNotPushed(RevalidateCacheJob::class);
+    }
+
+    public function test_swr_with_empty_hash_but_existing_meta_serves_fresh_callback(): void
+    {
+        Queue::fake();
+
+        $models = collect([
+            $this->createDummyModel(1, 'active'),
+        ]);
+
+        $redis = $this->service->getRedis();
+        $redis->del('{dummy_models}:hash');
+        $redis->hset('{dummy_models}:meta', 'cached_at', (string) (time() - 80));
+        $redis->del('{dummy_models}:lock:swr');
+
+        $result = $this->service->rememberAll(
+            callback: fn () => $models,
+            where: ['status' => 'active'],
+            swr: true,
+        );
+
+        $this->assertCount(1, $result);
+        Queue::assertNotPushed(RevalidateCacheJob::class);
+    }
+
     public function test_swr_prevents_duplicate_dispatches_using_lock(): void
     {
         Queue::fake();
