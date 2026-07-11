@@ -5,6 +5,33 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [v2.12.0] — 2026-07-11
+
+### Performance & Scalability
+
+#### Added
+
+- **`max_pipeline_size` config option** — controls internal pipeline chunking threshold (default: 5000). Models are automatically split into multiple pipeline flushes when `storeMany()` receives a batch larger than this threshold, preventing OOM for 50K+ record stores
+- **Benchmark suite (3 new scripts):**
+  - `scalability_benchmark.php` — write/read/pluck/sorted throughput from 100 to 100K records
+  - `batch_size_benchmark.php` — compares batch sizes 100–10K with Lua vs Pipeline paths over 50K records
+  - `concurrency_benchmark.php` — read-heavy, write-heavy, and balanced workloads with stampede/SWR overhead
+
+#### Changed
+
+- **Internal pipeline chunking** — `storeMany()` now auto-chunks model batches exceeding `max_pipeline_size` (default 5,000) into sequential pipeline flushes. Results in ~50-70% memory reduction for large batch stores with no throughput regression
+- **Configuration version** — bumped to `2.12.0`
+
+#### Documentation
+
+- **`docs/performance.md`** — added Complexity Analysis section with Big-O for all operations (Lua script, pipeline store, index query, sorted range, PHP deserialization), large-scale benchmark tables at 100/1K/10K/50K, batch size comparison data, internal pipeline chunking optimization entry, and updated scaling guidelines with pipeline chunking reference
+
+#### Tests
+
+- All 352 tests pass (2304 assertions)
+- PHPStan level 8: 0 errors
+- Pint: passed
+
 ## [v2.11.0] — 2026-07-11
 
 ### Test Coverage & CI Hardening

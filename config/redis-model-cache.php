@@ -12,7 +12,7 @@ return [
     | the published configuration file is out of date.
     |
     */
-    'config_version' => '2.10.0',
+    'config_version' => '2.12.0',
 
     /*
     |--------------------------------------------------------------------------
@@ -65,6 +65,21 @@ return [
     | round trips but may block Redis briefly. Default: 1000.
     */
     'scan_count' => env('REDIS_MODEL_CACHE_SCAN_COUNT', 1000),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Max Pipeline Size
+    |--------------------------------------------------------------------------
+    |
+    | Maximum number of commands to queue in a single Redis pipeline for
+    | batch operations like storeMany(). Larger pipelines improve throughput
+    | but consume more PHP memory. When a batch exceeds this limit, it is
+    | automatically split into multiple pipeline flushes.
+    |
+    | Benchmark results show 5000 as the sweet spot for throughput vs memory.
+    | Reduce to 2000 if memory-constrained; increase to 10000 for throughput.
+    */
+    'max_pipeline_size' => env('REDIS_MODEL_CACHE_MAX_PIPELINE', 5000),
 
     /*
     |--------------------------------------------------------------------------

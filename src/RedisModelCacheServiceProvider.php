@@ -347,9 +347,9 @@ class RedisModelCacheServiceProvider extends ServiceProvider
     protected function validateConfigVersion(): void
     {
         $configVersion = config('redis-model-cache.config_version');
-        if ($configVersion !== '2.10.0') {
+        if ($configVersion !== '2.12.0') {
             Log::warning(
-                'Published configuration version mismatch. Expected \'2.10.0\', got '
+                'Published configuration version mismatch. Expected \'2.12.0\', got '
                 .var_export($configVersion, true)
                 .'. Please re-publish your configuration file using: '
                 .'php artisan vendor:publish --tag=redis-model-cache-config --force'

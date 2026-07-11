@@ -732,19 +732,32 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
             $this->primeAtomicStoreScript();
         }
 
-        // Start pipeline
-        $pipeline = $this->redis->pipeline();
+        $maxPipelineSize = max(1, $this->configuration->maxPipelineSize);
 
-        foreach ($models as $model) {
-            $key = (string) $model->getKey();
-            $this->storeModel($model, $pipeline, $staleKeysMap[$key] ?? [], $staleZremMap[$key] ?? [], $revalidationTime);
+        // Chunk models into pipeline batches to prevent excessive memory usage
+        // for very large collections (50K+ models).
+        $modelChunks = $modelKeys;
+        if (count($modelKeys) > $maxPipelineSize) {
+            $modelChunks = array_chunk($modelKeys, $maxPipelineSize);
+        } else {
+            $modelChunks = [$modelKeys];
         }
 
         $startTime = microtime(true);
 
         try {
-            // Execute pipeline and exit pipeline mode
-            $this->executePipeline($pipeline);
+            foreach ($modelChunks as $chunkKeys) {
+                $pipeline = $this->redis->pipeline();
+
+                foreach ($chunkKeys as $key) {
+                    $model = $keyedModels[$key];
+                    $staleKeys = $staleKeysMap[$key] ?? [];
+                    $staleZremKeys = $staleZremMap[$key] ?? [];
+                    $this->storeModel($model, $pipeline, $staleKeys, $staleZremKeys, $revalidationTime);
+                }
+
+                $this->executePipeline($pipeline);
+            }
 
             $this->applyTTL($hashKey);
 
