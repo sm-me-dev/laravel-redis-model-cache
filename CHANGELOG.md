@@ -5,6 +5,70 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [v2.11.0] — 2026-07-11
+
+### Test Coverage & CI Hardening
+
+#### Added
+
+- **Concurrent write & race condition tests** (`CriticalRaceTest`) — 6 tests covering store-update, delete-then-recreate, empty collection, stale index filtering, index migration on attribute change, and partial hash returns
+- **Octane lifecycle tests** (`OctaneLifecycleTest`) — 6 tests covering Observability reset (clears all counters), reset idempotency, clean new instance state, shared service lifecycle, and full subscriber mapping verification
+- **SWR edge case coverage** (`StaleWhileRevalidateTest`) — 3 new tests for empty cache fallback, empty hash with existing metadata, and duplicate dispatch lock prevention
+- **ObservabilitySubscriber handler tests** — 4 new tests covering `CacheWrite`, `ModelCacheInvalidated`, `RedisConnectionFailed`, and `CacheOperationFailed` event handlers with full subscriber mapping assertion
+
+#### Changed
+
+- **CI pipeline** — added `composer audit` step (advisory check with `continue-on-error`), switched from `coverage: none` to `coverage: pcov`, added PHPUnit coverage run for PHP 8.4 / Laravel 13 / stable matrix with Codecov upload
+- **phpunit.xml** — added JUnit logging output
+
+#### Tests
+
+- All 352 tests pass (2304 assertions)
+- PHPStan level 8: 0 errors
+- Pint: passed
+
+## [v2.10.1] — 2026-07-11
+
+### Configuration Validation Hardening
+
+#### Added
+
+- `validateConfiguration()` split into focused sub-methods for `hydrate_batch_size`, `compression.algorithm`, `compression.level`, `compression.min_size`, `multi_tenant.strategy`, `multi_tenant.key`, `invalidation.strategy`, `invalidation.queue`, and `redis_failure.strategy`
+- 11 new configuration validation tests in `ServiceProviderTest`
+
+#### Fixed
+
+- Config version log message now reads the actual `config_version` from config instead of hard-coded `'2.5'`
+
+#### Tests
+
+- All 334 tests pass
+- PHPStan level 8: 0 errors
+- Pint: passed
+
+## [v2.10.0] — 2026-07-11
+
+### Redis Failure Handling & Observability Enhancements
+
+#### Added
+
+- **CacheWrite event** — dispatched on store/storeMany/delete operations (behind `observability.events` flag)
+- **ModelCacheInvalidated event** — dispatched on model cache invalidation
+- **RedisConnectionFailed event** — dispatched when a Redis command fails
+- **CacheOperationFailed event** — dispatched when a cache operation falls through to its fallback strategy
+- **Observability counters** — `recordWrite()`, `recordInvalidation()`, `recordFailure()` with full normalization support
+- **Observability snapshot** — includes `writes`, `invalidations`, `failures` in snapshot output
+- **FailureHandlerTest** — unit tests covering exception, log, and fallback strategies
+- **FailureHandlerIntegrationTest** — end-to-end Redis failure scenarios with live Redis
+- **FailureModel** — test fixture for failure strategy tests
+- **Redis failure documentation** — updated README with redis_failure section and example config
+
+#### Tests
+
+- All 323 tests pass
+- PHPStan level 8: 0 errors
+- Pint: passed
+
 ## [v2.9.0] — 2026-07-11
 
 ### Laravel 13 & PHP 8.4 Support
