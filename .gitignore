@@ -13,6 +13,7 @@ composer.lock
 # Static analysis
 .phpstan.cache/
 .php-cs-fixer.cache
+phpunit-junit.xml
 
 # Coverage
 coverage/
