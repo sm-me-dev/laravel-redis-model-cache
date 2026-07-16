@@ -222,6 +222,10 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
      */
     protected function hydrateModelFromPayload(array $payload): Model
     {
+        if (! isset($payload['attributes'])) {
+            return (new $this->model_class)->newFromBuilder($payload);
+        }
+
         $model = (new $this->model_class)->newFromBuilder($payload['attributes']);
 
         if (! empty($payload['relations'])) {
@@ -1564,8 +1568,8 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
                 continue;
             }
 
-            if (isset($relationData[0]['class'])) {
-                // Collection relation (HasMany, MorphMany, BelongsToMany)
+            if (array_is_list($relationData)) {
+                // Collection relation (HasMany, MorphMany, BelongsToMany) — including empty collections
                 $collection = collect($relationData)->map(function (mixed $item): Model {
                     /** @var array{class: string, attributes: array<string, mixed>, relations: array<string, mixed>} $item */
                     return $this->hydrateRelatedModel($item);
@@ -1585,6 +1589,10 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
      */
     protected function hydrateRelatedModel(array $data): Model
     {
+        if (! isset($data['class'])) {
+            return $this->hydrateModelFromPayload($data);
+        }
+
         /** @var class-string<Model> $class */
         $class = $data['class'];
         $model = new $class;

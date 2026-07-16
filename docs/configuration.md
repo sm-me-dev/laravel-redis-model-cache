@@ -6,7 +6,7 @@ The package provides a typed `Configuration` DTO (`Sm_mE\RedisModelCache\Support
 
 | Key | Default | Description |
 |-----|---------|-------------|
-    | `config_version` | `'2.9.0'` | Configuration file schema version (triggers warning on mismatch) |
+    | `config_version` | `'2.12.0'` | Configuration file schema version (triggers warning on mismatch) |
 | `connection` | `'cache'` | Redis connection from `config/database.php` |
 | `default_ttl` | `86400` | Default cache TTL in seconds (null = no expiry) |
 | `hydrate_batch_size` | `5000` | Models per pipeline batch for hydrate/pluck |

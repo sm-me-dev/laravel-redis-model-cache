@@ -156,6 +156,33 @@ class RedisModelServiceTest extends TestCase
         $this->assertEquals('Child', $result->first()->getRelation('children')->first()->name);
     }
 
+    public function test_empty_has_many_relation_hydrates_as_empty_collection(): void
+    {
+        $model = new TestModel(['id' => 1, 'role_id' => 1, 'status' => 'active']);
+        $model->setRelation('children', new Collection);
+
+        $payload = [
+            'attributes' => $model->getAttributes(),
+            'relations' => [
+                'children' => [],
+            ],
+        ];
+
+        $serialized = json_encode($payload, JSON_THROW_ON_ERROR);
+
+        $this->redis->shouldReceive('smembers')->with('{test_models}:index:role_id:1')->andReturn(['1']);
+        $this->redis->shouldReceive('hmget')
+            ->with('{test_models}:hash', Mockery::type('array'))
+            ->andReturn(['1' => $serialized]);
+
+        $result = $this->service->where(['role_id' => 1]);
+
+        $this->assertCount(1, $result);
+        $this->assertInstanceOf(TestModel::class, $result->first());
+        $this->assertCount(0, $result->first()->getRelation('children'));
+        $this->assertInstanceOf(\Illuminate\Support\Collection::class, $result->first()->getRelation('children'));
+    }
+
     public function test_collect_keys_by_pattern_returns_unique_keys(): void
     {
         $this->redis->shouldReceive('scan')

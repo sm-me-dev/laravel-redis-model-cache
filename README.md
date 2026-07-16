@@ -12,18 +12,18 @@
 
 ---
 
-**v2.9.0** | PHP 8.3+ or 8.4+ | Laravel 11, 12, or 13
+**v2.12.1** | PHP 8.3+ or 8.4+ | Laravel 11, 12, or 13
 
 ---
 
-## v2.9.0 Release Checklist
+## v2.12.1 Release Checklist
 
 All changes verified:
 
-✓ **Version alignment:** README v2.9.0 → CHANGELOG v2.9.0 → config version 2.9.0
+✓ **Version alignment:** README v2.12.1 → CHANGELOG v2.12.1 → config version 2.12.0
 ✓ **Documentation consistency:** Config version aligned across config/redis-model-cache.php and docs/configuration.md
 ✓ **Deprecation documentation:** Added `selective()` → `pluck()` mapping in README and all relevant docs
-✓ **Test suite:** All 315 tests pass (263 unit/feature + 52 integration)
+✓ **Test suite:** All 352 tests pass (2304 assertions)
 ✓ **Code quality:** PHPStan 8:0 errors, Pint passed
 ✓ **Backward compatibility:** Legacy commands and aliases preserved
 

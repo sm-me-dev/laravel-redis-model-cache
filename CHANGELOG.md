@@ -5,6 +5,21 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [v2.12.1] — 2026-07-16
+
+### Fixed
+
+- **Empty collection relation crash** — `restoreRelations()` used `isset($relationData[0]['class'])` to detect collection relations, which failed for empty `HasMany`/`BelongsToMany` collections. The empty array fell through to the single-model branch, causing `Undefined array key "class"` in `hydrateRelatedModel()`. Fixed by using `array_is_list()` instead, which correctly identifies empty arrays as collections.
+
+### Changed
+
+- **Internal hardening** — Added `isset($data['class'])` guard in `hydrateRelatedModel()` and `isset($payload['attributes'])` guard in `hydrateModelFromPayload()` as defense-in-depth.
+- **`actions/checkout`** bumped from `v4` to `v7` across all CI workflows.
+
+### Tests
+
+- Added `test_empty_has_many_relation_hydrates_as_empty_collection` covering the exact empty-collection hydration scenario.
+
 ## [v2.12.0] — 2026-07-11
 
 ### Performance & Scalability
