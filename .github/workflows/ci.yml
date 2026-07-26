@@ -77,7 +77,7 @@ jobs:
             --no-interaction --no-progress --no-update
 
       - name: Cache Composer dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.cache/composer
           key: php-${{ matrix.php }}-laravel-${{ matrix.laravel }}-${{ matrix.prefer }}-${{ hashFiles('composer.json') }}
