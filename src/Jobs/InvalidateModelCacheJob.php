@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace Sm_mE\RedisModelCache\Jobs;
+namespace SmMe\RedisModelCache\Jobs;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Sm_mE\RedisModelCache\Invalidation\InvalidationContext;
-use Sm_mE\RedisModelCache\Invalidation\Strategies\SyncStrategy;
-use Sm_mE\RedisModelCache\RedisModelService;
-use Sm_mE\RedisModelCache\Support\Configuration;
+use SmMe\RedisModelCache\Invalidation\InvalidationContext;
+use SmMe\RedisModelCache\Invalidation\Strategies\SyncStrategy;
+use SmMe\RedisModelCache\RedisModelService;
+use SmMe\RedisModelCache\Support\Configuration;
 
 class InvalidateModelCacheJob implements ShouldQueue
 {

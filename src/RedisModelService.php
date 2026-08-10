@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sm_mE\RedisModelCache;
+namespace SmMe\RedisModelCache;
 
 use BadMethodCallException;
 use Illuminate\Contracts\Database\Query\Expression;
@@ -10,22 +10,22 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use InvalidArgumentException;
 use RuntimeException;
-use Sm_mE\RedisModelCache\Contracts\ModelCacheService;
-use Sm_mE\RedisModelCache\Contracts\ModelMatchStrategy;
-use Sm_mE\RedisModelCache\Contracts\RedisConnectionResolver;
-use Sm_mE\RedisModelCache\Contracts\TenantResolverInterface;
-use Sm_mE\RedisModelCache\Events\CacheHit;
-use Sm_mE\RedisModelCache\Events\CacheMiss;
-use Sm_mE\RedisModelCache\Events\CacheWrite;
-use Sm_mE\RedisModelCache\Events\QueryExecuted;
-use Sm_mE\RedisModelCache\Jobs\RevalidateCacheJob;
-use Sm_mE\RedisModelCache\Support\Configuration;
-use Sm_mE\RedisModelCache\Support\DefaultConnectionResolver;
-use Sm_mE\RedisModelCache\Support\ExplainResult;
-use Sm_mE\RedisModelCache\Support\IndexResolver;
-use Sm_mE\RedisModelCache\Support\QueryPlanner;
-use Sm_mE\RedisModelCache\Support\RedisKeyBuilder;
-use Sm_mE\RedisModelCache\Support\StampedeProtection;
+use SmMe\RedisModelCache\Contracts\ModelCacheService;
+use SmMe\RedisModelCache\Contracts\ModelMatchStrategy;
+use SmMe\RedisModelCache\Contracts\RedisConnectionResolver;
+use SmMe\RedisModelCache\Contracts\TenantResolverInterface;
+use SmMe\RedisModelCache\Events\CacheHit;
+use SmMe\RedisModelCache\Events\CacheMiss;
+use SmMe\RedisModelCache\Events\CacheWrite;
+use SmMe\RedisModelCache\Events\QueryExecuted;
+use SmMe\RedisModelCache\Jobs\RevalidateCacheJob;
+use SmMe\RedisModelCache\Support\Configuration;
+use SmMe\RedisModelCache\Support\DefaultConnectionResolver;
+use SmMe\RedisModelCache\Support\ExplainResult;
+use SmMe\RedisModelCache\Support\IndexResolver;
+use SmMe\RedisModelCache\Support\QueryPlanner;
+use SmMe\RedisModelCache\Support\RedisKeyBuilder;
+use SmMe\RedisModelCache\Support\StampedeProtection;
 
 /** @implements ModelCacheService<int, Model> */
 class RedisModelService extends RedisBaseService implements ModelCacheService
@@ -662,8 +662,8 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
     }
 
     /**
-     * @deprecated 3.1.0 all() is permanently disabled for memory safety.
-     *             Use where() with indexed fields, rememberIndex(), or customWhere() instead.
+     * @internal Intentionally throws — full hash scans are prohibited for memory safety.
+     *           This method is not part of the public contract.
      *
      * @param  array<string>|null  $only
      * @return Collection<int, Model>

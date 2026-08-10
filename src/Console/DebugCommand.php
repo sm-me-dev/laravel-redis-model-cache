@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Sm_mE\RedisModelCache\Console;
+namespace SmMe\RedisModelCache\Console;
 
 use Illuminate\Console\Command;
-use Sm_mE\RedisModelCache\Contracts\RedisConnectionResolver;
-use Sm_mE\RedisModelCache\Support\CacheManager;
-use Sm_mE\RedisModelCache\Support\Configuration;
+use SmMe\RedisModelCache\Contracts\RedisConnectionResolver;
+use SmMe\RedisModelCache\Support\CacheManager;
+use SmMe\RedisModelCache\Support\Configuration;
 
 class DebugCommand extends Command
 {

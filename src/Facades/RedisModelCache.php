@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Sm_mE\RedisModelCache\Facades;
+namespace SmMe\RedisModelCache\Facades;
 
 use Illuminate\Support\Facades\Facade;
-use Sm_mE\RedisModelCache\Support\CacheManager;
-use Sm_mE\RedisModelCache\Support\CacheMetrics;
-use Sm_mE\RedisModelCache\Support\ExplainResult;
+use SmMe\RedisModelCache\Support\CacheManager;
+use SmMe\RedisModelCache\Support\CacheMetrics;
+use SmMe\RedisModelCache\Support\ExplainResult;
 
 /**
  * @method static CacheMetrics metrics()

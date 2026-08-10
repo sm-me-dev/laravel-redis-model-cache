@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace Sm_mE\RedisModelCache\Tests\Unit;
+namespace SmMe\RedisModelCache\Tests\Unit;
 
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 use Mockery;
 use Mockery\MockInterface;
-use Sm_mE\RedisModelCache\Contracts\RedisConnectionResolver;
-use Sm_mE\RedisModelCache\Events\CacheOperationFailed;
-use Sm_mE\RedisModelCache\Events\RedisConnectionFailed;
-use Sm_mE\RedisModelCache\RedisBaseService;
-use Sm_mE\RedisModelCache\Tests\TestCase;
+use SmMe\RedisModelCache\Contracts\RedisConnectionResolver;
+use SmMe\RedisModelCache\Events\CacheOperationFailed;
+use SmMe\RedisModelCache\Events\RedisConnectionFailed;
+use SmMe\RedisModelCache\RedisBaseService;
+use SmMe\RedisModelCache\Tests\TestCase;
 
 class RedisFailureStrategyTest extends TestCase
 {

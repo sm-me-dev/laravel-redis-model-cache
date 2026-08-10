@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Sm_mE\RedisModelCache\Tests\Unit\Events;
+namespace SmMe\RedisModelCache\Tests\Unit\Events;
 
-use Sm_mE\RedisModelCache\Events\CacheHit;
-use Sm_mE\RedisModelCache\Events\CacheMiss;
-use Sm_mE\RedisModelCache\Events\QueryExecuted;
-use Sm_mE\RedisModelCache\Tests\TestCase;
+use SmMe\RedisModelCache\Events\CacheHit;
+use SmMe\RedisModelCache\Events\CacheMiss;
+use SmMe\RedisModelCache\Events\QueryExecuted;
+use SmMe\RedisModelCache\Tests\TestCase;
 
 class EventsTest extends TestCase
 {

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Sm_mE\RedisModelCache\Tests\Unit;
+namespace SmMe\RedisModelCache\Tests\Unit;
 
 use Illuminate\Support\Facades\Redis;
-use Sm_mE\RedisModelCache\Tests\TestCase;
+use SmMe\RedisModelCache\Tests\TestCase;
 
 class BenchmarkSuiteTest extends TestCase
 {

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Sm_mE\RedisModelCache\Tests\Integration;
+namespace SmMe\RedisModelCache\Tests\Integration;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Sm_mE\RedisModelCache\Tests\TestCase as BaseTestCase;
+use SmMe\RedisModelCache\Tests\TestCase as BaseTestCase;
 
 abstract class IntegrationTestCase extends BaseTestCase
 {

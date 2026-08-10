@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace Sm_mE\RedisModelCache\Tests\Unit;
+namespace SmMe\RedisModelCache\Tests\Unit;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Mockery;
 use Mockery\MockInterface;
-use Sm_mE\RedisModelCache\Contracts\RedisConnectionResolver;
-use Sm_mE\RedisModelCache\Contracts\TenantResolverInterface;
-use Sm_mE\RedisModelCache\RedisModelService;
-use Sm_mE\RedisModelCache\Support\TenantResolvers\RequestTenantResolver;
-use Sm_mE\RedisModelCache\Tests\TestCase;
+use SmMe\RedisModelCache\Contracts\RedisConnectionResolver;
+use SmMe\RedisModelCache\Contracts\TenantResolverInterface;
+use SmMe\RedisModelCache\RedisModelService;
+use SmMe\RedisModelCache\Support\TenantResolvers\RequestTenantResolver;
+use SmMe\RedisModelCache\Tests\TestCase;
 
 class MultiTenantTest extends TestCase
 {
@@ -209,7 +209,7 @@ class MultiTenantTest extends TestCase
 
     protected function makeService(): RedisModelService
     {
-        $matchStrategy = Mockery::mock('Sm_mE\RedisModelCache\Contracts\ModelMatchStrategy');
+        $matchStrategy = Mockery::mock('SmMe\RedisModelCache\Contracts\ModelMatchStrategy');
         $matchStrategy->shouldReceive('normalize')->andReturnUsing(fn ($v) => $v);
         $matchStrategy->shouldReceive('matches')->andReturnUsing(fn ($a, $b) => $a === $b);
 

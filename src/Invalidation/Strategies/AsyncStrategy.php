@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Sm_mE\RedisModelCache\Invalidation\Strategies;
+namespace SmMe\RedisModelCache\Invalidation\Strategies;
 
-use Sm_mE\RedisModelCache\Invalidation\Contracts\InvalidationStrategy;
-use Sm_mE\RedisModelCache\Invalidation\InvalidationContext;
-use Sm_mE\RedisModelCache\Jobs\InvalidateModelCacheJob;
+use SmMe\RedisModelCache\Invalidation\Contracts\InvalidationStrategy;
+use SmMe\RedisModelCache\Invalidation\InvalidationContext;
+use SmMe\RedisModelCache\Jobs\InvalidateModelCacheJob;
 
 final class AsyncStrategy implements InvalidationStrategy
 {

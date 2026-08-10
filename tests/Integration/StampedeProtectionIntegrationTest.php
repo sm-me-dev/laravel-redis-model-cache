@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Sm_mE\RedisModelCache\Tests\Integration;
+namespace SmMe\RedisModelCache\Tests\Integration;
 
-use Sm_mE\RedisModelCache\RedisModelService;
-use Sm_mE\RedisModelCache\Support\StampedeProtection;
-use Sm_mE\RedisModelCache\Tests\Fixtures\DummyModel;
+use SmMe\RedisModelCache\RedisModelService;
+use SmMe\RedisModelCache\Support\StampedeProtection;
+use SmMe\RedisModelCache\Tests\Fixtures\DummyModel;
 
 class StampedeProtectionIntegrationTest extends IntegrationTestCase
 {
@@ -63,18 +63,20 @@ class StampedeProtectionIntegrationTest extends IntegrationTestCase
     {
         $lockKey = StampedeProtection::lockKey($this->hashKey);
 
-        $acquired = StampedeProtection::acquireLock($this->service->getRedis(), $lockKey, 10);
-        $this->assertTrue($acquired);
+        $lockValue = StampedeProtection::acquireLockWithValue($this->service->getRedis(), $lockKey, 10);
+        $this->assertNotNull($lockValue);
 
-        $secondAttempt = StampedeProtection::acquireLock($this->service->getRedis(), $lockKey, 10);
-        $this->assertFalse($secondAttempt);
+        $secondAttempt = StampedeProtection::acquireLockWithValue($this->service->getRedis(), $lockKey, 10);
+        $this->assertNull($secondAttempt);
 
-        StampedeProtection::releaseLock($this->service->getRedis(), $lockKey);
+        $released = StampedeProtection::releaseLockCas($this->service->getRedis(), $lockKey, $lockValue);
+        $this->assertTrue($released);
 
-        $reacquired = StampedeProtection::acquireLock($this->service->getRedis(), $lockKey, 10);
-        $this->assertTrue($reacquired);
+        $lockValue2 = StampedeProtection::acquireLockWithValue($this->service->getRedis(), $lockKey, 10);
+        $this->assertNotNull($lockValue2);
 
-        StampedeProtection::releaseLock($this->service->getRedis(), $lockKey);
+        $released2 = StampedeProtection::releaseLockCas($this->service->getRedis(), $lockKey, $lockValue2);
+        $this->assertTrue($released2);
     }
 
     public function test_lock_auto_expires_after_timeout(): void
@@ -107,8 +109,7 @@ class StampedeProtectionIntegrationTest extends IntegrationTestCase
         $result = StampedeProtection::waitForLock($this->service->getRedis(), $lockKey, 1, 100);
 
         $this->assertFalse($result);
-
-        StampedeProtection::releaseLock($this->service->getRedis(), $lockKey);
+        // Lock will expire via TTL (5 seconds)
     }
 
     public function test_stampede_lock_is_set_and_released_by_remember_all(): void
@@ -149,7 +150,8 @@ class StampedeProtectionIntegrationTest extends IntegrationTestCase
 
         $lockKey = StampedeProtection::lockKey($this->hashKey);
 
-        StampedeProtection::acquireLock($this->service->getRedis(), $lockKey, 10);
+        $lockValue = StampedeProtection::acquireLockWithValue($this->service->getRedis(), $lockKey, 10);
+        $this->assertNotNull($lockValue);
 
         $callCount = 0;
         $result = $this->service->rememberAll(
@@ -165,7 +167,8 @@ class StampedeProtectionIntegrationTest extends IntegrationTestCase
         $this->assertCount(1, $result);
         $this->assertSame(0, $callCount);
 
-        StampedeProtection::releaseLock($this->service->getRedis(), $lockKey);
+        $released = StampedeProtection::releaseLockCas($this->service->getRedis(), $lockKey, $lockValue);
+        $this->assertTrue($released);
     }
 
     public function test_lock_key_generation(): void

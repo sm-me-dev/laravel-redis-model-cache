@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sm_mE\RedisModelCache\Support;
+namespace SmMe\RedisModelCache\Support;
 
 class Observability
 {

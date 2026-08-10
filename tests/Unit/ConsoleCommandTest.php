@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Sm_mE\RedisModelCache\Tests\Unit;
+namespace SmMe\RedisModelCache\Tests\Unit;
 
-use Sm_mE\RedisModelCache\Console\DebugCommand;
-use Sm_mE\RedisModelCache\Console\MonitorCacheCommand;
-use Sm_mE\RedisModelCache\Console\WarmupCommand;
-use Sm_mE\RedisModelCache\Tests\TestCase;
+use SmMe\RedisModelCache\Console\DebugCommand;
+use SmMe\RedisModelCache\Console\MonitorCacheCommand;
+use SmMe\RedisModelCache\Console\WarmupCommand;
+use SmMe\RedisModelCache\Tests\TestCase;
 
 class ConsoleCommandTest extends TestCase
 {

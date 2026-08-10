@@ -1,5 +1,5 @@
 {
-    "name": "sm-me/laravel-redis-model-cache",
+    "name": "smme/laravel-redis-model-cache",
     "description": "Optimized Redis model and hash-set caching service for Laravel Eloquent.",
     "license": "MIT",
     "authors": [
@@ -32,15 +32,12 @@
     },
     "autoload": {
         "psr-4": {
-            "Sm_mE\\RedisModelCache\\": "src/"
-        },
-        "files": [
-            "src/Support/helpers.php"
-        ]
+            "SmMe\\RedisModelCache\\": "src/"
+        }
     },
     "autoload-dev": {
         "psr-4": {
-            "Sm_mE\\RedisModelCache\\Tests\\": "tests/",
+            "SmMe\\RedisModelCache\\Tests\\": "tests/",
             "Workbench\\App\\": "workbench/app/",
             "Workbench\\Database\\Factories\\": "workbench/database/factories/",
             "Workbench\\Database\\Seeders\\": "workbench/database/seeders/"
@@ -49,7 +46,7 @@
     "extra": {
         "laravel": {
             "providers": [
-                "Sm_mE\\RedisModelCache\\RedisModelCacheServiceProvider"
+                "SmMe\\RedisModelCache\\RedisModelCacheServiceProvider"
             ]
         }
     },

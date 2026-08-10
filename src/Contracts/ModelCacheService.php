@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Sm_mE\RedisModelCache\Contracts;
+namespace SmMe\RedisModelCache\Contracts;
 
 use Illuminate\Contracts\Database\Query\Expression;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
-use Sm_mE\RedisModelCache\Support\ExplainResult;
+use SmMe\RedisModelCache\Support\ExplainResult;
 
 /**
  * @template TKey of array-key
@@ -15,17 +15,6 @@ use Sm_mE\RedisModelCache\Support\ExplainResult;
  */
 interface ModelCacheService
 {
-    /**
-     * @deprecated 3.1.0 all() is permanently disabled for memory safety.
-     *             Use where() with indexed fields, rememberIndex(), or customWhere() instead.
-     *
-     * @param  array<string>|null  $only
-     * @return Collection<int, Model>
-     *
-     * @throws \BadMethodCallException Full hash scans are prohibited for memory safety.
-     */
-    public function all(bool $hydrate = true, ?array $only = null): Collection;
-
     /**
      * @param  array<string, mixed>  $where
      * @param  array<string>|null  $only

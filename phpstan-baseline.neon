@@ -331,7 +331,7 @@ parameters:
 			path: src/Console/MonitorCacheCommand.php
 
 		-
-			message: '#^Method Sm_mE\\RedisModelCache\\Console\\MonitorCacheCommand\:\:scanKeys\(\) should return array\<int, string\> but returns list\.$#'
+			message: '#^Method SmMe\\RedisModelCache\\Console\\MonitorCacheCommand\:\:scanKeys\(\) should return array\<int, string\> but returns list\.$#'
 			identifier: return.type
 			count: 1
 			path: src/Console/MonitorCacheCommand.php
@@ -403,19 +403,19 @@ parameters:
 			path: src/Jobs/InvalidateModelCacheJob.php
 
 		-
-			message: '#^Method Sm_mE\\RedisModelCache\\RedisBaseService\:\:compressLz4\(\) should return string but returns mixed\.$#'
+			message: '#^Method SmMe\\RedisModelCache\\RedisBaseService\:\:compressLz4\(\) should return string but returns mixed\.$#'
 			identifier: return.type
 			count: 1
 			path: src/RedisBaseService.php
 
 		-
-			message: '#^Method Sm_mE\\RedisModelCache\\RedisBaseService\:\:decompressLz4\(\) should return string but returns mixed\.$#'
+			message: '#^Method SmMe\\RedisModelCache\\RedisBaseService\:\:decompressLz4\(\) should return string but returns mixed\.$#'
 			identifier: return.type
 			count: 1
 			path: src/RedisBaseService.php
 
 		-
-			message: '#^Method Sm_mE\\RedisModelCache\\RedisHelperService\:\:getSet\(\) should return array\<string, mixed\> but returns array\.$#'
+			message: '#^Method SmMe\\RedisModelCache\\RedisHelperService\:\:getSet\(\) should return array\<string, mixed\> but returns array\.$#'
 			identifier: return.type
 			count: 1
 			path: src/RedisHelperService.php
@@ -445,49 +445,49 @@ parameters:
 			path: src/RedisModelService.php
 
 		-
-			message: '#^Method Sm_mE\\RedisModelCache\\RedisModelService\:\:custom\(\) should return Illuminate\\Support\\Collection\<int, Illuminate\\Database\\Eloquent\\Model\> but returns Illuminate\\Support\\Collection\<int, Illuminate\\Database\\Eloquent\\Model\>\|Illuminate\\Support\\Collection\<int, string\>\.$#'
+			message: '#^Method SmMe\\RedisModelCache\\RedisModelService\:\:custom\(\) should return Illuminate\\Support\\Collection\<int, Illuminate\\Database\\Eloquent\\Model\> but returns Illuminate\\Support\\Collection\<int, Illuminate\\Database\\Eloquent\\Model\>\|Illuminate\\Support\\Collection\<int, string\>\.$#'
 			identifier: return.type
 			count: 1
 			path: src/RedisModelService.php
 
 		-
-			message: '#^Method Sm_mE\\RedisModelCache\\RedisModelService\:\:customWhere\(\) should return Illuminate\\Support\\Collection\<int, Illuminate\\Database\\Eloquent\\Model\> but returns Illuminate\\Support\\Collection\<int, Illuminate\\Database\\Eloquent\\Model\>\|Illuminate\\Support\\Collection\<int, string\>\.$#'
+			message: '#^Method SmMe\\RedisModelCache\\RedisModelService\:\:customWhere\(\) should return Illuminate\\Support\\Collection\<int, Illuminate\\Database\\Eloquent\\Model\> but returns Illuminate\\Support\\Collection\<int, Illuminate\\Database\\Eloquent\\Model\>\|Illuminate\\Support\\Collection\<int, string\>\.$#'
 			identifier: return.type
 			count: 1
 			path: src/RedisModelService.php
 
 		-
-			message: '#^Method Sm_mE\\RedisModelCache\\RedisModelService\:\:executePipeline\(\) should return array\<int, mixed\> but returns array\.$#'
+			message: '#^Method SmMe\\RedisModelCache\\RedisModelService\:\:executePipeline\(\) should return array\<int, mixed\> but returns array\.$#'
 			identifier: return.type
 			count: 3
 			path: src/RedisModelService.php
 
 		-
-			message: '#^Method Sm_mE\\RedisModelCache\\RedisModelService\:\:extractRelations\(\) should return array\<string, array\<int, mixed\>\|null\> but returns array\<array\<mixed\>\|null\>\.$#'
+			message: '#^Method SmMe\\RedisModelCache\\RedisModelService\:\:extractRelations\(\) should return array\<string, array\<int, mixed\>\|null\> but returns array\<array\<mixed\>\|null\>\.$#'
 			identifier: return.type
 			count: 1
 			path: src/RedisModelService.php
 
 		-
-			message: '#^Method Sm_mE\\RedisModelCache\\RedisModelService\:\:findByIndex\(\) should return Illuminate\\Database\\Eloquent\\Model\|null but returns Illuminate\\Database\\Eloquent\\Model\|string\|null\.$#'
+			message: '#^Method SmMe\\RedisModelCache\\RedisModelService\:\:findByIndex\(\) should return Illuminate\\Database\\Eloquent\\Model\|null but returns Illuminate\\Database\\Eloquent\\Model\|string\|null\.$#'
 			identifier: return.type
 			count: 1
 			path: src/RedisModelService.php
 
 		-
-			message: '#^Method Sm_mE\\RedisModelCache\\RedisModelService\:\:hydrateIds\(\) should return Illuminate\\Support\\Collection\<int, Illuminate\\Database\\Eloquent\\Model\>\|Illuminate\\Support\\Collection\<int, string\> but returns Illuminate\\Support\\Collection\<\(int\|string\), mixed\>\.$#'
+			message: '#^Method SmMe\\RedisModelCache\\RedisModelService\:\:hydrateIds\(\) should return Illuminate\\Support\\Collection\<int, Illuminate\\Database\\Eloquent\\Model\>\|Illuminate\\Support\\Collection\<int, string\> but returns Illuminate\\Support\\Collection\<\(int\|string\), mixed\>\.$#'
 			identifier: return.type
 			count: 1
 			path: src/RedisModelService.php
 
 		-
-			message: '#^Method Sm_mE\\RedisModelCache\\RedisModelService\:\:rememberIndex\(\) should return Illuminate\\Support\\Collection\<int, Illuminate\\Database\\Eloquent\\Model\> but returns Illuminate\\Support\\Collection\<int, Illuminate\\Database\\Eloquent\\Model\>\|Illuminate\\Support\\Collection\<int, string\>\.$#'
+			message: '#^Method SmMe\\RedisModelCache\\RedisModelService\:\:rememberIndex\(\) should return Illuminate\\Support\\Collection\<int, Illuminate\\Database\\Eloquent\\Model\> but returns Illuminate\\Support\\Collection\<int, Illuminate\\Database\\Eloquent\\Model\>\|Illuminate\\Support\\Collection\<int, string\>\.$#'
 			identifier: return.type
 			count: 1
 			path: src/RedisModelService.php
 
 		-
-			message: '#^Method Sm_mE\\RedisModelCache\\RedisModelService\:\:sorted\(\) should return Illuminate\\Support\\Collection\<int, Illuminate\\Database\\Eloquent\\Model\> but returns Illuminate\\Support\\Collection\<int, Illuminate\\Database\\Eloquent\\Model\>\|Illuminate\\Support\\Collection\<int, string\>\.$#'
+			message: '#^Method SmMe\\RedisModelCache\\RedisModelService\:\:sorted\(\) should return Illuminate\\Support\\Collection\<int, Illuminate\\Database\\Eloquent\\Model\> but returns Illuminate\\Support\\Collection\<int, Illuminate\\Database\\Eloquent\\Model\>\|Illuminate\\Support\\Collection\<int, string\>\.$#'
 			identifier: return.type
 			count: 1
 			path: src/RedisModelService.php
@@ -511,31 +511,31 @@ parameters:
 			path: src/RedisModelService.php
 
 		-
-			message: '#^Parameter \#1 \$ids of method Sm_mE\\RedisModelCache\\RedisModelService\:\:hydrateIds\(\) expects array\<int, string\>, list given\.$#'
+			message: '#^Parameter \#1 \$ids of method SmMe\\RedisModelCache\\RedisModelService\:\:hydrateIds\(\) expects array\<int, string\>, list given\.$#'
 			identifier: argument.type
 			count: 1
 			path: src/RedisModelService.php
 
 		-
-			message: '#^Parameter \#1 \$models of method Sm_mE\\RedisModelCache\\RedisModelService\:\:storeMany\(\) expects Illuminate\\Support\\Collection\<int, Illuminate\\Database\\Eloquent\\Model\>, Illuminate\\Support\\Collection\<\(int\|string\), mixed\> given\.$#'
+			message: '#^Parameter \#1 \$models of method SmMe\\RedisModelCache\\RedisModelService\:\:storeMany\(\) expects Illuminate\\Support\\Collection\<int, Illuminate\\Database\\Eloquent\\Model\>, Illuminate\\Support\\Collection\<\(int\|string\), mixed\> given\.$#'
 			identifier: argument.type
 			count: 1
 			path: src/RedisModelService.php
 
 		-
-			message: '#^Parameter \#2 \$oldData of method Sm_mE\\RedisModelCache\\RedisModelService\:\:computeStaleIndexKeysFromData\(\) expects array\<string, mixed\>, array\<mixed\> given\.$#'
+			message: '#^Parameter \#2 \$oldData of method SmMe\\RedisModelCache\\RedisModelService\:\:computeStaleIndexKeysFromData\(\) expects array\<string, mixed\>, array\<mixed\> given\.$#'
 			identifier: argument.type
 			count: 2
 			path: src/RedisModelService.php
 
 		-
-			message: '#^Parameter \#2 \$oldData of method Sm_mE\\RedisModelCache\\RedisModelService\:\:removeIndexes\(\) expects array\<string, mixed\>, array\<mixed\> given\.$#'
+			message: '#^Parameter \#2 \$oldData of method SmMe\\RedisModelCache\\RedisModelService\:\:removeIndexes\(\) expects array\<string, mixed\>, array\<mixed\> given\.$#'
 			identifier: argument.type
 			count: 1
 			path: src/RedisModelService.php
 
 		-
-			message: '#^Parameter \#2 \$relations of method Sm_mE\\RedisModelCache\\RedisModelService\:\:restoreRelations\(\) expects array\<string, array\<int, mixed\>\|null\>, array\<string, mixed\> given\.$#'
+			message: '#^Parameter \#2 \$relations of method SmMe\\RedisModelCache\\RedisModelService\:\:restoreRelations\(\) expects array\<string, array\<int, mixed\>\|null\>, array\<string, mixed\> given\.$#'
 			identifier: argument.type
 			count: 2
 			path: src/RedisModelService.php

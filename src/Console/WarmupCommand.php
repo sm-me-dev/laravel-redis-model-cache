@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Sm_mE\RedisModelCache\Console;
+namespace SmMe\RedisModelCache\Console;
 
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
-use Sm_mE\RedisModelCache\RedisModelService;
+use SmMe\RedisModelCache\RedisModelService;
 
 class WarmupCommand extends Command
 {

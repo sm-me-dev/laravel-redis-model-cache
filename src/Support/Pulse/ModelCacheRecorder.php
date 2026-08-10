@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Sm_mE\RedisModelCache\Support\Pulse;
+namespace SmMe\RedisModelCache\Support\Pulse;
 
-use Sm_mE\RedisModelCache\Events\CacheHit;
-use Sm_mE\RedisModelCache\Events\CacheMiss;
-use Sm_mE\RedisModelCache\Support\Observability;
+use SmMe\RedisModelCache\Events\CacheHit;
+use SmMe\RedisModelCache\Events\CacheMiss;
+use SmMe\RedisModelCache\Support\Observability;
 
 /**
  * Record cache metrics into the Observability collector from dispatched events.
@@ -14,7 +14,7 @@ use Sm_mE\RedisModelCache\Support\Observability;
  * Register this class as an event subscriber in your AppServiceProvider:
  *
  * <code>
- * Event::subscribe(\Sm_mE\RedisModelCache\Support\Pulse\CacheMetricsSubscriber::class);
+ * Event::subscribe(\SmMe\RedisModelCache\Support\Pulse\CacheMetricsSubscriber::class);
  * </code>
  */
 class CacheMetricsSubscriber

@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Sm_mE\RedisModelCache\Tests\Feature;
+namespace SmMe\RedisModelCache\Tests\Feature;
 
 use Illuminate\Support\Facades\Queue;
-use Sm_mE\RedisModelCache\Jobs\RevalidateCacheJob;
-use Sm_mE\RedisModelCache\RedisModelService;
-use Sm_mE\RedisModelCache\Tests\Fixtures\DummyModel;
-use Sm_mE\RedisModelCache\Tests\TestCase;
+use SmMe\RedisModelCache\Jobs\RevalidateCacheJob;
+use SmMe\RedisModelCache\RedisModelService;
+use SmMe\RedisModelCache\Tests\Fixtures\DummyModel;
+use SmMe\RedisModelCache\Tests\TestCase;
 
 class StaleWhileRevalidateIntegrationTest extends TestCase
 {

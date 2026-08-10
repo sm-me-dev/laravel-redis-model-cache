@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sm_mE\RedisModelCache\Tests\Unit;
+namespace SmMe\RedisModelCache\Tests\Unit;
 
 use BadMethodCallException;
 use Illuminate\Database\Eloquent\Collection;
@@ -10,10 +10,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Mockery;
 use Mockery\MockInterface;
-use Sm_mE\RedisModelCache\Contracts\ModelMatchStrategy;
-use Sm_mE\RedisModelCache\Contracts\RedisConnectionResolver;
-use Sm_mE\RedisModelCache\RedisModelService;
-use Sm_mE\RedisModelCache\Tests\TestCase;
+use SmMe\RedisModelCache\Contracts\ModelMatchStrategy;
+use SmMe\RedisModelCache\Contracts\RedisConnectionResolver;
+use SmMe\RedisModelCache\RedisModelService;
+use SmMe\RedisModelCache\Tests\TestCase;
 
 class RedisModelServiceTest extends TestCase
 {

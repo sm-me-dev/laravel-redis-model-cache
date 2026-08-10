@@ -14,7 +14,7 @@ declare(strict_types=1);
  */
 
 use Illuminate\Contracts\Console\Kernel;
-use Sm_mE\RedisModelCache\RedisModelCacheServiceProvider;
+use SmMe\RedisModelCache\RedisModelCacheServiceProvider;
 
 require __DIR__.'/../vendor/autoload.php';
 

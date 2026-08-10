@@ -2,25 +2,25 @@
 
 declare(strict_types=1);
 
-namespace Sm_mE\RedisModelCache;
+namespace SmMe\RedisModelCache;
 
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Octane\Events\WorkerTickStarting;
-use Sm_mE\RedisModelCache\Contracts\HashCacheService;
-use Sm_mE\RedisModelCache\Contracts\ModelCacheService;
-use Sm_mE\RedisModelCache\Contracts\ModelMatchStrategy;
-use Sm_mE\RedisModelCache\Contracts\RedisConnectionResolver;
-use Sm_mE\RedisModelCache\Contracts\TenantResolverInterface;
-use Sm_mE\RedisModelCache\Listeners\ObservabilitySubscriber;
-use Sm_mE\RedisModelCache\Support\CacheManager;
-use Sm_mE\RedisModelCache\Support\Configuration;
-use Sm_mE\RedisModelCache\Support\DefaultConnectionResolver;
-use Sm_mE\RedisModelCache\Support\DefaultModelMatchStrategy;
-use Sm_mE\RedisModelCache\Support\Observability;
-use Sm_mE\RedisModelCache\Support\RedisModelCacheState;
-use Sm_mE\RedisModelCache\Support\TenantResolvers\RequestTenantResolver;
+use SmMe\RedisModelCache\Contracts\HashCacheService;
+use SmMe\RedisModelCache\Contracts\ModelCacheService;
+use SmMe\RedisModelCache\Contracts\ModelMatchStrategy;
+use SmMe\RedisModelCache\Contracts\RedisConnectionResolver;
+use SmMe\RedisModelCache\Contracts\TenantResolverInterface;
+use SmMe\RedisModelCache\Listeners\ObservabilitySubscriber;
+use SmMe\RedisModelCache\Support\CacheManager;
+use SmMe\RedisModelCache\Support\Configuration;
+use SmMe\RedisModelCache\Support\DefaultConnectionResolver;
+use SmMe\RedisModelCache\Support\DefaultModelMatchStrategy;
+use SmMe\RedisModelCache\Support\Observability;
+use SmMe\RedisModelCache\Support\RedisModelCacheState;
+use SmMe\RedisModelCache\Support\TenantResolvers\RequestTenantResolver;
 
 class RedisModelCacheServiceProvider extends ServiceProvider
 {
@@ -106,6 +106,11 @@ class RedisModelCacheServiceProvider extends ServiceProvider
         $this->registerEventSubscribers();
         $this->registerLifecycleHooks();
         $this->validateConfiguration();
+
+        // Conditionally load global helper functions
+        if (config('redis-model-cache.load_helpers', true)) {
+            require_once __DIR__.'/Support/helpers.php';
+        }
     }
 
     /**

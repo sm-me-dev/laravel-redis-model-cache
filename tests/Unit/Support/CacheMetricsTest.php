@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Sm_mE\RedisModelCache\Tests\Unit\Support;
+namespace SmMe\RedisModelCache\Tests\Unit\Support;
 
-use Sm_mE\RedisModelCache\Support\CacheMetrics;
-use Sm_mE\RedisModelCache\Tests\TestCase;
+use SmMe\RedisModelCache\Support\CacheMetrics;
+use SmMe\RedisModelCache\Tests\TestCase;
 
 class CacheMetricsTest extends TestCase
 {

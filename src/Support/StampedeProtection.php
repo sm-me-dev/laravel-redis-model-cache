@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sm_mE\RedisModelCache\Support;
+namespace SmMe\RedisModelCache\Support;
 
 use Illuminate\Support\Facades\Log;
 
@@ -57,29 +57,6 @@ LUA;
         $result = $redis->set($lockKey, $value, ['NX', 'EX' => $timeout]);
 
         return ($result === true || $result === 'OK') ? $value : null;
-    }
-
-    /**
-     * Release a stampede protection lock (non-CAS, simple delete).
-     *
-     * ⚠️  UNSAFE: This performs a blind DEL without ownership verification.
-     * Use only when you are absolutely certain no other process can hold
-     * the lock (e.g., immediately after acquiring it in the same request).
-     *
-     * For production use, prefer releaseLockCas() with a value-based lock
-     * (acquireLockWithValue()) to prevent releasing another process's lock.
-     *
-     * @deprecated 3.2.0 Use releaseLockCas() with acquireLockWithValue().
-     *             Blind DEL can release a lock owned by another process.
-     *             Prefer CAS release for compare-and-swap safety, or
-     *             rely on TTL to expire the lock automatically.
-     *
-     * @param  mixed  $redis  Redis connection instance
-     * @param  string  $lockKey  The lock key
-     */
-    public static function releaseLock($redis, string $lockKey): void
-    {
-        $redis->del($lockKey);
     }
 
     /**

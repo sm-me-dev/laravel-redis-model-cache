@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sm_mE\RedisModelCache\Support;
+namespace SmMe\RedisModelCache\Support;
 
 use InvalidArgumentException;
 
@@ -32,10 +32,11 @@ class IndexResolver
 
         foreach (array_keys($where) as $field) {
             if (! in_array($field, $availableIndexes, true)) {
-                throw new InvalidArgumentException(
-                    "Field '{$field}' is not indexed. Declare it in \$indexes. "
-                    .'Available: ['.implode(', ', $availableIndexes).']'
-                );
+                $message = empty($availableIndexes)
+                    ? "Field '{$field}' is not indexed. No indexes are declared for this service. Pass 'indexes' when constructing RedisModelService."
+                    : "Field '{$field}' is not indexed. Available indexes: [".implode(', ', $availableIndexes).'].';
+
+                throw new InvalidArgumentException($message);
             }
         }
 
@@ -57,10 +58,11 @@ class IndexResolver
     public function resolveWhereIn(string $field, array $values, array $availableIndexes): ResolvedIndex
     {
         if (! in_array($field, $availableIndexes, true)) {
-            throw new InvalidArgumentException(
-                "Field '{$field}' is not indexed. Declare it in \$indexes. "
-                .'Available: ['.implode(', ', $availableIndexes).']'
-            );
+            $message = empty($availableIndexes)
+                ? "Field '{$field}' is not indexed. No indexes are declared for this service. Pass 'indexes' when constructing RedisModelService."
+                : "Field '{$field}' is not indexed. Available indexes: [".implode(', ', $availableIndexes).'].';
+
+            throw new InvalidArgumentException($message);
         }
 
         if ($values === []) {

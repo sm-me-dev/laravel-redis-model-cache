@@ -83,7 +83,7 @@ php artisan vendor:publish --tag=redis-model-cache-config
 ### Manual service usage
 
 ```php
-use Sm_mE\RedisModelCache\RedisModelService;
+use SmMe\RedisModelCache\RedisModelService;
 
 $cache = app(RedisModelService::class, [
     'model_class' => User::class,
@@ -105,7 +105,7 @@ $activeUsers = $cache->where(['status' => 'active']);
 ### Eloquent trait (auto-sync)
 
 ```php
-use Sm_mE\RedisModelCache\Concerns\HasRedisModelCache;
+use SmMe\RedisModelCache\Concerns\HasRedisModelCache;
 
 class User extends Model
 {
@@ -463,7 +463,7 @@ If cache keys are not being isolated per tenant, check:
 
 The `HasRedisModelCache` trait must be applied to your model:
 ```php
-use Sm_mE\RedisModelCache\Concerns\HasRedisModelCache;
+use SmMe\RedisModelCache\Concerns\HasRedisModelCache;
 
 class User extends Model
 {

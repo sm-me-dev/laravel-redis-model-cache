@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Sm_mE\RedisModelCache\Tests\Unit\Support;
+namespace SmMe\RedisModelCache\Tests\Unit\Support;
 
 use Mockery;
-use Sm_mE\RedisModelCache\Support\StampedeProtection;
-use Sm_mE\RedisModelCache\Tests\TestCase;
+use SmMe\RedisModelCache\Support\StampedeProtection;
+use SmMe\RedisModelCache\Tests\TestCase;
 
 class StampedeProtectionTest extends TestCase
 {
@@ -52,18 +52,9 @@ class StampedeProtectionTest extends TestCase
         $this->assertTrue($result);
     }
 
-    public function test_release_lock_deletes_key(): void
+    public function test_does_not_expose_the_unsafe_blind_del_lock_release(): void
     {
-        $redis = Mockery::mock();
-        $redis->shouldReceive('del')
-            ->with('cache:lock')
-            ->once()
-            ->andReturn(1);
-
-        StampedeProtection::releaseLock($redis, 'cache:lock');
-
-        // Assertion is implicit - Mockery verifies the del was called
-        $this->assertTrue(true);
+        $this->assertFalse(method_exists(StampedeProtection::class, 'releaseLock'));
     }
 
     public function test_wait_for_lock_returns_true_when_lock_released(): void
