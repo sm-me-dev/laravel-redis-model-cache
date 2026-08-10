@@ -23,6 +23,9 @@ use SmMe\RedisModelCache\Support\Configuration;
 use SmMe\RedisModelCache\Support\DefaultConnectionResolver;
 use SmMe\RedisModelCache\Support\ExplainResult;
 use SmMe\RedisModelCache\Support\IndexResolver;
+use SmMe\RedisModelCache\Support\ModelHydrator;
+use SmMe\RedisModelCache\Support\ModelSerializer;
+use SmMe\RedisModelCache\Support\PipelineExecutor;
 use SmMe\RedisModelCache\Support\QueryPlanner;
 use SmMe\RedisModelCache\Support\RedisKeyBuilder;
 use SmMe\RedisModelCache\Support\StampedeProtection;
@@ -69,6 +72,12 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
     protected IndexResolver $indexResolver;
 
     protected QueryPlanner $queryPlanner;
+
+    protected ModelHydrator $hydrator;
+
+    protected PipelineExecutor $pipeline;
+
+    protected ModelSerializer $serializer;
 
     /**
      * @param  array<int, string>  $indexes
@@ -122,6 +131,27 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         $this->metricsEnabled = $this->configuration->observabilityEnabled;
         $this->indexResolver = new IndexResolver;
         $this->queryPlanner = new QueryPlanner;
+
+        // Initialize helper classes
+        $this->hydrator = new ModelHydrator(
+            modelClass: $this->model_class,
+            configuration: $this->configuration,
+            deserializer: fn (string $payload) => $this->deserialize($payload),
+            redis: $this->redis,
+            hashKey: $this->keyBuilder->hashKey(),
+        );
+
+        $this->pipeline = new PipelineExecutor(
+            redis: $this->redis,
+            configuration: $this->configuration,
+            luaExecutor: function (mixed $client, array $keys, array $args): void {
+                $this->queueLuaAtomicStoreOnClientInternal($client, $keys, $args);
+            },
+        );
+
+        $this->serializer = new ModelSerializer(
+            serializer: fn (mixed $data) => $this->serializeResult($data),
+        );
     }
 
     public function getPrefix(): string
@@ -159,80 +189,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
      */
     public function custom(string $name): Collection
     {
-        return $this->hydrateIds($this->redis->smembers($this->customIndexKey($name)));
-    }
-
-    /**
-     * @param  array<int, string>  $ids
-     * @return Collection<int, Model>|Collection<int, string>
-     */
-    protected function hydrateIds(array $ids, bool $hydrate = true): Collection
-    {
-        if ($ids === []) {
-            return collect();
-        }
-
-        if (! $hydrate) {
-            return collect($ids);
-        }
-
-        $hashKey = $this->hashKey();
-        $maxBatch = max(1, $this->configuration->hydrateBatchSize);
-
-        /** @var array<int, string|false> $results */
-        $results = [];
-
-        if (count($ids) <= $maxBatch) {
-            $raw = $this->redis->hmget($hashKey, $ids);
-            foreach ($ids as $id) {
-                $results[] = $raw[$id] ?? false;
-            }
-        } else {
-            foreach (array_chunk($ids, $maxBatch) as $chunk) {
-                $raw = $this->redis->hmget($hashKey, $chunk);
-                foreach ($chunk as $id) {
-                    $results[] = $raw[$id] ?? false;
-                }
-            }
-        }
-
-        return collect($results)
-            ->filter()
-            ->map(function (mixed $payload): ?Model {
-                if (! is_string($payload)) {
-                    return null;
-                }
-                try {
-                    /** @var array{attributes: array<string, mixed>, relations: array<string, mixed>} $data */
-                    $data = $this->deserialize($payload);
-
-                    return $this->hydrateModelFromPayload($data);
-                } catch (\JsonException $e) {
-                    return null;
-                }
-            })
-            ->filter()
-            ->values();
-    }
-
-    /**
-     * Reconstructs a Model from stored payload including eager-loaded relations.
-     *
-     * @param  array{attributes: array<string, mixed>, relations: array<string, mixed>}  $payload
-     */
-    protected function hydrateModelFromPayload(array $payload): Model
-    {
-        if (! isset($payload['attributes'])) {
-            return (new $this->model_class)->newFromBuilder($payload);
-        }
-
-        $model = (new $this->model_class)->newFromBuilder($payload['attributes']);
-
-        if (! empty($payload['relations'])) {
-            $this->restoreRelations($model, $payload['relations']);
-        }
-
-        return $model;
+        return $this->hydrator->hydrateIds($this->redis->smembers($this->customIndexKey($name)));
     }
 
     protected function hashKey(): string
@@ -357,7 +314,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
             $names
         );
 
-        return $this->hydrateIds($this->redis->sinter(...$keys));
+        return $this->hydrator->hydrateIds($this->redis->sinter(...$keys));
     }
 
     /**
@@ -376,7 +333,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
      */
     public function sorted(string $field, int $start, int $end): Collection
     {
-        return $this->hydrateIds($this->redis->zrevrange($this->sortedKey($field), $start, $end));
+        return $this->hydrator->hydrateIds($this->redis->zrevrange($this->sortedKey($field), $start, $end));
     }
 
     protected function sortedKey(string $field): string
@@ -733,7 +690,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
 
         // Prime Lua script cache before entering pipeline (avoids NOSCRIPT in batch EVALSHA)
         if ($this->luaEnabled()) {
-            $this->primeAtomicStoreScript();
+            $this->pipeline->primeAtomicStoreScript(self::LUA_ATOMIC_STORE, fn($script) => $this->loadScript($script));
         }
 
         $maxPipelineSize = max(1, $this->configuration->maxPipelineSize);
@@ -760,7 +717,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
                     $this->storeModel($model, $pipeline, $staleKeys, $staleZremKeys, $revalidationTime);
                 }
 
-                $this->executePipeline($pipeline);
+                $this->pipeline->executePipeline($pipeline);
             }
 
             $this->applyTTL($hashKey);
@@ -866,7 +823,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         }
 
         // Batch hydrate (relation-aware)
-        $result = $this->hydrateIds($ids, $hydrate);
+        $result = $this->hydrator->hydrateIds($ids, $hydrate);
 
         // Dispatch metrics event
         if ($this->metricsEnabled && $this->configuration->observabilityDispatchEvents) {
@@ -957,7 +914,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         }
 
         // Batch hydrate (relation-aware)
-        $result = $this->hydrateIds($ids, $hydrate);
+        $result = $this->hydrator->hydrateIds($ids, $hydrate);
 
         // Dispatch metrics event
         if ($this->metricsEnabled && $this->configuration->observabilityDispatchEvents) {
@@ -1049,7 +1006,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         }
 
         // Batch hydrate (relation-aware)
-        $result = $this->hydrateIds($ids, $hydrate);
+        $result = $this->hydrator->hydrateIds($ids, $hydrate);
 
         // Dispatch metrics event
         if ($this->metricsEnabled && $this->configuration->observabilityDispatchEvents) {
@@ -1116,7 +1073,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         $mergedIds = array_values(array_unique(array_merge($baseIds, $newIds)));
 
         // Batch hydrate
-        return $this->hydrateIds($mergedIds, $hydrate);
+        return $this->hydrator->hydrateIds($mergedIds, $hydrate);
     }
 
     /**
@@ -1258,7 +1215,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
 
         $payload = [
             'attributes' => $model->getAttributes(),
-            'relations' => $this->extractRelations($model),
+            'relations' => $this->serializer->extractRelations($model),
             'revalidation_time' => $revalidationTime,
         ];
         $serialized = $this->serializeResult($payload);
@@ -1282,7 +1239,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
             if ($value !== null) {
                 $sortedKey = $this->sortedKey($field);
                 $newZadd[] = $sortedKey;
-                $zaddScores[] = (string) $this->extractScore($value);
+                $zaddScores[] = (string) $this->serializer->extractScore($value);
             }
         }
 
@@ -1340,7 +1297,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
      * @param  array<int, string>  $keys  KEYS for the Lua script
      * @param  array<int, string>  $args  ARGV for the Lua script
      */
-    protected function queueLuaAtomicStoreOnClient(mixed $client, array $keys, array $args): void
+    protected function queueLuaAtomicStoreOnClientInternal(mixed $client, array $keys, array $args): void
     {
         $numKeys = count($keys);
         $allArgs = array_merge($keys, $args);
@@ -1405,14 +1362,14 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         // Structured payload: attributes + eager-loaded relations
         $payload = [
             'attributes' => $model->getAttributes(),
-            'relations' => $this->extractRelations($model),
+            'relations' => $this->serializer->extractRelations($model),
             'revalidation_time' => $revalidationTime,
         ];
 
         $client->hset($this->hashKey(), $key, $this->serializeResult($payload));
 
         if ($this->ttl) {
-            $this->queueExpire($client, $this->hashKey());
+            $this->pipeline->queueExpire($client, $this->hashKey(), $this->ttl);
         }
 
         // Queue stale index cleanup within the same pipeline/write batch
@@ -1500,7 +1457,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
                 continue;
             }
 
-            if ($this->extractScore($oldValue) === $this->extractScore($currentValue)) {
+            if ($this->serializer->extractScore($oldValue) === $this->serializer->extractScore($currentValue)) {
                 continue;
             }
 
@@ -1515,147 +1472,6 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
      *
      * @return array<string, array<int, mixed>|null>
      */
-    protected function extractRelations(Model $model): array
-    {
-        $relations = [];
-
-        foreach ($model->getRelations() as $name => $relation) {
-            if ($relation instanceof Collection) {
-                // HasMany, MorphMany, BelongsToMany
-                $relations[$name] = $relation->map(function (Model $related): array {
-                    return $this->serializeModel($related);
-                })->toArray();
-
-            } elseif ($relation instanceof Model) {
-                // HasOne, BelongsTo, MorphOne, MorphTo
-                $relations[$name] = $this->serializeModel($relation);
-
-            } elseif ($relation === null) {
-                // Explicitly loaded null relation (e.g., BelongsTo with no parent)
-                $relations[$name] = null;
-            }
-            // Unloaded relations are NOT in getRelations() — correctly omitted
-        }
-
-        return $relations;
-    }
-
-    /**
-     * Serializes a single model (attributes + nested relations).
-     *
-     * @return array{class: string, attributes: array<string, mixed>, relations: array<string, mixed>}
-     */
-    protected function serializeModel(Model $model): array
-    {
-        return [
-            'class' => get_class($model),
-            'attributes' => $model->getAttributes(),
-            'relations' => $this->extractRelations($model),  // Recursive
-        ];
-    }
-
-    /**
-     * Restores eager-loaded relations onto a model instance.
-     *
-     * @param  array<string, array<int, mixed>|null>  $relations
-     */
-    protected function restoreRelations(Model $model, array $relations): void
-    {
-        foreach ($relations as $name => $relationData) {
-            if ($relationData === null) {
-                $model->setRelation($name, null);
-
-                continue;
-            }
-
-            if (array_is_list($relationData)) {
-                // Collection relation (HasMany, MorphMany, BelongsToMany) — including empty collections
-                $collection = collect($relationData)->map(function (mixed $item): Model {
-                    /** @var array{class: string, attributes: array<string, mixed>, relations: array<string, mixed>} $item */
-                    return $this->hydrateRelatedModel($item);
-                });
-                $model->setRelation($name, $collection);
-
-            } else {
-                // Single model relation (BelongsTo, HasOne, MorphOne, MorphTo)
-                /** @var array{class: string, attributes: array<string, mixed>, relations: array<string, mixed>} $relationData */
-                $model->setRelation($name, $this->hydrateRelatedModel($relationData));
-            }
-        }
-    }
-
-    /**
-     * @param  array{class: string, attributes: array<string, mixed>, relations: array<string, mixed>}  $data
-     */
-    protected function hydrateRelatedModel(array $data): Model
-    {
-        if (! isset($data['class'])) {
-            return $this->hydrateModelFromPayload($data);
-        }
-
-        /** @var class-string<Model> $class */
-        $class = $data['class'];
-        $model = new $class;
-        $model->setRawAttributes($data['attributes'], true);
-
-        if (! empty($data['relations'])) {
-            $this->restoreRelations($model, $data['relations']);
-        }
-
-        return $model;
-    }
-
-    /**
-     * Queue an EXPIRE command within a pipeline or execute directly.
-     *
-     * @param  mixed  $client
-     */
-    protected function queueExpire($client, string $key): void
-    {
-        $client->expire($key, $this->ttl);
-    }
-
-    /**
-     * Execute a pipeline in a client-agnostic way.
-     *
-     * phpredis puts the \Redis object itself into pipeline mode and uses exec().
-     * Predis returns a dedicated Pipeline object with execute().
-     * Mockery mocks implement magic __call so we use is_a() to detect phpredis.
-     *
-     * @return array<int, mixed>
-     */
-    protected function executePipeline(mixed $pipeline): array
-    {
-        // phpredis: pipeline() returns the same \Redis instance in pipeline mode; uses exec()
-        if ($pipeline instanceof \Redis) {
-            return (array) $pipeline->exec();
-        }
-
-        // Predis and test mocks: pipeline object with execute() or __call
-        if (is_callable([$pipeline, 'execute'])) {
-            return (array) call_user_func([$pipeline, 'execute']);
-        }
-
-        // Last resort fallback for exec()-only clients
-        if (is_callable([$pipeline, 'exec'])) {
-            return (array) call_user_func([$pipeline, 'exec']);
-        }
-
-        return [];
-    }
-
-    /**
-     * Convert a field value into a numeric score for sorted set storage.
-     */
-    protected function extractScore(mixed $value): float
-    {
-        if (is_numeric($value)) {
-            return (float) $value;
-        }
-
-        return (float) (strtotime((string) $value) ?: 0);
-    }
-
     /**
      * @param  mixed  $pipeline
      */
@@ -1673,7 +1489,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
             $client->sadd($key, (string) $model->getKey());
 
             if ($this->ttl) {
-                $this->queueExpire($client, $key);
+                $this->pipeline->queueExpire($client, $key, $this->ttl);
             }
         }
     }
@@ -1699,7 +1515,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
             $client->zadd($key, $score, (string) $model->getKey());
 
             if ($this->ttl) {
-                $this->queueExpire($client, $key);
+                $this->pipeline->queueExpire($client, $key, $this->ttl);
             }
         }
     }
@@ -1793,7 +1609,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         }
 
         // Take first match (should be unique for PK lookups)
-        $models = $this->hydrateIds($ids, true);
+        $models = $this->hydrator->hydrateIds($ids, true);
 
         return $models->first() ?? null;
     }
@@ -1811,7 +1627,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
             $ids = $this->redis->smembers($key);
 
             if ($hydrate) {
-                return $this->hydrateIds($ids);
+                return $this->hydrator->hydrateIds($ids);
             }
 
             // @phpstan-ignore-next-line non-hydrate path returns IDs, not Models
@@ -1852,7 +1668,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
 
             if ($hydrate) {
                 // @phpstan-ignore-next-line hydrate path returns Models
-                return $this->hydrateIds($ids);
+                return $this->hydrator->hydrateIds($ids);
             }
 
             // @phpstan-ignore-next-line non-hydrate path returns IDs, not Models
@@ -2103,7 +1919,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         foreach ($this->sorted as $field) {
             if (isset($attributes[$field])) {
                 $sortedKey = $this->sortedKey($field);
-                $score = $this->extractScore($attributes[$field]);
+                $score = $this->serializer->extractScore($attributes[$field]);
                 $pipeline->zadd($sortedKey, $score, $key);
 
                 if ($this->ttl !== null) {
@@ -2118,7 +1934,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         }
 
         // Execute all commands atomically
-        $this->executePipeline($pipeline);
+        $this->pipeline->executePipeline($pipeline);
 
         // Update metadata timestamp
         $this->storeCacheMetadata();
@@ -2327,7 +2143,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
             /** @var array{attributes: array<string, mixed>, relations: array<string, mixed>} $data */
             $data = $this->deserialize($payload);
 
-            return $this->hydrateModelFromPayload($data);
+            return $this->hydrator->hydrateModelFromPayload($data);
         } catch (\JsonException $e) {
             return null;
         }
@@ -2369,7 +2185,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
         /** @var array{attributes: array<string, mixed>, relations: array<string, mixed>} $data */
         $data = $this->deserialize($payload);
 
-        return $this->hydrateModelFromPayload($data);
+        return $this->hydrator->hydrateModelFromPayload($data);
     }
 
     /**
