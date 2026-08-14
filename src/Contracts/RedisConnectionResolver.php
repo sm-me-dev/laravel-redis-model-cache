@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace SmMe\RedisModelCache\Contracts;
+namespace SmmE\RedisModelCache\Contracts;
 
 interface RedisConnectionResolver
 {

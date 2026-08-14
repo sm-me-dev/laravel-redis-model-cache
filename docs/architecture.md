@@ -364,37 +364,37 @@ package, even if someone forked or monkey-patched the code.
 
 ### Contracts (stable, breaking changes require major version bump)
 
-- `SmMe\RedisModelCache\Contracts\ModelCacheService`
-- `SmMe\RedisModelCache\Contracts\HashCacheService`
-- `SmMe\RedisModelCache\Contracts\RedisConnectionResolver`
-- `SmMe\RedisModelCache\Contracts\ModelMatchStrategy`
-- `SmMe\RedisModelCache\Contracts\TenantResolverInterface`
-- `SmMe\RedisModelCache\Invalidation\Contracts\InvalidationStrategy`
+- `SmmE\RedisModelCache\Contracts\ModelCacheService`
+- `SmmE\RedisModelCache\Contracts\HashCacheService`
+- `SmmE\RedisModelCache\Contracts\RedisConnectionResolver`
+- `SmmE\RedisModelCache\Contracts\ModelMatchStrategy`
+- `SmmE\RedisModelCache\Contracts\TenantResolverInterface`
+- `SmmE\RedisModelCache\Invalidation\Contracts\InvalidationStrategy`
 
 ### Service (stable)
 
-- `SmMe\RedisModelCache\RedisModelService` — all public methods
+- `SmmE\RedisModelCache\RedisModelService` — all public methods
 
 ### Trait (stable)
 
-- `SmMe\RedisModelCache\Concerns\HasRedisModelCache`
+- `SmmE\RedisModelCache\Concerns\HasRedisModelCache`
 
 ### Support classes (stable, but may extend with new methods)
 
-- `SmMe\RedisModelCache\Support\StampedeProtection`
-- `SmMe\RedisModelCache\Support\IndexResolver`
-- `SmMe\RedisModelCache\Support\ExplainResult`
-- `SmMe\RedisModelCache\Support\CacheManager`
-- `SmMe\RedisModelCache\Support\QueryPlanner`
-- `SmMe\RedisModelCache\Support\DefaultConnectionResolver`
-- `SmMe\RedisModelCache\Support\TenantResolvers\RequestTenantResolver`
+- `SmmE\RedisModelCache\Support\StampedeProtection`
+- `SmmE\RedisModelCache\Support\IndexResolver`
+- `SmmE\RedisModelCache\Support\ExplainResult`
+- `SmmE\RedisModelCache\Support\CacheManager`
+- `SmmE\RedisModelCache\Support\QueryPlanner`
+- `SmmE\RedisModelCache\Support\DefaultConnectionResolver`
+- `SmmE\RedisModelCache\Support\TenantResolvers\RequestTenantResolver`
 
 ### Events (stable)
 
-- `SmMe\RedisModelCache\Events\CacheHit`
-- `SmMe\RedisModelCache\Events\CacheMiss`
-- `SmMe\RedisModelCache\Events\QueryExecuted`
-- `SmMe\RedisModelCache\Events\ModelCacheInvalidated`
+- `SmmE\RedisModelCache\Events\CacheHit`
+- `SmmE\RedisModelCache\Events\CacheMiss`
+- `SmmE\RedisModelCache\Events\QueryExecuted`
+- `SmmE\RedisModelCache\Events\ModelCacheInvalidated`
 
 ### Console commands (stable)
 
@@ -404,12 +404,12 @@ package, even if someone forked or monkey-patched the code.
 
 ### Jobs (stable)
 
-- `SmMe\RedisModelCache\Jobs\RevalidateCacheJob`
-- `SmMe\RedisModelCache\Jobs\InvalidateModelCacheJob`
+- `SmmE\RedisModelCache\Jobs\RevalidateCacheJob`
+- `SmmE\RedisModelCache\Jobs\InvalidateModelCacheJob`
 
 ### Invalidation (stable)
 
-- `SmMe\RedisModelCache\Invalidation\InvalidationManager`
-- `SmMe\RedisModelCache\Invalidation\InvalidationContext`
-- `SmMe\RedisModelCache\Invalidation\Strategies\SyncStrategy`
-- `SmMe\RedisModelCache\Invalidation\Strategies\AsyncStrategy`
+- `SmmE\RedisModelCache\Invalidation\InvalidationManager`
+- `SmmE\RedisModelCache\Invalidation\InvalidationContext`
+- `SmmE\RedisModelCache\Invalidation\Strategies\SyncStrategy`
+- `SmmE\RedisModelCache\Invalidation\Strategies\AsyncStrategy`

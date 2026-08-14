@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace SmMe\RedisModelCache\Support;
+namespace SmmE\RedisModelCache\Support;
 
 /**
  * Handles Redis pipeline execution and Lua script management.

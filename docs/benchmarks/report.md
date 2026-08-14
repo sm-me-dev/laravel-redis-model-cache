@@ -12,7 +12,7 @@
 
    Illuminate\Contracts\Container\BindingResolutionException 
 
-  Target [SmMe\RedisModelCache\Contracts\RedisConnectionResolver] is not instantiable while building [SmMe\RedisModelCache\RedisModelService].
+  Target [SmmE\RedisModelCache\Contracts\RedisConnectionResolver] is not instantiable while building [SmmE\RedisModelCache\RedisModelService].
 
   at vendor/laravel/framework/src/Illuminate/Container/Container.php:1411
     1407▕         } else {
@@ -36,7 +36,7 @@
 
    Illuminate\Contracts\Container\BindingResolutionException 
 
-  Target [SmMe\RedisModelCache\Contracts\RedisConnectionResolver] is not instantiable while building [SmMe\RedisModelCache\RedisModelService].
+  Target [SmmE\RedisModelCache\Contracts\RedisConnectionResolver] is not instantiable while building [SmmE\RedisModelCache\RedisModelService].
 
   at vendor/laravel/framework/src/Illuminate/Container/Container.php:1411
     1407▕         } else {
@@ -66,7 +66,7 @@
 
    Illuminate\Contracts\Container\BindingResolutionException 
 
-  Target [SmMe\RedisModelCache\Contracts\RedisConnectionResolver] is not instantiable while building [SmMe\RedisModelCache\RedisModelService].
+  Target [SmmE\RedisModelCache\Contracts\RedisConnectionResolver] is not instantiable while building [SmmE\RedisModelCache\RedisModelService].
 
   at vendor/laravel/framework/src/Illuminate/Container/Container.php:1411
     1407▕         } else {
@@ -90,7 +90,7 @@
 
    Illuminate\Contracts\Container\BindingResolutionException 
 
-  Target [SmMe\RedisModelCache\Contracts\RedisConnectionResolver] is not instantiable while building [SmMe\RedisModelCache\RedisModelService].
+  Target [SmmE\RedisModelCache\Contracts\RedisConnectionResolver] is not instantiable while building [SmmE\RedisModelCache\RedisModelService].
 
   at vendor/laravel/framework/src/Illuminate/Container/Container.php:1411
     1407▕         } else {

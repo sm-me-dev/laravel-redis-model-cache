@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace SmMe\RedisModelCache\Tests\Unit;
+namespace SmmE\RedisModelCache\Tests\Unit;
 
 use Illuminate\Database\Eloquent\Model;
 use InvalidArgumentException;
-use SmMe\RedisModelCache\RedisModelService;
-use SmMe\RedisModelCache\Tests\Fixtures\DummyModel;
-use SmMe\RedisModelCache\Tests\TestCase;
+use SmmE\RedisModelCache\RedisModelService;
+use SmmE\RedisModelCache\Tests\Fixtures\DummyModel;
+use SmmE\RedisModelCache\Tests\TestCase;
 
 class IncrementalUpdateTest extends TestCase
 {

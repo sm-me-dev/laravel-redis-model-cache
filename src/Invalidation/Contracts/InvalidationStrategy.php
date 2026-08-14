@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace SmMe\RedisModelCache\Invalidation\Contracts;
+namespace SmmE\RedisModelCache\Invalidation\Contracts;
 
-use SmMe\RedisModelCache\Invalidation\InvalidationContext;
+use SmmE\RedisModelCache\Invalidation\InvalidationContext;
 
 interface InvalidationStrategy
 {

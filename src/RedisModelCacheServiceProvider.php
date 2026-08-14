@@ -2,25 +2,25 @@
 
 declare(strict_types=1);
 
-namespace SmMe\RedisModelCache;
+namespace SmmE\RedisModelCache;
 
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Octane\Events\WorkerTickStarting;
-use SmMe\RedisModelCache\Contracts\HashCacheService;
-use SmMe\RedisModelCache\Contracts\ModelCacheService;
-use SmMe\RedisModelCache\Contracts\ModelMatchStrategy;
-use SmMe\RedisModelCache\Contracts\RedisConnectionResolver;
-use SmMe\RedisModelCache\Contracts\TenantResolverInterface;
-use SmMe\RedisModelCache\Listeners\ObservabilitySubscriber;
-use SmMe\RedisModelCache\Support\CacheManager;
-use SmMe\RedisModelCache\Support\Configuration;
-use SmMe\RedisModelCache\Support\DefaultConnectionResolver;
-use SmMe\RedisModelCache\Support\DefaultModelMatchStrategy;
-use SmMe\RedisModelCache\Support\Observability;
-use SmMe\RedisModelCache\Support\RedisModelCacheState;
-use SmMe\RedisModelCache\Support\TenantResolvers\RequestTenantResolver;
+use SmmE\RedisModelCache\Contracts\HashCacheService;
+use SmmE\RedisModelCache\Contracts\ModelCacheService;
+use SmmE\RedisModelCache\Contracts\ModelMatchStrategy;
+use SmmE\RedisModelCache\Contracts\RedisConnectionResolver;
+use SmmE\RedisModelCache\Contracts\TenantResolverInterface;
+use SmmE\RedisModelCache\Listeners\ObservabilitySubscriber;
+use SmmE\RedisModelCache\Support\CacheManager;
+use SmmE\RedisModelCache\Support\Configuration;
+use SmmE\RedisModelCache\Support\DefaultConnectionResolver;
+use SmmE\RedisModelCache\Support\DefaultModelMatchStrategy;
+use SmmE\RedisModelCache\Support\Observability;
+use SmmE\RedisModelCache\Support\RedisModelCacheState;
+use SmmE\RedisModelCache\Support\TenantResolvers\RequestTenantResolver;
 
 class RedisModelCacheServiceProvider extends ServiceProvider
 {

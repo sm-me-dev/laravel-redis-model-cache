@@ -15,7 +15,7 @@ All events use Laravel's standard `Dispatchable` trait and can be consumed via `
 | `CacheOperationFailed` | Redis operation fails with `fallback` strategy | `operation`, `message`, `fallbackResult`, `strategy` |
 
 ```php
-use SmMe\RedisModelCache\Events\CacheHit;
+use SmmE\RedisModelCache\Events\CacheHit;
 
 Event::listen(CacheHit::class, function (CacheHit $event) {
     Log::info('Cache hit', [
@@ -34,7 +34,7 @@ Disable events per operation: `$cacheService->withoutMetrics()->where([...])`.
 The `Observability` singleton provides in-memory ring-buffered metrics.
 
 ```php
-use SmMe\RedisModelCache\Support\Observability;
+use SmmE\RedisModelCache\Support\Observability;
 
 $metrics = app(Observability::class);
 $report = $metrics->snapshot();
@@ -115,14 +115,14 @@ $report = $service->analyzeIndexes();
 Register the watcher in your `AppServiceProvider`:
 
 ```php
-use SmMe\RedisModelCache\Support\Telescope\ModelCacheWatcher;
+use SmmE\RedisModelCache\Support\Telescope\ModelCacheWatcher;
 
 Event::listen(
-    ['SmMe\RedisModelCache\Events\CacheHit',
-     'SmMe\RedisModelCache\Events\CacheMiss',
-     'SmMe\RedisModelCache\Events\CacheWrite',
-     'SmMe\RedisModelCache\Events\QueryExecuted',
-     'SmMe\RedisModelCache\Events\ModelCacheInvalidated'],
+    ['SmmE\RedisModelCache\Events\CacheHit',
+     'SmmE\RedisModelCache\Events\CacheMiss',
+     'SmmE\RedisModelCache\Events\CacheWrite',
+     'SmmE\RedisModelCache\Events\QueryExecuted',
+     'SmmE\RedisModelCache\Events\ModelCacheInvalidated'],
     ModelCacheWatcher::class
 );
 ```
@@ -157,7 +157,7 @@ class CacheWatcher
 Subscribe cache metrics for Pulse recording:
 
 ```php
-use SmMe\RedisModelCache\Support\Pulse\CacheMetricsSubscriber;
+use SmmE\RedisModelCache\Support\Pulse\CacheMetricsSubscriber;
 
 Event::subscribe(CacheMetricsSubscriber::class);
 ```
@@ -177,7 +177,7 @@ class CacheMetricsCard extends Component
 {
     public function render(Pulse $pulse)
     {
-        $metrics = app(\SmMe\RedisModelCache\Support\Observability::class);
+        $metrics = app(\SmmE\RedisModelCache\Support\Observability::class);
 
         return view('livewire.cache-metrics', [
             'hitRate' => $metrics->hitRate(),
@@ -189,7 +189,7 @@ class CacheMetricsCard extends Component
 }
 ```
 
-Access raw metrics via `app(\SmMe\RedisModelCache\Support\Observability::class)`.
+Access raw metrics via `app(\SmmE\RedisModelCache\Support\Observability::class)`.
 
 ## Security Guardrails
 

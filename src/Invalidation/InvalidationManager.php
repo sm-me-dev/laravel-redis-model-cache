@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace SmMe\RedisModelCache\Invalidation;
+namespace SmmE\RedisModelCache\Invalidation;
 
 use Illuminate\Database\Eloquent\Model;
-use SmMe\RedisModelCache\Events\ModelCacheInvalidated;
-use SmMe\RedisModelCache\Invalidation\Contracts\InvalidationStrategy;
-use SmMe\RedisModelCache\Invalidation\Strategies\AsyncStrategy;
-use SmMe\RedisModelCache\Invalidation\Strategies\SyncStrategy;
-use SmMe\RedisModelCache\RedisModelService;
+use SmmE\RedisModelCache\Events\ModelCacheInvalidated;
+use SmmE\RedisModelCache\Invalidation\Contracts\InvalidationStrategy;
+use SmmE\RedisModelCache\Invalidation\Strategies\AsyncStrategy;
+use SmmE\RedisModelCache\Invalidation\Strategies\SyncStrategy;
+use SmmE\RedisModelCache\RedisModelService;
 
 final class InvalidationManager
 {

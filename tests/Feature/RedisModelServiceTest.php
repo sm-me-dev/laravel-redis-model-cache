@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace SmMe\RedisModelCache\Tests\Feature;
+namespace SmmE\RedisModelCache\Tests\Feature;
 
 use Illuminate\Database\Eloquent\Model;
-use SmMe\RedisModelCache\RedisModelService;
-use SmMe\RedisModelCache\Tests\TestCase;
+use SmmE\RedisModelCache\RedisModelService;
+use SmmE\RedisModelCache\Tests\TestCase;
 
 class RedisModelServiceTest extends TestCase
 {

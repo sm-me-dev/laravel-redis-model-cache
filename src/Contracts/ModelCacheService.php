@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace SmMe\RedisModelCache\Contracts;
+namespace SmmE\RedisModelCache\Contracts;
 
 use Illuminate\Contracts\Database\Query\Expression;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
-use SmMe\RedisModelCache\Support\ExplainResult;
+use SmmE\RedisModelCache\Support\ExplainResult;
 
 /**
  * @template TKey of array-key

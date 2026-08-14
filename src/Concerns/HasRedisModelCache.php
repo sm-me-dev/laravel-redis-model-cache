@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace SmMe\RedisModelCache\Concerns;
+namespace SmmE\RedisModelCache\Concerns;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
-use SmMe\RedisModelCache\Invalidation\InvalidationManager;
-use SmMe\RedisModelCache\RedisModelService;
-use SmMe\RedisModelCache\Support\Configuration;
-use SmMe\RedisModelCache\Support\RedisModelCacheState;
+use SmmE\RedisModelCache\Invalidation\InvalidationManager;
+use SmmE\RedisModelCache\RedisModelService;
+use SmmE\RedisModelCache\Support\Configuration;
+use SmmE\RedisModelCache\Support\RedisModelCacheState;
 
 trait HasRedisModelCache
 {

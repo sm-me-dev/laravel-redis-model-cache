@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace SmMe\RedisModelCache;
+namespace SmmE\RedisModelCache;
 
 use BadMethodCallException;
 use Illuminate\Contracts\Database\Query\Expression;
@@ -10,25 +10,25 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use InvalidArgumentException;
 use RuntimeException;
-use SmMe\RedisModelCache\Contracts\ModelCacheService;
-use SmMe\RedisModelCache\Contracts\ModelMatchStrategy;
-use SmMe\RedisModelCache\Contracts\RedisConnectionResolver;
-use SmMe\RedisModelCache\Contracts\TenantResolverInterface;
-use SmMe\RedisModelCache\Events\CacheHit;
-use SmMe\RedisModelCache\Events\CacheMiss;
-use SmMe\RedisModelCache\Events\CacheWrite;
-use SmMe\RedisModelCache\Events\QueryExecuted;
-use SmMe\RedisModelCache\Jobs\RevalidateCacheJob;
-use SmMe\RedisModelCache\Support\Configuration;
-use SmMe\RedisModelCache\Support\DefaultConnectionResolver;
-use SmMe\RedisModelCache\Support\ExplainResult;
-use SmMe\RedisModelCache\Support\IndexResolver;
-use SmMe\RedisModelCache\Support\ModelHydrator;
-use SmMe\RedisModelCache\Support\ModelSerializer;
-use SmMe\RedisModelCache\Support\PipelineExecutor;
-use SmMe\RedisModelCache\Support\QueryPlanner;
-use SmMe\RedisModelCache\Support\RedisKeyBuilder;
-use SmMe\RedisModelCache\Support\StampedeProtection;
+use SmmE\RedisModelCache\Contracts\ModelCacheService;
+use SmmE\RedisModelCache\Contracts\ModelMatchStrategy;
+use SmmE\RedisModelCache\Contracts\RedisConnectionResolver;
+use SmmE\RedisModelCache\Contracts\TenantResolverInterface;
+use SmmE\RedisModelCache\Events\CacheHit;
+use SmmE\RedisModelCache\Events\CacheMiss;
+use SmmE\RedisModelCache\Events\CacheWrite;
+use SmmE\RedisModelCache\Events\QueryExecuted;
+use SmmE\RedisModelCache\Jobs\RevalidateCacheJob;
+use SmmE\RedisModelCache\Support\Configuration;
+use SmmE\RedisModelCache\Support\DefaultConnectionResolver;
+use SmmE\RedisModelCache\Support\ExplainResult;
+use SmmE\RedisModelCache\Support\IndexResolver;
+use SmmE\RedisModelCache\Support\ModelHydrator;
+use SmmE\RedisModelCache\Support\ModelSerializer;
+use SmmE\RedisModelCache\Support\PipelineExecutor;
+use SmmE\RedisModelCache\Support\QueryPlanner;
+use SmmE\RedisModelCache\Support\RedisKeyBuilder;
+use SmmE\RedisModelCache\Support\StampedeProtection;
 
 /** @implements ModelCacheService<int, Model> */
 class RedisModelService extends RedisBaseService implements ModelCacheService
@@ -690,7 +690,7 @@ class RedisModelService extends RedisBaseService implements ModelCacheService
 
         // Prime Lua script cache before entering pipeline (avoids NOSCRIPT in batch EVALSHA)
         if ($this->luaEnabled()) {
-            $this->pipeline->primeAtomicStoreScript(self::LUA_ATOMIC_STORE, fn($script) => $this->loadScript($script));
+            $this->pipeline->primeAtomicStoreScript(self::LUA_ATOMIC_STORE, fn ($script) => $this->loadScript($script));
         }
 
         $maxPipelineSize = max(1, $this->configuration->maxPipelineSize);

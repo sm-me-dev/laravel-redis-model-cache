@@ -17,7 +17,7 @@ require __DIR__.'/bootstrap.php';
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Redis;
-use SmMe\RedisModelCache\RedisModelService;
+use SmmE\RedisModelCache\RedisModelService;
 
 // Create test model class
 class BenchmarkModel extends Model

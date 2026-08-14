@@ -258,7 +258,7 @@ return [
     | Auto-load global helper functions (formatBytes, etc.) on package boot.
     | Set to false if these helpers conflict with your application's own
     | global functions or if you prefer to call helpers via fully-qualified
-    | names only (SmMe\RedisModelCache\Support\formatBytes).
+    | names only (SmmE\RedisModelCache\Support\formatBytes).
     */
     'load_helpers' => env('REDIS_MODEL_CACHE_HELPERS', true),
 ];

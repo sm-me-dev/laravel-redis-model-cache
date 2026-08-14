@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace SmMe\RedisModelCache\Invalidation;
+namespace SmmE\RedisModelCache\Invalidation;
 
 readonly class InvalidationContext
 {

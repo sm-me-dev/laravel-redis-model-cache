@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace SmMe\RedisModelCache\Tests\Unit\Support;
+namespace SmmE\RedisModelCache\Tests\Unit\Support;
 
 use Illuminate\Database\Eloquent\Model;
 use Mockery;
 use Mockery\MockInterface;
-use SmMe\RedisModelCache\Concerns\HasRedisModelCache;
-use SmMe\RedisModelCache\Contracts\RedisConnectionResolver;
-use SmMe\RedisModelCache\Support\CacheManager;
-use SmMe\RedisModelCache\Support\CacheMetrics;
-use SmMe\RedisModelCache\Support\ExplainResult;
-use SmMe\RedisModelCache\Support\Observability;
-use SmMe\RedisModelCache\Tests\TestCase;
+use SmmE\RedisModelCache\Concerns\HasRedisModelCache;
+use SmmE\RedisModelCache\Contracts\RedisConnectionResolver;
+use SmmE\RedisModelCache\Support\CacheManager;
+use SmmE\RedisModelCache\Support\CacheMetrics;
+use SmmE\RedisModelCache\Support\ExplainResult;
+use SmmE\RedisModelCache\Support\Observability;
+use SmmE\RedisModelCache\Tests\TestCase;
 
 class CacheManagerTest extends TestCase
 {

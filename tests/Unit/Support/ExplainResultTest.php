@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace SmMe\RedisModelCache\Tests\Unit\Support;
+namespace SmmE\RedisModelCache\Tests\Unit\Support;
 
-use SmMe\RedisModelCache\Support\ExplainResult;
-use SmMe\RedisModelCache\Tests\TestCase;
+use SmmE\RedisModelCache\Support\ExplainResult;
+use SmmE\RedisModelCache\Tests\TestCase;
 
 class ExplainResultTest extends TestCase
 {

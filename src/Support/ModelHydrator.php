@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace SmMe\RedisModelCache\Support;
+namespace SmmE\RedisModelCache\Support;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;

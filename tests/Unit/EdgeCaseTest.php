@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace SmMe\RedisModelCache\Tests\Unit;
+namespace SmmE\RedisModelCache\Tests\Unit;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
@@ -10,13 +10,13 @@ use Illuminate\Support\Facades\Queue;
 use Mockery;
 use Mockery\MockInterface;
 use RuntimeException;
-use SmMe\RedisModelCache\Contracts\ModelMatchStrategy;
-use SmMe\RedisModelCache\Contracts\RedisConnectionResolver;
-use SmMe\RedisModelCache\Invalidation\InvalidationContext;
-use SmMe\RedisModelCache\Invalidation\Strategies\AsyncStrategy;
-use SmMe\RedisModelCache\Jobs\InvalidateModelCacheJob;
-use SmMe\RedisModelCache\RedisModelService;
-use SmMe\RedisModelCache\Tests\TestCase;
+use SmmE\RedisModelCache\Contracts\ModelMatchStrategy;
+use SmmE\RedisModelCache\Contracts\RedisConnectionResolver;
+use SmmE\RedisModelCache\Invalidation\InvalidationContext;
+use SmmE\RedisModelCache\Invalidation\Strategies\AsyncStrategy;
+use SmmE\RedisModelCache\Jobs\InvalidateModelCacheJob;
+use SmmE\RedisModelCache\RedisModelService;
+use SmmE\RedisModelCache\Tests\TestCase;
 
 /**
  * Edge-case tests for production robustness.

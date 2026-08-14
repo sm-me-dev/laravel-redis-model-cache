@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace SmMe\RedisModelCache\Tests\Unit\Invalidation;
+namespace SmmE\RedisModelCache\Tests\Unit\Invalidation;
 
 use Illuminate\Database\Eloquent\Model;
 use Mockery;
 use Mockery\MockInterface;
-use SmMe\RedisModelCache\Invalidation\InvalidationManager;
-use SmMe\RedisModelCache\RedisModelService;
-use SmMe\RedisModelCache\Tests\TestCase;
+use SmmE\RedisModelCache\Invalidation\InvalidationManager;
+use SmmE\RedisModelCache\RedisModelService;
+use SmmE\RedisModelCache\Tests\TestCase;
 
 class InvalidationManagerTest extends TestCase
 {

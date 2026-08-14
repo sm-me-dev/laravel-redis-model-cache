@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 use Illuminate\Database\Eloquent\Model;
-use SmMe\RedisModelCache\Contracts\HashCacheService;
-use SmMe\RedisModelCache\Contracts\ModelCacheService;
+use SmmE\RedisModelCache\Contracts\HashCacheService;
+use SmmE\RedisModelCache\Contracts\ModelCacheService;
 
 if (! function_exists('redisHelper')) {
     function redisHelper(?int $ttl = null): HashCacheService

@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace SmMe\RedisModelCache\Support\Telescope;
+namespace SmmE\RedisModelCache\Support\Telescope;
 
 use Laravel\Telescope\IncomingEntry;
 use Laravel\Telescope\Telescope;
-use SmMe\RedisModelCache\Events\CacheHit;
-use SmMe\RedisModelCache\Events\CacheMiss;
-use SmMe\RedisModelCache\Events\QueryExecuted;
+use SmmE\RedisModelCache\Events\CacheHit;
+use SmmE\RedisModelCache\Events\CacheMiss;
+use SmmE\RedisModelCache\Events\QueryExecuted;
 
 class ModelCacheWatcher
 {

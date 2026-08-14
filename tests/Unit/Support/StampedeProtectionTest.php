@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace SmMe\RedisModelCache\Tests\Unit\Support;
+namespace SmmE\RedisModelCache\Tests\Unit\Support;
 
 use Mockery;
-use SmMe\RedisModelCache\Support\StampedeProtection;
-use SmMe\RedisModelCache\Tests\TestCase;
+use SmmE\RedisModelCache\Support\StampedeProtection;
+use SmmE\RedisModelCache\Tests\TestCase;
 
 class StampedeProtectionTest extends TestCase
 {

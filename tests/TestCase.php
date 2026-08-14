@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace SmMe\RedisModelCache\Tests;
+namespace SmmE\RedisModelCache\Tests;
 
 use Orchestra\Testbench\TestCase as OrchestraTestCase;
-use SmMe\RedisModelCache\RedisModelCacheServiceProvider;
+use SmmE\RedisModelCache\RedisModelCacheServiceProvider;
 
 abstract class TestCase extends OrchestraTestCase
 {

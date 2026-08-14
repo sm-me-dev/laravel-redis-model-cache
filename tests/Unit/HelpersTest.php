@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace SmMe\RedisModelCache\Tests\Unit;
+namespace SmmE\RedisModelCache\Tests\Unit;
 
-use SmMe\RedisModelCache\Tests\TestCase;
+use SmmE\RedisModelCache\Tests\TestCase;
 
 class HelpersTest extends TestCase
 {

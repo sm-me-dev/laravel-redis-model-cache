@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace SmMe\RedisModelCache\Tests\Fixtures;
+namespace SmmE\RedisModelCache\Tests\Fixtures;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use SmMe\RedisModelCache\Concerns\HasRedisModelCache;
+use SmmE\RedisModelCache\Concerns\HasRedisModelCache;
 
 class DummyModel extends Model
 {

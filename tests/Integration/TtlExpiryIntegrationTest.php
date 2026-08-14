@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace SmMe\RedisModelCache\Tests\Integration;
+namespace SmmE\RedisModelCache\Tests\Integration;
 
-use SmMe\RedisModelCache\RedisModelService;
-use SmMe\RedisModelCache\Tests\Fixtures\DummyModel;
+use SmmE\RedisModelCache\RedisModelService;
+use SmmE\RedisModelCache\Tests\Fixtures\DummyModel;
 
 class TtlExpiryIntegrationTest extends IntegrationTestCase
 {

@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace SmMe\RedisModelCache\Tests\Unit;
+namespace SmmE\RedisModelCache\Tests\Unit;
 
 use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
-use SmMe\RedisModelCache\RedisModelCacheServiceProvider;
-use SmMe\RedisModelCache\Tests\TestCase;
+use SmmE\RedisModelCache\RedisModelCacheServiceProvider;
+use SmmE\RedisModelCache\Tests\TestCase;
 
 class ServiceProviderTest extends TestCase
 {

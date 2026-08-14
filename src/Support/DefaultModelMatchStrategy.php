@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace SmMe\RedisModelCache\Support;
+namespace SmmE\RedisModelCache\Support;
 
-use SmMe\RedisModelCache\Contracts\ModelMatchStrategy;
+use SmmE\RedisModelCache\Contracts\ModelMatchStrategy;
 
 class DefaultModelMatchStrategy implements ModelMatchStrategy
 {

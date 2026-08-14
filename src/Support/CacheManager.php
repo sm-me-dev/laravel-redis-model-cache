@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace SmMe\RedisModelCache\Support;
+namespace SmmE\RedisModelCache\Support;
 
 use Closure;
 use Illuminate\Database\Eloquent\Model;
 use InvalidArgumentException;
-use SmMe\RedisModelCache\Contracts\RedisConnectionResolver;
-use SmMe\RedisModelCache\RedisModelService;
+use SmmE\RedisModelCache\Contracts\RedisConnectionResolver;
+use SmmE\RedisModelCache\RedisModelService;
 
 class CacheManager
 {
-    private const string FACADE_TRAIT = 'SmMe\RedisModelCache\Concerns\HasRedisModelCache';
+    private const string FACADE_TRAIT = 'SmmE\RedisModelCache\Concerns\HasRedisModelCache';
 
     public function __construct(
         private readonly RedisConnectionResolver $connectionResolver,

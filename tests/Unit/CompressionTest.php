@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace SmMe\RedisModelCache\Tests\Unit;
+namespace SmmE\RedisModelCache\Tests\Unit;
 
 use Mockery;
 use Mockery\MockInterface;
-use SmMe\RedisModelCache\Contracts\RedisConnectionResolver;
-use SmMe\RedisModelCache\RedisBaseService;
-use SmMe\RedisModelCache\Tests\TestCase;
+use SmmE\RedisModelCache\Contracts\RedisConnectionResolver;
+use SmmE\RedisModelCache\RedisBaseService;
+use SmmE\RedisModelCache\Tests\TestCase;
 
 class CompressionTest extends TestCase
 {

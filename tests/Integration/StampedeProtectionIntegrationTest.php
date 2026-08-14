@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace SmMe\RedisModelCache\Tests\Integration;
+namespace SmmE\RedisModelCache\Tests\Integration;
 
-use SmMe\RedisModelCache\RedisModelService;
-use SmMe\RedisModelCache\Support\StampedeProtection;
-use SmMe\RedisModelCache\Tests\Fixtures\DummyModel;
+use SmmE\RedisModelCache\RedisModelService;
+use SmmE\RedisModelCache\Support\StampedeProtection;
+use SmmE\RedisModelCache\Tests\Fixtures\DummyModel;
 
 class StampedeProtectionIntegrationTest extends IntegrationTestCase
 {

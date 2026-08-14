@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace SmMe\RedisModelCache\Support\TenantResolvers;
+namespace SmmE\RedisModelCache\Support\TenantResolvers;
 
 use Illuminate\Http\Request;
-use SmMe\RedisModelCache\Contracts\TenantResolverInterface;
+use SmmE\RedisModelCache\Contracts\TenantResolverInterface;
 
 /**
  * Resolve the current tenant ID from the HTTP request context.

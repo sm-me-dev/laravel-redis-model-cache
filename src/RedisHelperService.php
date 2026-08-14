@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace SmMe\RedisModelCache;
+namespace SmmE\RedisModelCache;
 
 use Illuminate\Support\Arr;
-use SmMe\RedisModelCache\Contracts\HashCacheService;
-use SmMe\RedisModelCache\Contracts\RedisConnectionResolver;
+use SmmE\RedisModelCache\Contracts\HashCacheService;
+use SmmE\RedisModelCache\Contracts\RedisConnectionResolver;
 
 class RedisHelperService extends RedisBaseService implements HashCacheService
 {

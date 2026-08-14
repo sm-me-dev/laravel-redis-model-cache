@@ -14,7 +14,7 @@ declare(strict_types=1);
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
-use SmMe\RedisModelCache\RedisModelService;
+use SmmE\RedisModelCache\RedisModelService;
 
 require __DIR__.'/../vendor/autoload.php';
 

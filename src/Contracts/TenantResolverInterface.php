@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace SmMe\RedisModelCache\Contracts;
+namespace SmmE\RedisModelCache\Contracts;
 
 /**
  * Interface for resolving tenant ID in multi-tenant applications.

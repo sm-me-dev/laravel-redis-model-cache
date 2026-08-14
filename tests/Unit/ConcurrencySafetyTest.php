@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace SmMe\RedisModelCache\Tests\Unit;
+namespace SmmE\RedisModelCache\Tests\Unit;
 
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\Eloquent\Model;
@@ -10,11 +10,11 @@ use Illuminate\Support\Collection;
 use Mockery;
 use Mockery\MockInterface;
 use RuntimeException;
-use SmMe\RedisModelCache\Contracts\ModelMatchStrategy;
-use SmMe\RedisModelCache\Contracts\RedisConnectionResolver;
-use SmMe\RedisModelCache\RedisModelService;
-use SmMe\RedisModelCache\Support\StampedeProtection;
-use SmMe\RedisModelCache\Tests\TestCase;
+use SmmE\RedisModelCache\Contracts\ModelMatchStrategy;
+use SmmE\RedisModelCache\Contracts\RedisConnectionResolver;
+use SmmE\RedisModelCache\RedisModelService;
+use SmmE\RedisModelCache\Support\StampedeProtection;
+use SmmE\RedisModelCache\Tests\TestCase;
 
 class ConcurrencySafetyTest extends TestCase
 {

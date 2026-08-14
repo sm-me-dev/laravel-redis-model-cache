@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace SmMe\RedisModelCache;
+namespace SmmE\RedisModelCache;
 
 use Illuminate\Support\Facades\Log;
-use SmMe\RedisModelCache\Contracts\RedisConnectionResolver;
-use SmMe\RedisModelCache\Events\CacheOperationFailed;
-use SmMe\RedisModelCache\Events\RedisConnectionFailed;
-use SmMe\RedisModelCache\Support\Configuration;
+use SmmE\RedisModelCache\Contracts\RedisConnectionResolver;
+use SmmE\RedisModelCache\Events\CacheOperationFailed;
+use SmmE\RedisModelCache\Events\RedisConnectionFailed;
+use SmmE\RedisModelCache\Support\Configuration;
 
 class RedisBaseService
 {

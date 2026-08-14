@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace SmMe\RedisModelCache\Tests\Unit\Listeners;
+namespace SmmE\RedisModelCache\Tests\Unit\Listeners;
 
 use Mockery;
-use SmMe\RedisModelCache\Events\CacheHit;
-use SmMe\RedisModelCache\Events\CacheMiss;
-use SmMe\RedisModelCache\Events\CacheOperationFailed;
-use SmMe\RedisModelCache\Events\CacheWrite;
-use SmMe\RedisModelCache\Events\ModelCacheInvalidated;
-use SmMe\RedisModelCache\Events\QueryExecuted;
-use SmMe\RedisModelCache\Events\RedisConnectionFailed;
-use SmMe\RedisModelCache\Listeners\ObservabilitySubscriber;
-use SmMe\RedisModelCache\Support\Observability;
-use SmMe\RedisModelCache\Tests\TestCase;
+use SmmE\RedisModelCache\Events\CacheHit;
+use SmmE\RedisModelCache\Events\CacheMiss;
+use SmmE\RedisModelCache\Events\CacheOperationFailed;
+use SmmE\RedisModelCache\Events\CacheWrite;
+use SmmE\RedisModelCache\Events\ModelCacheInvalidated;
+use SmmE\RedisModelCache\Events\QueryExecuted;
+use SmmE\RedisModelCache\Events\RedisConnectionFailed;
+use SmmE\RedisModelCache\Listeners\ObservabilitySubscriber;
+use SmmE\RedisModelCache\Support\Observability;
+use SmmE\RedisModelCache\Tests\TestCase;
 
 class ObservabilitySubscriberTest extends TestCase
 {
