@@ -29,7 +29,7 @@ Steps:
 
 2. Update `composer.json`:
    - Change `"name"` from `"sm-me/laravel-redis-model-cache"` to
-     `"smme/laravel-redis-model-cache"` (Packagist slug must be lowercase).
+     `"sm-me/laravel-redis-model-cache"` (Packagist slug remains unchanged).
    - Update all `autoload.psr-4` and `autoload-dev.psr-4` keys:
      `"SmmE\\RedisModelCache\\"` → `"SmmE\\RedisModelCache\\"`,
      `"SmmE\\RedisModelCache\\Tests\\"` → `"SmmE\\RedisModelCache\\Tests\\"`.
@@ -917,7 +917,7 @@ baseline at `phpstan-baseline.neon`.
 1. Rewrite `docs/roadmap.md` to reflect the v3.0.0 feature set (all
    phases above). Remove all references to v1.x milestone language.
 
-2. Update `CHAOS_REPORT.md` version header from `2.6.0` to `3.0.0`.
+2. Update `docs/operations/chaos-resilience.md` version header from `2.6.0` to `3.0.0`.
 
 3. Create `docs/known-limitations-v3.0.0.md` by copying the v2.12.0
    file and updating:

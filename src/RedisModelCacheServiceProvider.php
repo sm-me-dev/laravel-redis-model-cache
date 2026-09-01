@@ -101,6 +101,9 @@ class RedisModelCacheServiceProvider extends ServiceProvider
         $this->publishes([
             __DIR__.'/../resources/views' => resource_path('views/vendor/redis-model-cache'),
         ], 'redis-model-cache-views');
+        $this->publishes([
+            __DIR__.'/../resources/rector/redis-model-cache-rector.php' => base_path('rector.redis-model-cache.php'),
+        ], 'redis-model-cache-rector');
 
         if ($this->app->runningInConsole()) {
             $this->commands([

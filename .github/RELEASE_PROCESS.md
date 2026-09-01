@@ -34,6 +34,10 @@ Follow [Semantic Versioning](https://semver.org/):
 - **MINOR** (0.x.0): New features, backward compatible
 - **PATCH** (0.0.x): Bug fixes, backward compatible
 
+The `v3.0.0` release is dated September 1, 2026 in `CHANGELOG.md`. The
+release workflow extracts the matching `## [vX.Y.Z]` section from that file
+for the GitHub release body.
+
 ### Packagist
 
 Releases are automatically synced to Packagist via the GitHub webhook on tag pushes.

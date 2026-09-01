@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Native sorted-range limit/offset support and `paginateWhereBetween()`.
 - Distributed SWR locks with CAS-based release.
 - Optional Laravel Pulse recorder and dashboard card.
+- Publishable Rector configuration for the namespace migration.
+- Direct `laravel/serializable-closure` runtime dependency for SWR queue jobs.
 
 ### Changed
 
@@ -28,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Global helper loading is configurable and opt-in.
 - The existing Packagist package name remains
   `sm-me/laravel-redis-model-cache`.
+- Published Rector configuration targets only application-owned directories.
 
 ### Fixed
 
@@ -193,7 +196,7 @@ All changes verified:
 - **Centralized RedisKeyBuilder** (`src/Support/RedisKeyBuilder.php`) — all model-key construction unified in one class with `buildModelHashKey()`, `buildLockKey()`, `buildSWRLockKey()`, `buildIndexKey()`, `buildSortedIndexKey()`, `buildMetaKey()`. Backward-compatible legacy aliases retained.
 - **Counter normalization in Observability** (`src/Support/Observability.php`) — unbounded `$hits`, `$misses`, `$staleCleanupCount`, `$lockContentionCount`, `$staleCleanupKeysRemoved` now halved via bitwise right-shift when any one exceeds `PHP_INT_MAX >> 2`, preventing integer overflow under sustained production load.
 - **Chaos resilience integration tests** (`tests/Integration/ChaosResilienceIntegrationTest.php`) — 8 tests covering Lua script cache flush (simulates Redis restart), lock TTL auto-release, SWR freshness guard stale-write prevention, and external key corruption/deletion.
-- **CHAOS_REPORT.md** — documents all chaos scenarios, resilience posture matrix, and run instructions.
+- **docs/operations/chaos-resilience.md** — documents all chaos scenarios, resilience posture matrix, and run instructions.
 - **Enterprise Deployment section** in README — Redis cluster config, capacity planning formulas, failover guidance, observability alerting thresholds, circuit breaker recommendations, upgrade/migration guidance, and production checklist.
 
 #### Changed

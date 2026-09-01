@@ -7,19 +7,18 @@ use Rector\Renaming\Rector\NameSpace\RenameNamespaceRector;
 
 return static function (RectorConfig $rectorConfig): void {
     $rectorConfig->paths([
-        __DIR__.'/app',
-        __DIR__.'/tests',
-        __DIR__.'/database',
-        __DIR__.'/config',
+        base_path('app'),
+        base_path('tests'),
+        base_path('database'),
+        base_path('config'),
     ]);
 
     $rectorConfig->skip([
-        __DIR__.'/vendor',
-        __DIR__.'/storage',
-        __DIR__.'/bootstrap',
+        base_path('vendor'),
+        base_path('storage'),
+        base_path('bootstrap'),
     ]);
 
-    // Handle both old namespace variants users might have
     $rectorConfig->rule(RenameNamespaceRector::class, [
         'old_namespace' => 'Sm_mE\RedisModelCache',
         'new_namespace' => 'SMDev\RedisModelCache',

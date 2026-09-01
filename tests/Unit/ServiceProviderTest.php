@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SMDev\RedisModelCache\Tests\Unit;
 
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
 use SMDev\RedisModelCache\RedisModelCacheServiceProvider;
@@ -141,11 +142,23 @@ class ServiceProviderTest extends TestCase
         $this->bootProvider();
     }
 
-    public function test_publish_tag_matches_config_path(): void
+    public function test_rector_publish_tag_writes_to_application_root(): void
     {
-        $provider = $this->app->getProvider(RedisModelCacheServiceProvider::class);
+        $destination = base_path('rector.redis-model-cache.php');
+        File::delete($destination);
 
-        $this->assertInstanceOf(RedisModelCacheServiceProvider::class, $provider);
+        try {
+            $this->artisan('vendor:publish', [
+                '--tag' => 'redis-model-cache-rector',
+                '--force' => true,
+            ])->assertExitCode(0);
+
+            $this->assertFileExists($destination);
+            $this->assertStringContainsString("base_path('app')", File::get($destination));
+            $this->assertStringNotContainsString('vendor/sm-me/laravel-redis-model-cache', File::get($destination));
+        } finally {
+            File::delete($destination);
+        }
     }
 
     public function test_invalid_connection_logs_warning_instead_of_throwing(): void

@@ -8,24 +8,11 @@
     <a href="https://packagist.org/packages/sm-me/laravel-redis-model-cache"><img src="https://img.shields.io/packagist/php-v/sm-me/laravel-redis-model-cache" alt="PHP Version"></a>
     <a href="https://packagist.org/packages/sm-me/laravel-redis-model-cache"><img src="https://img.shields.io/packagist/l/sm-me/laravel-redis-model-cache" alt="License"></a>
     <a href="https://github.com/sm-me-dev/laravel-redis-model-cache/actions"><img src="https://github.com/sm-me-dev/laravel-redis-model-cache/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-    <img src="https://img.shields.io/badge/PHPStan-baseline%2015%20lines-success" alt="PHPStan baseline: 15 lines">
 </p>
 
 ---
 
 **v3.0.0** | PHP 8.3+ or 8.4+ | Laravel 11, 12, or 13
-
----
-
-## v3.0.0 Release Checklist
-
-All changes verified:
-
-✓ **Version alignment:** README v3.0.0 → CHANGELOG v3.0.0 → config version 3.0.0
-✓ **Static analysis:** PHPStan level 8, 0 errors, 15-line baseline
-✓ **Code quality:** Pint passed
-✓ **API additions:** Attributes, fake testing utility, sorted pagination, and distributed SWR locks
-✓ **Backward compatibility:** Legacy commands and aliases preserved where applicable
 
 ---
 
@@ -64,6 +51,10 @@ See the architecture documentation and diagrams:
 
 | Document | Audience |
 |----------|----------|
+| [`UPGRADE.md`](UPGRADE.md) | Migration guidance between major package versions |
+| [`STABILITY.md`](STABILITY.md) | Public namespace and compatibility commitment |
+| [`CHANGELOG.md`](CHANGELOG.md) | Release history and user-visible changes |
+| [`docs/static-analysis.md`](docs/static-analysis.md) | PHPStan policy and suppression boundaries |
 | [`docs/architecture.md`](docs/architecture.md) | Engineers — data flow, key layout, Redis ops, design decisions |
 | [`docs/query-limitations.md`](docs/query-limitations.md) | All queries — what works, what doesn't, why |
 | [`docs/invalidation.md`](docs/invalidation.md) | Engineers — lifecycle hooks, versioning, edge cases, parent touches |
@@ -158,6 +149,10 @@ it('stores a user when saved', function () use (&$fake) {
 The fake supports `store`, `find`, `where`, and `delete`. Other operations
 throw `BadMethodCallException` so tests can stub only what they need.
 
+Development checks run PHPStan at its maximum configured level and Pint in
+test mode. See [the static-analysis policy](docs/static-analysis.md) for the
+limited dynamic-runtime exceptions.
+
 ### Attribute-based config
 
 Declare indexes and cache behavior directly on an Eloquent model:
@@ -206,14 +201,20 @@ The card shows per-model hit rates, query latency, and cached record metrics.
 
 ### Automated migration with Rector
 
-The package includes a `rector.php` config at the root. Run this in your application to automatically update all imports:
+The package can publish a Rector config into your application root. Run this in your application to automatically update all imports:
 
 ```bash
 # Install Rector (if not already installed)
 composer require --dev rector/rector
 
+# Publish the migration config
+php artisan vendor:publish \
+  --tag=redis-model-cache-rector \
+  --force
+
 # Run the migration
-vendor/bin/rector process vendor/sm-me/laravel-redis-model-cache/rector.php
+vendor/bin/rector process \
+  --config=rector.redis-model-cache.php
 ```
 
 This handles all three historical namespace variants:
@@ -730,6 +731,10 @@ MIT. See [LICENSE](LICENSE).
 ## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md) for release history.
+
+## Upgrading
+
+See [UPGRADE.md](UPGRADE.md) for version migration guidance and [STABILITY.md](STABILITY.md) for the public namespace commitment.
 
 ## Contributing
 
