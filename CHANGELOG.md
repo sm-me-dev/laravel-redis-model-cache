@@ -10,7 +10,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Breaking Changes
 
 - Renamed the package namespace to `SMDev\RedisModelCache`.
-- Changed the Packagist package name to `smme/laravel-redis-model-cache`.
 - Stampede protection is enabled by default; set
   `REDIS_MODEL_CACHE_STAMPEDE=false` to restore the previous behavior.
 
@@ -27,6 +26,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Split hydration, serialization, and pipeline execution into focused support
   classes.
 - Global helper loading is configurable and opt-in.
+- The existing Packagist package name remains
+  `sm-me/laravel-redis-model-cache`.
 
 ### Fixed
 

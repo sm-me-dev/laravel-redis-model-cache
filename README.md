@@ -4,9 +4,9 @@
 </p>
 
 <p align="center">
-    <a href="https://packagist.org/packages/smme/laravel-redis-model-cache"><img src="https://img.shields.io/packagist/v/smme/laravel-redis-model-cache" alt="Latest Version"></a>
-    <a href="https://packagist.org/packages/smme/laravel-redis-model-cache"><img src="https://img.shields.io/packagist/php-v/smme/laravel-redis-model-cache" alt="PHP Version"></a>
-    <a href="https://packagist.org/packages/smme/laravel-redis-model-cache"><img src="https://img.shields.io/packagist/l/smme/laravel-redis-model-cache" alt="License"></a>
+    <a href="https://packagist.org/packages/sm-me/laravel-redis-model-cache"><img src="https://img.shields.io/packagist/v/sm-me/laravel-redis-model-cache" alt="Latest Version"></a>
+    <a href="https://packagist.org/packages/sm-me/laravel-redis-model-cache"><img src="https://img.shields.io/packagist/php-v/sm-me/laravel-redis-model-cache" alt="PHP Version"></a>
+    <a href="https://packagist.org/packages/sm-me/laravel-redis-model-cache"><img src="https://img.shields.io/packagist/l/sm-me/laravel-redis-model-cache" alt="License"></a>
     <a href="https://github.com/sm-me-dev/laravel-redis-model-cache/actions"><img src="https://github.com/sm-me-dev/laravel-redis-model-cache/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
     <img src="https://img.shields.io/badge/PHPStan-baseline%2015%20lines-success" alt="PHPStan baseline: 15 lines">
 </p>
@@ -76,7 +76,7 @@ See the architecture documentation and diagrams:
 ## Quick Start
 
 ```bash
-composer require smme/laravel-redis-model-cache
+composer require sm-me/laravel-redis-model-cache
 php artisan vendor:publish --tag=redis-model-cache-config
 ```
 
@@ -213,7 +213,7 @@ The package includes a `rector.php` config at the root. Run this in your applica
 composer require --dev rector/rector
 
 # Run the migration
-vendor/bin/rector process vendor/smme/laravel-redis-model-cache/rector.php
+vendor/bin/rector process vendor/sm-me/laravel-redis-model-cache/rector.php
 ```
 
 This handles all three historical namespace variants:
@@ -227,7 +227,7 @@ Update your `composer.json` dependency:
 
 ```json
 "require": {
-    "smme/laravel-redis-model-cache": "^3.0"
+"sm-me/laravel-redis-model-cache": "^3.0"
 }
 ```
 
@@ -241,7 +241,7 @@ Then find/replace in your codebase:
 | `SmmE\RedisModelCache\Contracts\...` | `SMDev\RedisModelCache\Contracts\...` |
 | `SmmE\RedisModelCache\Support\...` | `SMDev\RedisModelCache\Support\...` |
 
-The package name on Packagist changed from `sm-me/laravel-redis-model-cache` to `smme/laravel-redis-model-cache` (no hyphen).
+The package name remains `sm-me/laravel-redis-model-cache` on Packagist.
 
 
 ## Requirements
@@ -552,7 +552,7 @@ The package only supports cursor-based `SCAN` operations. Set `scan_strategy` to
 ### Artisan command not found
 
 If `php artisan redis-model-cache:warmup` is not recognized, verify:
-1. The package is installed: `composer require smme/laravel-redis-model-cache`
+1. The package is installed: `composer require sm-me/laravel-redis-model-cache`
 2. The service provider is registered (auto-discovery should handle this)
 3. Run `php artisan route:list` — console commands are registered during `php artisan` bootstrap
 
