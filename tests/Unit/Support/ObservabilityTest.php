@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace SmmE\RedisModelCache\Tests\Unit\Support;
+namespace SMDev\RedisModelCache\Tests\Unit\Support;
 
 use ReflectionClass;
-use SmmE\RedisModelCache\Support\Observability;
-use SmmE\RedisModelCache\Tests\TestCase;
+use SMDev\RedisModelCache\Support\Observability;
+use SMDev\RedisModelCache\Tests\TestCase;
 
 class ObservabilityTest extends TestCase
 {

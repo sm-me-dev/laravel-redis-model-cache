@@ -2,11 +2,13 @@
 
 declare(strict_types=1);
 
-namespace SmmE\RedisModelCache\Tests\Unit\Support;
+namespace SMDev\RedisModelCache\Tests\Unit\Support;
 
 use Mockery;
-use SmmE\RedisModelCache\Support\StampedeProtection;
-use SmmE\RedisModelCache\Tests\TestCase;
+use SMDev\RedisModelCache\Contracts\RedisConnectionResolver;
+use SMDev\RedisModelCache\Jobs\ReleaseSWRLockJob;
+use SMDev\RedisModelCache\Support\StampedeProtection;
+use SMDev\RedisModelCache\Tests\TestCase;
 
 class StampedeProtectionTest extends TestCase
 {
@@ -50,6 +52,23 @@ class StampedeProtectionTest extends TestCase
         $result = StampedeProtection::acquireLock($redis, 'cache:lock', 10);
 
         $this->assertTrue($result);
+    }
+
+    public function test_acquire_lock_with_value_returns_token_when_lock_is_acquired(): void
+    {
+        $redis = Mockery::mock();
+        $redis->shouldReceive('set')
+            ->with(
+                'cache:lock',
+                Mockery::type('string'),
+                ['NX', 'EX' => 30],
+            )
+            ->andReturn('OK');
+
+        $token = StampedeProtection::acquireLockWithValue($redis, 'cache:lock', 30);
+
+        $this->assertIsString($token);
+        $this->assertSame(32, strlen($token));
     }
 
     public function test_does_not_expose_the_unsafe_blind_del_lock_release(): void
@@ -152,5 +171,21 @@ class StampedeProtectionTest extends TestCase
         $result = StampedeProtection::releaseLockCas($redis, 'lock:key', 'expected-value', $sha);
 
         $this->assertFalse($result);
+    }
+
+    public function test_release_swr_lock_job_calls_cas_release(): void
+    {
+        $redis = Mockery::mock();
+        $redis->shouldReceive('eval')
+            ->with(StampedeProtection::LUA_LOCK_CAS, 1, 'lock:key', 'token')
+            ->andReturn(1);
+
+        $resolver = Mockery::mock(RedisConnectionResolver::class);
+        $resolver->shouldReceive('resolve')->once()->andReturn($redis);
+        app()->instance(RedisConnectionResolver::class, $resolver);
+
+        (new ReleaseSWRLockJob('lock:key', 'token'))->handle();
+
+        $this->addToAssertionCount(1);
     }
 }

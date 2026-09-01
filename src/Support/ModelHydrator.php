@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace SmmE\RedisModelCache\Support;
+namespace SMDev\RedisModelCache\Support;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
@@ -18,7 +18,7 @@ final class ModelHydrator
 {
     /**
      * @param  class-string<Model>  $modelClass
-     * @param  \Closure(string): array{attributes: array<string, mixed>, relations: array<string, mixed>}  $deserializer
+     * @param  \Closure(string): array<string, mixed>  $deserializer
      */
     public function __construct(
         private readonly string $modelClass,
@@ -37,11 +37,17 @@ final class ModelHydrator
     public function hydrateIds(array $ids, bool $hydrate = true): Collection
     {
         if ($ids === []) {
-            return collect();
+            /** @var Collection<int, Model> $empty */
+            $empty = collect();
+
+            return $empty;
         }
 
         if (! $hydrate) {
-            return collect($ids);
+            /** @var Collection<int, Model> $notHydrated */
+            $notHydrated = collect($ids);
+
+            return $notHydrated;
         }
 
         $maxBatch = max(1, $this->configuration->hydrateBatchSize);
@@ -50,12 +56,14 @@ final class ModelHydrator
         $results = [];
 
         if (count($ids) <= $maxBatch) {
+            /** @var array<int|string, string|false> $raw */
             $raw = $this->redis->hmget($this->hashKey, $ids);
             foreach ($ids as $id) {
                 $results[] = $raw[$id] ?? false;
             }
         } else {
             foreach (array_chunk($ids, $maxBatch) as $chunk) {
+                /** @var array<int|string, string|false> $raw */
                 $raw = $this->redis->hmget($this->hashKey, $chunk);
                 foreach ($chunk as $id) {
                     $results[] = $raw[$id] ?? false;
@@ -63,7 +71,8 @@ final class ModelHydrator
             }
         }
 
-        return collect($results)
+        /** @var Collection<int, Model> $models */
+        $models = collect($results)
             ->filter()
             ->map(function (mixed $payload): ?Model {
                 if (! is_string($payload)) {
@@ -80,23 +89,29 @@ final class ModelHydrator
             })
             ->filter()
             ->values();
+
+        return $models;
     }
 
     /**
      * Reconstructs a Model from stored payload including eager-loaded relations.
      *
-     * @param  array{attributes: array<string, mixed>, relations: array<string, mixed>}  $payload
+     * @param  array<string, mixed>  $payload
      */
     public function hydrateModelFromPayload(array $payload): Model
     {
-        if (! isset($payload['attributes'])) {
+        if (! isset($payload['attributes']) || ! is_array($payload['attributes'])) {
             return (new $this->modelClass)->newFromBuilder($payload);
         }
 
-        $model = (new $this->modelClass)->newFromBuilder($payload['attributes']);
+        /** @var array<string, mixed> $attributes */
+        $attributes = $payload['attributes'];
+        $model = (new $this->modelClass)->newFromBuilder($attributes);
 
-        if (! empty($payload['relations'])) {
-            $this->restoreRelations($model, $payload['relations']);
+        if (isset($payload['relations']) && is_array($payload['relations']) && $payload['relations'] !== []) {
+            /** @var array<string, mixed> $relations */
+            $relations = $payload['relations'];
+            $this->restoreRelations($model, $relations);
         }
 
         return $model;

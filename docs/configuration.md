@@ -2,22 +2,24 @@
 
 Publish: `php artisan vendor:publish --tag=redis-model-cache-config`
 
-The package provides a typed `Configuration` DTO (`SmmE\RedisModelCache\Support\Configuration`) with 28 typed readonly properties. All internal config reads go through this DTO instead of raw `config()` calls, ensuring type safety at every access point. Use `Configuration::fromConfig()` to create an instance from the current Laravel config, or inject `Configuration` in your own services (it is auto-resolvable from the container).
+The package provides a typed `Configuration` DTO (`SMDev\RedisModelCache\Support\Configuration`) with 28 typed readonly properties. All internal config reads go through this DTO instead of raw `config()` calls, ensuring type safety at every access point. Use `Configuration::fromConfig()` to create an instance from the current Laravel config, or inject `Configuration` in your own services (it is auto-resolvable from the container).
 
 | Key | Default | Description |
 |-----|---------|-------------|
-    | `config_version` | `'2.12.0'` | Configuration file schema version (triggers warning on mismatch) |
+| `config_version` | `'3.0.0'` | Configuration file schema version (triggers warning on mismatch) |
 | `connection` | `'cache'` | Redis connection from `config/database.php` |
 | `default_ttl` | `86400` | Default cache TTL in seconds (null = no expiry) |
 | `hydrate_batch_size` | `5000` | Models per pipeline batch for hydrate/pluck |
 | `scan_strategy` | `'scan'` | Deletion key discovery strategy |
-| `stampede_protection.enabled` | `false` | Enable stampede prevention |
+| `stampede_protection.enabled` | `true` | Enable stampede prevention |
 | `stampede_protection.lock_timeout` | `10` | Lock expiry (seconds) |
 | `stampede_protection.wait_timeout` | `5` | Max wait for lock release (seconds) |
 | `stampede_protection.wait_interval` | `100` | Poll interval (ms) |
 | `stale_while_revalidate.enabled` | `false` | Enable SWR pattern |
 | `stale_while_revalidate.grace_period` | `300` | SWR grace period (seconds) |
 | `stale_while_revalidate.queue` | `'default'` | Queue for background jobs |
+| `stale_while_revalidate.distributed_lock` | `true` | Coordinate SWR rebuilds across workers |
+| `stale_while_revalidate.lock_ttl` | `30` | Distributed SWR lock expiry (seconds) |
 | `lua_scripting.enabled` | `true` | Use Lua for atomic stores |
 | `compression.enabled` | `false` | Enable payload compression |
 | `compression.algorithm` | `'gzip'` | `gzip`, `zstd`, or `lz4` |
@@ -59,4 +61,3 @@ To update an outdated published configuration file, run:
 ```bash
 php artisan vendor:publish --tag=redis-model-cache-config --force
 ```
-

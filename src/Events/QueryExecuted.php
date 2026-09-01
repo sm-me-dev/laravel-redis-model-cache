@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace SmmE\RedisModelCache\Events;
+namespace SMDev\RedisModelCache\Events;
 
 use Illuminate\Foundation\Events\Dispatchable;
 

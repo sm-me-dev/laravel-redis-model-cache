@@ -4,28 +4,28 @@
 </p>
 
 <p align="center">
-    <a href="https://packagist.org/packages/sm-me/laravel-redis-model-cache"><img src="https://img.shields.io/packagist/v/sm-me/laravel-redis-model-cache" alt="Latest Version"></a>
-    <a href="https://packagist.org/packages/sm-me/laravel-redis-model-cache"><img src="https://img.shields.io/packagist/php-v/sm-me/laravel-redis-model-cache" alt="PHP Version"></a>
-    <a href="https://packagist.org/packages/sm-me/laravel-redis-model-cache"><img src="https://img.shields.io/packagist/l/sm-me/laravel-redis-model-cache" alt="License"></a>
+    <a href="https://packagist.org/packages/smme/laravel-redis-model-cache"><img src="https://img.shields.io/packagist/v/smme/laravel-redis-model-cache" alt="Latest Version"></a>
+    <a href="https://packagist.org/packages/smme/laravel-redis-model-cache"><img src="https://img.shields.io/packagist/php-v/smme/laravel-redis-model-cache" alt="PHP Version"></a>
+    <a href="https://packagist.org/packages/smme/laravel-redis-model-cache"><img src="https://img.shields.io/packagist/l/smme/laravel-redis-model-cache" alt="License"></a>
     <a href="https://github.com/sm-me-dev/laravel-redis-model-cache/actions"><img src="https://github.com/sm-me-dev/laravel-redis-model-cache/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+    <img src="https://img.shields.io/badge/PHPStan-baseline%2015%20lines-success" alt="PHPStan baseline: 15 lines">
 </p>
 
 ---
 
-**v2.12.1** | PHP 8.3+ or 8.4+ | Laravel 11, 12, or 13
+**v3.0.0** | PHP 8.3+ or 8.4+ | Laravel 11, 12, or 13
 
 ---
 
-## v2.12.1 Release Checklist
+## v3.0.0 Release Checklist
 
 All changes verified:
 
-✓ **Version alignment:** README v2.12.1 → CHANGELOG v2.12.1 → config version 2.12.0
-✓ **Documentation consistency:** Config version aligned across config/redis-model-cache.php and docs/configuration.md
-✓ **Deprecation documentation:** Added `selective()` → `pluck()` mapping in README and all relevant docs
-✓ **Test suite:** All 352 tests pass (2304 assertions)
-✓ **Code quality:** PHPStan 8:0 errors, Pint passed
-✓ **Backward compatibility:** Legacy commands and aliases preserved
+✓ **Version alignment:** README v3.0.0 → CHANGELOG v3.0.0 → config version 3.0.0
+✓ **Static analysis:** PHPStan level 8, 0 errors, 15-line baseline
+✓ **Code quality:** Pint passed
+✓ **API additions:** Attributes, fake testing utility, sorted pagination, and distributed SWR locks
+✓ **Backward compatibility:** Legacy commands and aliases preserved where applicable
 
 ---
 
@@ -76,14 +76,14 @@ See the architecture documentation and diagrams:
 ## Quick Start
 
 ```bash
-composer require sm-me/laravel-redis-model-cache
+composer require smme/laravel-redis-model-cache
 php artisan vendor:publish --tag=redis-model-cache-config
 ```
 
 ### Manual service usage
 
 ```php
-use SmmE\RedisModelCache\RedisModelService;
+use SMDev\RedisModelCache\RedisModelService;
 
 $cache = app(RedisModelService::class, [
     'model_class' => User::class,
@@ -105,7 +105,7 @@ $activeUsers = $cache->where(['status' => 'active']);
 ### Eloquent trait (auto-sync)
 
 ```php
-use SmmE\RedisModelCache\Concerns\HasRedisModelCache;
+use SMDev\RedisModelCache\Concerns\HasRedisModelCache;
 
 class User extends Model
 {
@@ -138,6 +138,111 @@ php artisan redis-model-cache:debug
 php artisan redis-model-cache:monitor-cache info
 # Legacy alias: php artisan redis:monitor-cache info
 ```
+
+## Testing
+
+Use the in-memory fake when testing model cache behavior without Redis:
+
+```php
+use SMDev\RedisModelCache\Testing\RedisModelCacheFake;
+
+beforeEach(fn () => $fake = RedisModelCacheFake::fake());
+
+it('stores a user when saved', function () use (&$fake) {
+    $user = User::factory()->create();
+
+    $fake->assertStored(User::class, $user->id);
+});
+```
+
+The fake supports `store`, `find`, `where`, and `delete`. Other operations
+throw `BadMethodCallException` so tests can stub only what they need.
+
+### Attribute-based config
+
+Declare indexes and cache behavior directly on an Eloquent model:
+
+```php
+use SMDev\RedisModelCache\Attributes\CacheIndex;
+use SMDev\RedisModelCache\Attributes\CacheSorted;
+use SMDev\RedisModelCache\Attributes\CacheTtl;
+use SMDev\RedisModelCache\Attributes\CacheWith;
+use SMDev\RedisModelCache\Concerns\HasRedisModelCache;
+
+#[CacheTtl(3600)]
+#[CacheWith(['roles', 'permissions'])]
+class User extends Model
+{
+    use HasRedisModelCache;
+
+    #[CacheIndex]
+    public string $status;
+
+    #[CacheIndex]
+    public int $role_id;
+
+    #[CacheSorted]
+    public int $created_at;
+}
+```
+
+The existing `redisModelCacheConfig()` array remains supported and takes
+priority over attributes when both are present.
+
+## Laravel Pulse
+
+When Laravel Pulse is installed, the Redis Model Cache card is registered
+automatically. Publish the dashboard view and add:
+
+```html
+<livewire:redis-model-cache-card cols="full" />
+```
+
+The card shows per-model hit rates, query latency, and cached record metrics.
+
+## Migration from v2.x (Namespace Change)
+
+**v3.0.0** introduces a breaking namespace change: `SmmE\RedisModelCache` → `SMDev\RedisModelCache`.
+
+### Automated migration with Rector
+
+The package includes a `rector.php` config at the root. Run this in your application to automatically update all imports:
+
+```bash
+# Install Rector (if not already installed)
+composer require --dev rector/rector
+
+# Run the migration
+vendor/bin/rector process vendor/smme/laravel-redis-model-cache/rector.php
+```
+
+This handles all three historical namespace variants:
+- `Sm_mE\RedisModelCache` (legacy)
+- `SmMe\RedisModelCache` (v2.x)
+- `SmmE\RedisModelCache` (case variant)
+
+### Manual migration
+
+Update your `composer.json` dependency:
+
+```json
+"require": {
+    "smme/laravel-redis-model-cache": "^3.0"
+}
+```
+
+Then find/replace in your codebase:
+
+| Old namespace | New namespace |
+|---------------|---------------|
+| `SmmE\RedisModelCache` | `SMDev\RedisModelCache` |
+| `SmmE\RedisModelCache\Concerns\HasRedisModelCache` | `SMDev\RedisModelCache\Concerns\HasRedisModelCache` |
+| `SmmE\RedisModelCache\RedisModelService` | `SMDev\RedisModelCache\RedisModelService` |
+| `SmmE\RedisModelCache\Contracts\...` | `SMDev\RedisModelCache\Contracts\...` |
+| `SmmE\RedisModelCache\Support\...` | `SMDev\RedisModelCache\Support\...` |
+
+The package name on Packagist changed from `sm-me/laravel-redis-model-cache` to `smme/laravel-redis-model-cache` (no hyphen).
+
 
 ## Requirements
 
@@ -447,7 +552,7 @@ The package only supports cursor-based `SCAN` operations. Set `scan_strategy` to
 ### Artisan command not found
 
 If `php artisan redis-model-cache:warmup` is not recognized, verify:
-1. The package is installed: `composer require sm-me/laravel-redis-model-cache`
+1. The package is installed: `composer require smme/laravel-redis-model-cache`
 2. The service provider is registered (auto-discovery should handle this)
 3. Run `php artisan route:list` — console commands are registered during `php artisan` bootstrap
 
@@ -463,7 +568,7 @@ If cache keys are not being isolated per tenant, check:
 
 The `HasRedisModelCache` trait must be applied to your model:
 ```php
-use SmmE\RedisModelCache\Concerns\HasRedisModelCache;
+use SMDev\RedisModelCache\Concerns\HasRedisModelCache;
 
 class User extends Model
 {

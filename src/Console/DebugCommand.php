@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace SmmE\RedisModelCache\Console;
+namespace SMDev\RedisModelCache\Console;
 
 use Illuminate\Console\Command;
-use SmmE\RedisModelCache\Contracts\RedisConnectionResolver;
-use SmmE\RedisModelCache\Support\CacheManager;
-use SmmE\RedisModelCache\Support\Configuration;
+use SMDev\RedisModelCache\Contracts\RedisConnectionResolver;
+use SMDev\RedisModelCache\Support\CacheManager;
+use SMDev\RedisModelCache\Support\Configuration;
 
 class DebugCommand extends Command
 {
@@ -66,11 +66,11 @@ class DebugCommand extends Command
         $this->newLine();
 
         $this->info('Redis Server');
-        $this->line('  Version:          '.($info['redis_version'] ?? 'N/A'));
-        $this->line('  Uptime:           '.round(($info['uptime_in_seconds'] ?? 0) / 86400, 2).' days');
-        $this->line('  Connected clients: '.($info['connected_clients'] ?? 'N/A'));
-        $this->line('  Total keys:       '.($metrics->toArray()['redis']['total_keys'] ?? 'N/A'));
-        $this->line('  Expired keys:     '.($info['expired_keys'] ?? 'N/A'));
+        $this->line('  Version:          '.$this->display($info['redis_version'] ?? 'N/A'));
+        $this->line('  Uptime:           '.round((float) ($info['uptime_in_seconds'] ?? 0) / 86400, 2).' days');
+        $this->line('  Connected clients: '.$this->display($info['connected_clients'] ?? 'N/A'));
+        $this->line('  Total keys:       '.$this->display($metrics->toArray()['redis']['total_keys'] ?? 'N/A'));
+        $this->line('  Expired keys:     '.$this->display($info['expired_keys'] ?? 'N/A'));
         $this->line('  Used memory:      '.$this->formatBytes((int) ($info['used_memory'] ?? 0)));
         $this->line('  Peak memory:      '.$this->formatBytes((int) ($info['used_memory_peak'] ?? 0)));
         $this->newLine();
@@ -79,29 +79,38 @@ class DebugCommand extends Command
     private function renderMetrics(mixed $metrics): void
     {
         $this->info('Cache Metrics');
-        $this->line('  Hit rate:         '.($metrics->toArray()['requests']['hit_rate'] ?? 'N/A').'%');
-        $this->line('  Miss rate:        '.($metrics->toArray()['requests']['miss_rate'] ?? 'N/A').'%');
-        $this->line('  Total requests:   '.($metrics->toArray()['requests']['total_requests'] ?? 0));
-        $this->line('  Cache hits:       '.($metrics->toArray()['requests']['hits'] ?? 0));
-        $this->line('  Cache misses:     '.($metrics->toArray()['requests']['misses'] ?? 0));
+        $this->line('  Hit rate:         '.$this->display($metrics->toArray()['requests']['hit_rate'] ?? 'N/A').'%');
+        $this->line('  Miss rate:        '.$this->display($metrics->toArray()['requests']['miss_rate'] ?? 'N/A').'%');
+        $this->line('  Total requests:   '.$this->display($metrics->toArray()['requests']['total_requests'] ?? 0));
+        $this->line('  Cache hits:       '.$this->display($metrics->toArray()['requests']['hits'] ?? 0));
+        $this->line('  Cache misses:     '.$this->display($metrics->toArray()['requests']['misses'] ?? 0));
         $this->newLine();
 
         $latency = $metrics->toArray()['latency'];
         $this->info('Latency (ms)');
-        $this->line('  P50:              '.($latency['p50'] ?? 'N/A'));
-        $this->line('  P95:              '.($latency['p95'] ?? 'N/A'));
-        $this->line('  P99:              '.($latency['p99'] ?? 'N/A'));
-        $this->line('  Average:          '.($latency['average'] ?? 'N/A'));
-        $this->line('  Min / Max:        '.($latency['min'] ?? 'N/A').' / '.($latency['max'] ?? 'N/A'));
-        $this->line('  Samples:          '.($latency['samples'] ?? 0));
+        $this->line('  P50:              '.$this->display($latency['p50'] ?? 'N/A'));
+        $this->line('  P95:              '.$this->display($latency['p95'] ?? 'N/A'));
+        $this->line('  P99:              '.$this->display($latency['p99'] ?? 'N/A'));
+        $this->line('  Average:          '.$this->display($latency['average'] ?? 'N/A'));
+        $this->line('  Min / Max:        '.$this->display($latency['min'] ?? 'N/A').' / '.$this->display($latency['max'] ?? 'N/A'));
+        $this->line('  Samples:          '.$this->display($latency['samples'] ?? 0));
         $this->newLine();
 
         $cleanup = $metrics->toArray()['stale_cleanup'];
         $this->info('Stale Cleanup');
-        $this->line('  Events:           '.$cleanup['count']);
-        $this->line('  Keys removed:     '.$cleanup['keys_removed']);
-        $this->line('  Lock contentions: '.$metrics->toArray()['lock_contention']);
+        $this->line('  Events:           '.$this->display($cleanup['count']));
+        $this->line('  Keys removed:     '.$this->display($cleanup['keys_removed']));
+        $this->line('  Lock contentions: '.$this->display($metrics->toArray()['lock_contention']));
         $this->newLine();
+    }
+
+    private function display(mixed $value): string
+    {
+        if (is_scalar($value) || $value === null) {
+            return (string) $value;
+        }
+
+        return (string) json_encode($value);
     }
 
     private function renderConfig(Configuration $config): void

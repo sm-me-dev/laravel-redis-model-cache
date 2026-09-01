@@ -8,18 +8,18 @@
 - [ ] Code style passes: `vendor/bin/pint --test`
 - [ ] Static analysis passes: `vendor/bin/phpstan analyse`
 - [ ] CHANGELOG / release notes updated
-- [ ] Version bumped in `README.md` and `RELEASE_NOTES-v*.md`
+- [ ] Version bumped in `README.md`, `CHANGELOG.md`, and release notes
 
 ### Creating a Release
 
 1. **Tag the release:**
    ```bash
-   git tag -a v2.0.0 -m "v2.0.0"
+   git tag -a v3.0.0 -m "v3.0.0"
    ```
 
 2. **Push the tag:**
    ```bash
-   git push origin v2.0.0
+   git push origin v3.0.0
    ```
 
 3. **GitHub Actions** will automatically:
@@ -41,5 +41,6 @@ No manual action required.
 
 ## Recent Releases
 
-- **v2.0.0** — Major expansion: stampede protection, SWR, query engine, incremental updates, background warmup, compression, Lua atomicity, observability, Telescope/Pulse integration, benchmarks (current)
+- **v3.0.0** — Namespace migration, testing fake, attribute configuration, sorted pagination, distributed SWR locks, Pulse integration, and release hardening (current)
+- **v2.0.0** — Major expansion: stampede protection, SWR, query engine, incremental updates, background warmup, compression, Lua atomicity, observability, Telescope/Pulse integration, benchmarks
 - **v1.1.0** — Memory-safe Redis model cache with indexed queries, eager-relation hydration, pipeline atomicity

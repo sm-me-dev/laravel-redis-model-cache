@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace SmmE\RedisModelCache\Support;
+namespace SMDev\RedisModelCache\Support;
 
 class ExplainResult
 {

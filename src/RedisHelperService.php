@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace SmmE\RedisModelCache;
+namespace SMDev\RedisModelCache;
 
 use Illuminate\Support\Arr;
-use SmmE\RedisModelCache\Contracts\HashCacheService;
-use SmmE\RedisModelCache\Contracts\RedisConnectionResolver;
+use SMDev\RedisModelCache\Contracts\HashCacheService;
+use SMDev\RedisModelCache\Contracts\RedisConnectionResolver;
 
 class RedisHelperService extends RedisBaseService implements HashCacheService
 {
@@ -37,9 +37,12 @@ class RedisHelperService extends RedisBaseService implements HashCacheService
 
     public function getSet(string $hashset): array
     {
-        return Arr::map(
+        /** @var array<string, mixed> $values */
+        $values = Arr::map(
             $this->redis->hGetAll($hashset),
             fn (mixed $value): mixed => $this->deserializeResult((string) $value)
         );
+
+        return $values;
     }
 }

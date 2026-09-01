@@ -5,6 +5,39 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [v3.0.0] — 2026-08-17
+
+### Breaking Changes
+
+- Renamed the package namespace to `SMDev\RedisModelCache`.
+- Changed the Packagist package name to `smme/laravel-redis-model-cache`.
+- Stampede protection is enabled by default; set
+  `REDIS_MODEL_CACHE_STAMPEDE=false` to restore the previous behavior.
+
+### Added
+
+- `RedisModelCacheFake` for Redis-free model cache tests.
+- PHP 8 attributes for indexes, sorted fields, TTL, and eager-loaded relations.
+- Native sorted-range limit/offset support and `paginateWhereBetween()`.
+- Distributed SWR locks with CAS-based release.
+- Optional Laravel Pulse recorder and dashboard card.
+
+### Changed
+
+- Split hydration, serialization, and pipeline execution into focused support
+  classes.
+- Global helper loading is configurable and opt-in.
+
+### Fixed
+
+- Removed the invalid `all()` interface contract.
+- Removed unsafe blind-DEL lock release.
+- Improved missing-index exception messages.
+
+### Deprecated
+
+- No new deprecations. The existing `selective()` deprecation remains.
+
 ## [v2.12.1] — 2026-07-16
 
 ### Fixed

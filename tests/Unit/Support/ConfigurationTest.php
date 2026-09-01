@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace SmmE\RedisModelCache\Tests\Unit\Support;
+namespace SMDev\RedisModelCache\Tests\Unit\Support;
 
-use SmmE\RedisModelCache\Support\Configuration;
-use SmmE\RedisModelCache\Tests\TestCase;
+use SMDev\RedisModelCache\Support\Configuration;
+use SMDev\RedisModelCache\Tests\TestCase;
 
 class ConfigurationTest extends TestCase
 {
@@ -23,7 +23,7 @@ class ConfigurationTest extends TestCase
         $this->assertTrue($config->observabilityTelescope);
         $this->assertTrue($config->observabilityPulse);
         $this->assertFalse($config->observabilityDebug);
-        $this->assertFalse($config->stampedeProtectionEnabled);
+        $this->assertTrue($config->stampedeProtectionEnabled);
         $this->assertSame(10, $config->stampedeProtectionLockTimeout);
         $this->assertSame(5, $config->stampedeProtectionWaitTimeout);
         $this->assertSame(100, $config->stampedeProtectionWaitInterval);

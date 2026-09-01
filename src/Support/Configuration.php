@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace SmmE\RedisModelCache\Support;
+namespace SMDev\RedisModelCache\Support;
 
 class Configuration
 {
@@ -17,13 +17,15 @@ class Configuration
         public readonly bool $observabilityTelescope = true,
         public readonly bool $observabilityPulse = true,
         public readonly bool $observabilityDebug = false,
-        public readonly bool $stampedeProtectionEnabled = false,
+        public readonly bool $stampedeProtectionEnabled = true,
         public readonly int $stampedeProtectionLockTimeout = 10,
         public readonly int $stampedeProtectionWaitTimeout = 5,
         public readonly int $stampedeProtectionWaitInterval = 100,
         public readonly bool $swrEnabled = false,
         public readonly int $swrGracePeriod = 300,
         public readonly string $swrQueue = 'default',
+        public readonly bool $swrDistributedLock = true,
+        public readonly int $swrLockTtl = 30,
         public readonly bool $compressionEnabled = false,
         public readonly string $compressionAlgorithm = 'gzip',
         public readonly int $compressionLevel = 6,
@@ -68,13 +70,15 @@ class Configuration
             observabilityTelescope: (bool) ($observability['telescope'] ?? true),
             observabilityPulse: (bool) ($observability['pulse'] ?? true),
             observabilityDebug: (bool) ($observability['debug'] ?? false),
-            stampedeProtectionEnabled: (bool) ($stampede['enabled'] ?? false),
+            stampedeProtectionEnabled: (bool) ($stampede['enabled'] ?? true),
             stampedeProtectionLockTimeout: (int) ($stampede['lock_timeout'] ?? 10),
             stampedeProtectionWaitTimeout: (int) ($stampede['wait_timeout'] ?? 5),
             stampedeProtectionWaitInterval: (int) ($stampede['wait_interval'] ?? 100),
             swrEnabled: (bool) ($swr['enabled'] ?? false),
             swrGracePeriod: (int) ($swr['grace_period'] ?? 300),
             swrQueue: (string) ($swr['queue'] ?? 'default'),
+            swrDistributedLock: (bool) ($swr['distributed_lock'] ?? true),
+            swrLockTtl: (int) ($swr['lock_ttl'] ?? 30),
             compressionEnabled: (bool) ($compression['enabled'] ?? false),
             compressionAlgorithm: (string) ($compression['algorithm'] ?? 'gzip'),
             compressionLevel: (int) ($compression['level'] ?? 6),

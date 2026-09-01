@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace SmmE\RedisModelCache\Listeners;
+namespace SMDev\RedisModelCache\Listeners;
 
-use SmmE\RedisModelCache\Events\CacheHit;
-use SmmE\RedisModelCache\Events\CacheMiss;
-use SmmE\RedisModelCache\Events\CacheOperationFailed;
-use SmmE\RedisModelCache\Events\CacheWrite;
-use SmmE\RedisModelCache\Events\ModelCacheInvalidated;
-use SmmE\RedisModelCache\Events\QueryExecuted;
-use SmmE\RedisModelCache\Events\RedisConnectionFailed;
-use SmmE\RedisModelCache\Support\Observability;
+use SMDev\RedisModelCache\Events\CacheHit;
+use SMDev\RedisModelCache\Events\CacheMiss;
+use SMDev\RedisModelCache\Events\CacheOperationFailed;
+use SMDev\RedisModelCache\Events\CacheWrite;
+use SMDev\RedisModelCache\Events\ModelCacheInvalidated;
+use SMDev\RedisModelCache\Events\QueryExecuted;
+use SMDev\RedisModelCache\Events\RedisConnectionFailed;
+use SMDev\RedisModelCache\Support\Observability;
 
 class ObservabilitySubscriber
 {

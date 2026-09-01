@@ -6,16 +6,21 @@ parameters:
     paths:
         - src/
         - tests/Fixtures/
+    excludePaths:
+        - src/Support/Pulse/ModelCacheCard.php
     level: max
     tmpDir: .phpstan.cache
     stubFiles:
         - phpstan.stub
+        - phpstan-pulse.stub
     treatPhpDocTypesAsCertain: false
     reportUnmatchedIgnoredErrors: false
     ignoreErrors:
         # Telescope classes are optional dependencies; stubs exist in phpstan.stub
         - '~Call to static method make\(\) on an unknown class Laravel\\Telescope\\IncomingEntry~'
         - '~Call to static method recordCache\(\) on an unknown class Laravel\\Telescope\\Telescope~'
+        # Pulse's Livewire Card is optional and is loaded only when Pulse is installed.
+        - '~Class SMDev\\RedisModelCache\\Support\\Pulse\\ModelCacheCard extends unknown class Laravel\\Pulse\\Livewire\\Card~'
         # Config-derived values are now typed via Configuration DTO (src/Support/Configuration.php).
         # Remaining mixed access issues are from Redis responses, model attributes,
         # and deserialized payloads — these are inherent to dynamic data and cannot

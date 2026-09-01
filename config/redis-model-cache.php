@@ -12,7 +12,7 @@ return [
     | the published configuration file is out of date.
     |
     */
-    'config_version' => '2.12.0',
+    'config_version' => '3.0.0',
 
     /*
     |--------------------------------------------------------------------------
@@ -90,7 +90,10 @@ return [
     | only one process rebuilds expired cache while others wait or use stale.
     */
     'stampede_protection' => [
-        'enabled' => env('REDIS_MODEL_CACHE_STAMPEDE', false),
+        // Enabled by default. Set REDIS_MODEL_CACHE_STAMPEDE=false to disable.
+        // Without stampede protection, concurrent requests on a cold cache will
+        // all hit the database simultaneously (thundering herd).
+        'enabled' => env('REDIS_MODEL_CACHE_STAMPEDE', true),
         'lock_timeout' => env('REDIS_MODEL_CACHE_LOCK_TIMEOUT', 10), // seconds
         'wait_timeout' => env('REDIS_MODEL_CACHE_WAIT_TIMEOUT', 5),  // seconds
         'wait_interval' => env('REDIS_MODEL_CACHE_WAIT_INTERVAL', 100), // milliseconds
@@ -133,6 +136,8 @@ return [
         'enabled' => env('REDIS_MODEL_CACHE_SWR', false),
         'grace_period' => env('REDIS_MODEL_CACHE_SWR_GRACE', 300), // 5 minutes
         'queue' => env('REDIS_MODEL_CACHE_SWR_QUEUE', 'default'),
+        'distributed_lock' => env('REDIS_MODEL_CACHE_SWR_LOCK', true),
+        'lock_ttl' => env('REDIS_MODEL_CACHE_SWR_LOCK_TTL', 30),
     ],
 
     /*
@@ -258,7 +263,7 @@ return [
     | Auto-load global helper functions (formatBytes, etc.) on package boot.
     | Set to false if these helpers conflict with your application's own
     | global functions or if you prefer to call helpers via fully-qualified
-    | names only (SmmE\RedisModelCache\Support\formatBytes).
+    | names only (SMDev\RedisModelCache\Support\formatBytes).
     */
     'load_helpers' => env('REDIS_MODEL_CACHE_HELPERS', true),
 ];

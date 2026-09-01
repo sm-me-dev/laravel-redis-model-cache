@@ -2,12 +2,13 @@
 
 declare(strict_types=1);
 
-namespace SmmE\RedisModelCache\Contracts;
+namespace SMDev\RedisModelCache\Contracts;
 
 use Illuminate\Contracts\Database\Query\Expression;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
-use SmmE\RedisModelCache\Support\ExplainResult;
+use SMDev\RedisModelCache\Support\ExplainResult;
 
 /**
  * @template TKey of array-key
@@ -103,7 +104,31 @@ interface ModelCacheService
      *
      * @throws \InvalidArgumentException If field is not a sorted index.
      */
-    public function whereBetween(string $field, int|float $min, int|float $max, bool $hydrate = true, ?array $only = null): Collection|ExplainResult;
+    public function whereBetween(
+        string $field,
+        int|float $min,
+        int|float $max,
+        bool $hydrate = true,
+        ?array $only = null,
+        ?int $limit = null,
+        int $offset = 0,
+    ): Collection|ExplainResult;
+
+    /**
+     * Paginate models where a sorted field falls between min and max.
+     *
+     * @return LengthAwarePaginator<int, TModel|string>
+     *
+     * @throws \InvalidArgumentException If field is not a sorted index.
+     */
+    public function paginateWhereBetween(
+        string $field,
+        int|float $min,
+        int|float $max,
+        int $perPage = 15,
+        int $page = 1,
+        bool $hydrate = true,
+    ): LengthAwarePaginator;
 
     /**
      * Add OR condition to query by combining results.

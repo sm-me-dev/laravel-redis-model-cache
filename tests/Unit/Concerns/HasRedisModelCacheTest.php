@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace SmmE\RedisModelCache\Tests\Unit\Concerns;
+namespace SMDev\RedisModelCache\Tests\Unit\Concerns;
 
 use Illuminate\Database\Eloquent\Model;
 use Mockery;
 use ReflectionMethod;
-use SmmE\RedisModelCache\RedisModelService;
-use SmmE\RedisModelCache\Tests\Fixtures\DummyModel;
-use SmmE\RedisModelCache\Tests\Fixtures\DummySoftDeleteModel;
-use SmmE\RedisModelCache\Tests\TestCase;
+use SMDev\RedisModelCache\RedisModelService;
+use SMDev\RedisModelCache\Tests\Fixtures\DummyModel;
+use SMDev\RedisModelCache\Tests\Fixtures\DummySoftDeleteModel;
+use SMDev\RedisModelCache\Tests\TestCase;
 
 class HasRedisModelCacheTest extends TestCase
 {

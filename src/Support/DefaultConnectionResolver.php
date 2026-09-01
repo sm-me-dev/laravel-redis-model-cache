@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace SmmE\RedisModelCache\Support;
+namespace SMDev\RedisModelCache\Support;
 
 use Illuminate\Support\Facades\Redis;
-use SmmE\RedisModelCache\Contracts\RedisConnectionResolver;
+use SMDev\RedisModelCache\Contracts\RedisConnectionResolver;
 
 class DefaultConnectionResolver implements RedisConnectionResolver
 {

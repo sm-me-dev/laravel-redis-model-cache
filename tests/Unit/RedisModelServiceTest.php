@@ -2,18 +2,19 @@
 
 declare(strict_types=1);
 
-namespace SmmE\RedisModelCache\Tests\Unit;
+namespace SMDev\RedisModelCache\Tests\Unit;
 
 use BadMethodCallException;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Mockery;
 use Mockery\MockInterface;
-use SmmE\RedisModelCache\Contracts\ModelMatchStrategy;
-use SmmE\RedisModelCache\Contracts\RedisConnectionResolver;
-use SmmE\RedisModelCache\RedisModelService;
-use SmmE\RedisModelCache\Tests\TestCase;
+use SMDev\RedisModelCache\Contracts\ModelMatchStrategy;
+use SMDev\RedisModelCache\Contracts\RedisConnectionResolver;
+use SMDev\RedisModelCache\RedisModelService;
+use SMDev\RedisModelCache\Tests\TestCase;
 
 class RedisModelServiceTest extends TestCase
 {
@@ -219,6 +220,49 @@ class RedisModelServiceTest extends TestCase
 
         $this->assertCount(2, $result);
         $this->assertEquals(1, $result->first()->getKey());
+    }
+
+    public function test_where_between_passes_limit_options_to_redis(): void
+    {
+        $this->redis->shouldReceive('zrangebyscore')
+            ->once()
+            ->with('{test_models}:sorted:created_at', '1', '10', ['limit' => [0, 5]])
+            ->andReturn(['1', '2']);
+
+        $result = $this->service->whereBetween('created_at', 1, 10, false, null, 5);
+
+        $this->assertSame(['1', '2'], $result->all());
+    }
+
+    public function test_where_between_passes_offset_and_limit_options_to_redis(): void
+    {
+        $this->redis->shouldReceive('zrangebyscore')
+            ->once()
+            ->with('{test_models}:sorted:created_at', '1', '10', ['limit' => [10, 5]])
+            ->andReturn(['11', '12']);
+
+        $result = $this->service->whereBetween('created_at', 1, 10, false, null, 5, 10);
+
+        $this->assertSame(['11', '12'], $result->all());
+    }
+
+    public function test_paginate_where_between_returns_length_aware_paginator(): void
+    {
+        $this->redis->shouldReceive('zcount')
+            ->once()
+            ->with('{test_models}:sorted:created_at', '1', '10')
+            ->andReturn(100);
+        $this->redis->shouldReceive('zrangebyscore')
+            ->once()
+            ->with('{test_models}:sorted:created_at', '1', '10', ['limit' => [15, 15]])
+            ->andReturn(['16', '17']);
+
+        $paginator = $this->service->paginateWhereBetween('created_at', 1, 10, 15, 2, false);
+
+        $this->assertInstanceOf(LengthAwarePaginator::class, $paginator);
+        $this->assertSame(100, $paginator->total());
+        $this->assertSame(15, $paginator->perPage());
+        $this->assertSame(['16', '17'], $paginator->items());
     }
 
     public function test_remember_all_throws_on_empty_where_with_warm_cache(): void

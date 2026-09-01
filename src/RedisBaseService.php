@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace SmmE\RedisModelCache;
+namespace SMDev\RedisModelCache;
 
 use Illuminate\Support\Facades\Log;
-use SmmE\RedisModelCache\Contracts\RedisConnectionResolver;
-use SmmE\RedisModelCache\Events\CacheOperationFailed;
-use SmmE\RedisModelCache\Events\RedisConnectionFailed;
-use SmmE\RedisModelCache\Support\Configuration;
+use SMDev\RedisModelCache\Contracts\RedisConnectionResolver;
+use SMDev\RedisModelCache\Events\CacheOperationFailed;
+use SMDev\RedisModelCache\Events\RedisConnectionFailed;
+use SMDev\RedisModelCache\Support\Configuration;
 
 class RedisBaseService
 {
@@ -318,7 +318,7 @@ LUA;
             return $data;
         }
 
-        return $compressed;
+        return (string) $compressed;
     }
 
     /**
@@ -332,7 +332,7 @@ LUA;
             return $data;
         }
 
-        return $decompressed;
+        return (string) $decompressed;
     }
 
     /**
@@ -386,7 +386,7 @@ LUA;
             return $data;
         }
 
-        return $compressed;
+        return (string) $compressed;
     }
 
     /**
@@ -404,7 +404,7 @@ LUA;
             return $data;
         }
 
-        return $decompressed;
+        return (string) $decompressed;
     }
 
     /**

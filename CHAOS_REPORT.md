@@ -1,7 +1,7 @@
 # Chaos Resilience Report
 
 **Package:** `sm-me/laravel-redis-model-cache`  
-**Version:** 2.6.0  
+**Version:** 3.0.0
 **Scope:** Production infrastructure failure simulation  
 **Date:** 2026-07-11
 

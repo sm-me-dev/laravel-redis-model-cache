@@ -2,7 +2,7 @@
 
 Benchmark results, scaling guidelines, tuning advice, and best practices for `laravel-redis-model-cache`.
 
-> **Version:** 2.12.0  
+> **Version:** 3.0.0
 > **Tested with:** PHP 8.4, Laravel 13, Redis 7.4, phpredis (ext-redis)  
 > **Environment:** Local (localhost Redis, no network latency)  
 > **Model:** 6 indexed fields (name, email, role_id, status, score, created_at), ~800 B avg payload
@@ -292,7 +292,7 @@ Single-round-trip atomic model storage using Lua scripting (disabled: pipeline f
 | `lua_scripting.enabled` | true | Keep enabled for atomic operations |
 | `compression.enabled` | false | Enable for 50%+ memory savings |
 | `compression.algorithm` | gzip | Use `lz4` for speed, `zstd` for ratio |
-| `stampede_protection.enabled` | false | Enable for high-traffic endpoints |
+| `stampede_protection.enabled` | true | Disable only when duplicate rebuilds are acceptable |
 
 ### Redis Configuration
 

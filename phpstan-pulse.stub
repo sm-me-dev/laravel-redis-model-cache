@@ -1,0 +1,15 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Laravel\Pulse\Livewire;
+
+use Illuminate\Contracts\View\View;
+
+class Card
+{
+    public function render(): View
+    {
+        return view('');
+    }
+}

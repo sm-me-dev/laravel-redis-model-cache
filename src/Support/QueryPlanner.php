@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace SmmE\RedisModelCache\Support;
+namespace SMDev\RedisModelCache\Support;
 
 use InvalidArgumentException;
 
@@ -17,7 +17,7 @@ class QueryPlanner
     /**
      * Build an execution plan for a query operation.
      *
-     * @param  string  $operation  One of: 'where', 'whereIn', 'find', 'first', 'count', 'exists'
+     * @param  string  $operation  One of: 'where', 'whereIn', 'whereBetween', 'find', 'first', 'count', 'exists'
      * @param  ResolvedIndex  $index  The resolved index data
      * @param  string  $hashKey  The Redis hash key for model data
      * @param  array<string, mixed>  $options  Additional options (prefix resolver, etc.)
@@ -32,6 +32,7 @@ class QueryPlanner
             'count' => $this->planCount($index),
             'exists' => $this->planExists($index),
             'where', 'whereIn' => $this->planWhere($operation, $index, $hashKey),
+            'whereBetween' => $this->planWhereBetween($index, $hashKey, $options),
             default => throw new InvalidArgumentException("Unsupported operation: {$operation}"),
         };
     }
@@ -253,6 +254,45 @@ class QueryPlanner
             steps: $steps,
             totalCommands: 2,
             complexity: 'O(N)',
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $options
+     */
+    private function planWhereBetween(ResolvedIndex $index, string $hashKey, array $options): QueryPlan
+    {
+        $range = [
+            'min' => $options['min'] ?? null,
+            'max' => $options['max'] ?? null,
+        ];
+
+        if (isset($options['limit'])) {
+            $range['limit'] = $options['limit'];
+            $range['offset'] = $options['offset'] ?? 0;
+        }
+
+        $steps = [
+            [
+                'command' => 'ZRANGEBYSCORE',
+                'key' => $index->keys[0] ?? '{prefix}:sorted:{field}',
+                'description' => 'Resolve sorted IDs within the requested score range'.(isset($range['limit']) ? ' with pagination' : ''),
+                'estimated_cost' => 'O(log N + M)',
+            ],
+            [
+                'command' => 'Pipeline HGET × N',
+                'key' => $hashKey,
+                'description' => 'Batch hydrate models from hash',
+                'estimated_cost' => 'O(N)',
+            ],
+        ];
+
+        return new QueryPlan(
+            operation: 'whereBetween',
+            resolvedIndex: $index,
+            steps: $steps,
+            totalCommands: 2,
+            complexity: 'O(log N + M)',
         );
     }
 

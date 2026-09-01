@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace SmmE\RedisModelCache\Tests\Unit;
+namespace SMDev\RedisModelCache\Tests\Unit;
 
 use Illuminate\Database\Eloquent\Model;
 use Mockery;
 use Mockery\MockInterface;
-use SmmE\RedisModelCache\Contracts\ModelMatchStrategy;
-use SmmE\RedisModelCache\Contracts\RedisConnectionResolver;
-use SmmE\RedisModelCache\RedisModelService;
-use SmmE\RedisModelCache\Tests\TestCase;
+use SMDev\RedisModelCache\Contracts\ModelMatchStrategy;
+use SMDev\RedisModelCache\Contracts\RedisConnectionResolver;
+use SMDev\RedisModelCache\RedisModelService;
+use SMDev\RedisModelCache\Tests\TestCase;
 
 class DebugToolingTest extends TestCase
 {

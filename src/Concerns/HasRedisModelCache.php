@@ -2,17 +2,24 @@
 
 declare(strict_types=1);
 
-namespace SmmE\RedisModelCache\Concerns;
+namespace SMDev\RedisModelCache\Concerns;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
-use SmmE\RedisModelCache\Invalidation\InvalidationManager;
-use SmmE\RedisModelCache\RedisModelService;
-use SmmE\RedisModelCache\Support\Configuration;
-use SmmE\RedisModelCache\Support\RedisModelCacheState;
+use SMDev\RedisModelCache\Invalidation\InvalidationManager;
+use SMDev\RedisModelCache\RedisModelService;
+use SMDev\RedisModelCache\Support\AttributeReader;
+use SMDev\RedisModelCache\Support\Configuration;
+use SMDev\RedisModelCache\Support\RedisModelCacheState;
 
+/**
+ * @phpstan-require-extends Model
+ */
 trait HasRedisModelCache
 {
+    /**
+     * @return array<string, mixed>
+     */
     protected static function redisModelCacheConfig(): array
     {
         return [];
@@ -92,6 +99,13 @@ trait HasRedisModelCache
         static::markRedisModelCacheProcessing($model);
 
         try {
+            $config = static::resolveRedisModelCacheConfiguration(static::class);
+            $with = $config['with'];
+
+            if ($with !== []) {
+                $model->loadMissing($with);
+            }
+
             static::resolveRedisModelCacheService()->store($model);
             static::resolveInvalidationManager()->handle('saved', $model);
             static::touchRedisModelCacheParents($model);
@@ -140,15 +154,14 @@ trait HasRedisModelCache
     protected static function resolveRedisModelCacheService(): RedisModelService
     {
         $modelClass = static::class;
-
-        $config = static::redisModelCacheConfig();
+        $config = static::resolveRedisModelCacheConfiguration($modelClass);
 
         $params = [
             'model_class' => $modelClass,
-            'indexes' => $config['indexes'] ?? [],
-            'sorted' => $config['sorted'] ?? [],
+            'indexes' => $config['indexes'],
+            'sorted' => $config['sorted'],
             'custom_indexes' => $config['custom_indexes'] ?? [],
-            'ttl' => $config['ttl'] ?? null,
+            'ttl' => $config['ttl'],
             'connection' => $config['connection'] ?? null,
         ];
 
@@ -199,22 +212,96 @@ trait HasRedisModelCache
         }
     }
 
+    /**
+     * @param  class-string<Model>  $modelClass
+     */
     protected static function resolveRedisModelCacheServiceFor(string $modelClass): RedisModelService
     {
-        $config = method_exists($modelClass, 'redisModelCacheConfig')
-            ? $modelClass::redisModelCacheConfig()
-            : [];
+        $config = static::resolveRedisModelCacheConfiguration($modelClass);
 
         $params = [
             'model_class' => $modelClass,
-            'indexes' => $config['indexes'] ?? [],
-            'sorted' => $config['sorted'] ?? [],
+            'indexes' => $config['indexes'],
+            'sorted' => $config['sorted'],
             'custom_indexes' => $config['custom_indexes'] ?? [],
-            'ttl' => $config['ttl'] ?? null,
+            'ttl' => $config['ttl'],
             'connection' => $config['connection'] ?? null,
         ];
 
         return app(RedisModelService::class, $params);
+    }
+
+    /**
+     * Merge explicit array configuration with attribute-based configuration.
+     *
+     * Array configuration takes precedence, including explicit empty arrays and
+     * a null TTL, so existing model configuration remains authoritative.
+     *
+     * @param  class-string<Model>  $modelClass
+     * @return array{
+     *     indexes: list<string>,
+     *     sorted: list<string>,
+     *     with: list<string>,
+     *     ttl: int|null,
+     *     custom_indexes?: array<string, array<int, string>>,
+     *     connection?: string|null
+     * }
+     */
+    protected static function resolveRedisModelCacheConfiguration(string $modelClass): array
+    {
+        /** @var array<string, mixed> $arrayConfig */
+        $arrayConfig = method_exists($modelClass, 'redisModelCacheConfig')
+            ? $modelClass::redisModelCacheConfig()
+            : [];
+
+        $attributeConfig = AttributeReader::read($modelClass);
+
+        return [
+            'indexes' => array_key_exists('indexes', $arrayConfig)
+                ? static::toStringList($arrayConfig['indexes'])
+                : $attributeConfig['indexes'],
+            'sorted' => array_key_exists('sorted', $arrayConfig)
+                ? static::toStringList($arrayConfig['sorted'])
+                : $attributeConfig['sorted'],
+            'with' => array_key_exists('with', $arrayConfig)
+                ? static::toStringList($arrayConfig['with'])
+                : $attributeConfig['with'],
+            'ttl' => array_key_exists('ttl', $arrayConfig)
+                ? ($arrayConfig['ttl'] === null ? null : (int) $arrayConfig['ttl'])
+                : $attributeConfig['ttl'],
+            'custom_indexes' => static::toCustomIndexes($arrayConfig['custom_indexes'] ?? []),
+            'connection' => is_string($arrayConfig['connection'] ?? null) ? $arrayConfig['connection'] : null,
+        ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    protected static function toStringList(mixed $value): array
+    {
+        if (! is_array($value)) {
+            return [];
+        }
+
+        return array_values(array_map(strval(...), $value));
+    }
+
+    /**
+     * @return array<string, array<int, string>>
+     */
+    protected static function toCustomIndexes(mixed $value): array
+    {
+        if (! is_array($value)) {
+            return [];
+        }
+
+        $result = [];
+
+        foreach ($value as $name => $fields) {
+            $result[(string) $name] = static::toStringList($fields);
+        }
+
+        return $result;
     }
 
     /**

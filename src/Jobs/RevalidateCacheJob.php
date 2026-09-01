@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace SmmE\RedisModelCache\Jobs;
+namespace SMDev\RedisModelCache\Jobs;
 
 use Closure;
 use Illuminate\Bus\Queueable;
@@ -12,8 +12,8 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Laravel\SerializableClosure\SerializableClosure;
-use SmmE\RedisModelCache\RedisModelService;
-use SmmE\RedisModelCache\Support\Configuration;
+use SMDev\RedisModelCache\RedisModelService;
+use SMDev\RedisModelCache\Support\Configuration;
 
 /**
  * Background job for revalidating stale cache entries.

@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
-namespace SmmE\RedisModelCache\Tests\Unit;
+namespace SMDev\RedisModelCache\Tests\Unit;
 
 use Mockery;
-use SmmE\RedisModelCache\Events\CacheHit;
-use SmmE\RedisModelCache\Events\CacheMiss;
-use SmmE\RedisModelCache\Events\CacheOperationFailed;
-use SmmE\RedisModelCache\Events\CacheWrite;
-use SmmE\RedisModelCache\Events\ModelCacheInvalidated;
-use SmmE\RedisModelCache\Events\QueryExecuted;
-use SmmE\RedisModelCache\Events\RedisConnectionFailed;
-use SmmE\RedisModelCache\Listeners\ObservabilitySubscriber;
-use SmmE\RedisModelCache\RedisModelService;
-use SmmE\RedisModelCache\Support\Observability;
-use SmmE\RedisModelCache\Tests\Fixtures\DummyModel;
-use SmmE\RedisModelCache\Tests\TestCase;
+use SMDev\RedisModelCache\Events\CacheHit;
+use SMDev\RedisModelCache\Events\CacheMiss;
+use SMDev\RedisModelCache\Events\CacheOperationFailed;
+use SMDev\RedisModelCache\Events\CacheWrite;
+use SMDev\RedisModelCache\Events\ModelCacheInvalidated;
+use SMDev\RedisModelCache\Events\QueryExecuted;
+use SMDev\RedisModelCache\Events\RedisConnectionFailed;
+use SMDev\RedisModelCache\Listeners\ObservabilitySubscriber;
+use SMDev\RedisModelCache\RedisModelService;
+use SMDev\RedisModelCache\Support\Observability;
+use SMDev\RedisModelCache\Tests\Fixtures\DummyModel;
+use SMDev\RedisModelCache\Tests\TestCase;
 
 class OctaneLifecycleTest extends TestCase
 {

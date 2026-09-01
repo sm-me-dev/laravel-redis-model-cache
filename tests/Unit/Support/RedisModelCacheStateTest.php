@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace SmmE\RedisModelCache\Tests\Unit\Support;
+namespace SMDev\RedisModelCache\Tests\Unit\Support;
 
-use SmmE\RedisModelCache\Support\RedisModelCacheState;
-use SmmE\RedisModelCache\Tests\TestCase;
+use SMDev\RedisModelCache\Support\RedisModelCacheState;
+use SMDev\RedisModelCache\Tests\TestCase;
 
 class RedisModelCacheStateTest extends TestCase
 {

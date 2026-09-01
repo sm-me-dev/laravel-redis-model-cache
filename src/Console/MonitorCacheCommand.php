@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace SmmE\RedisModelCache\Console;
+namespace SMDev\RedisModelCache\Console;
 
 use Illuminate\Console\Command;
-use SmmE\RedisModelCache\Contracts\RedisConnectionResolver;
+use SMDev\RedisModelCache\Contracts\RedisConnectionResolver;
 
 class MonitorCacheCommand extends Command
 {
@@ -95,7 +95,10 @@ class MonitorCacheCommand extends Command
             } while ($cursor !== '0');
         }
 
-        return array_values(array_unique($keys));
+        /** @var array<int, string> $uniqueKeys */
+        $uniqueKeys = array_values(array_unique($keys));
+
+        return $uniqueKeys;
     }
 
     private function showKeys(mixed $redis): void

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace SmmE\RedisModelCache\Invalidation\Strategies;
+namespace SMDev\RedisModelCache\Invalidation\Strategies;
 
-use SmmE\RedisModelCache\Invalidation\Contracts\InvalidationStrategy;
-use SmmE\RedisModelCache\Invalidation\InvalidationContext;
-use SmmE\RedisModelCache\RedisModelService;
+use SMDev\RedisModelCache\Invalidation\Contracts\InvalidationStrategy;
+use SMDev\RedisModelCache\Invalidation\InvalidationContext;
+use SMDev\RedisModelCache\RedisModelService;
 
 final class SyncStrategy implements InvalidationStrategy
 {

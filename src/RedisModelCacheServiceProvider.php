@@ -2,25 +2,29 @@
 
 declare(strict_types=1);
 
-namespace SmmE\RedisModelCache;
+namespace SMDev\RedisModelCache;
 
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Octane\Events\WorkerTickStarting;
-use SmmE\RedisModelCache\Contracts\HashCacheService;
-use SmmE\RedisModelCache\Contracts\ModelCacheService;
-use SmmE\RedisModelCache\Contracts\ModelMatchStrategy;
-use SmmE\RedisModelCache\Contracts\RedisConnectionResolver;
-use SmmE\RedisModelCache\Contracts\TenantResolverInterface;
-use SmmE\RedisModelCache\Listeners\ObservabilitySubscriber;
-use SmmE\RedisModelCache\Support\CacheManager;
-use SmmE\RedisModelCache\Support\Configuration;
-use SmmE\RedisModelCache\Support\DefaultConnectionResolver;
-use SmmE\RedisModelCache\Support\DefaultModelMatchStrategy;
-use SmmE\RedisModelCache\Support\Observability;
-use SmmE\RedisModelCache\Support\RedisModelCacheState;
-use SmmE\RedisModelCache\Support\TenantResolvers\RequestTenantResolver;
+use Laravel\Pulse\Facades\Pulse;
+use Livewire\Livewire;
+use SMDev\RedisModelCache\Contracts\HashCacheService;
+use SMDev\RedisModelCache\Contracts\ModelCacheService;
+use SMDev\RedisModelCache\Contracts\ModelMatchStrategy;
+use SMDev\RedisModelCache\Contracts\RedisConnectionResolver;
+use SMDev\RedisModelCache\Contracts\TenantResolverInterface;
+use SMDev\RedisModelCache\Listeners\ObservabilitySubscriber;
+use SMDev\RedisModelCache\Support\CacheManager;
+use SMDev\RedisModelCache\Support\Configuration;
+use SMDev\RedisModelCache\Support\DefaultConnectionResolver;
+use SMDev\RedisModelCache\Support\DefaultModelMatchStrategy;
+use SMDev\RedisModelCache\Support\Observability;
+use SMDev\RedisModelCache\Support\Pulse\ModelCacheCard;
+use SMDev\RedisModelCache\Support\Pulse\ModelCacheRecorder;
+use SMDev\RedisModelCache\Support\RedisModelCacheState;
+use SMDev\RedisModelCache\Support\TenantResolvers\RequestTenantResolver;
 
 class RedisModelCacheServiceProvider extends ServiceProvider
 {
@@ -94,6 +98,9 @@ class RedisModelCacheServiceProvider extends ServiceProvider
         $this->publishes([
             __DIR__.'/../config/redis-model-cache.php' => config_path('redis-model-cache.php'),
         ], 'redis-model-cache-config');
+        $this->publishes([
+            __DIR__.'/../resources/views' => resource_path('views/vendor/redis-model-cache'),
+        ], 'redis-model-cache-views');
 
         if ($this->app->runningInConsole()) {
             $this->commands([
@@ -104,6 +111,7 @@ class RedisModelCacheServiceProvider extends ServiceProvider
         }
 
         $this->registerEventSubscribers();
+        $this->registerPulseIntegration();
         $this->registerLifecycleHooks();
         $this->validateConfiguration();
 
@@ -150,6 +158,23 @@ class RedisModelCacheServiceProvider extends ServiceProvider
 
         $this->app->make('events')->subscribe(
             $this->app->make(ObservabilitySubscriber::class)
+        );
+    }
+
+    protected function registerPulseIntegration(): void
+    {
+        if (! class_exists(Pulse::class)
+            || ! class_exists(Livewire::class)) {
+            return;
+        }
+
+        Livewire::component(
+            'redis-model-cache-card',
+            ModelCacheCard::class,
+        );
+
+        $this->app->make('events')->subscribe(
+            $this->app->make(ModelCacheRecorder::class)
         );
     }
 
@@ -352,9 +377,9 @@ class RedisModelCacheServiceProvider extends ServiceProvider
     protected function validateConfigVersion(): void
     {
         $configVersion = config('redis-model-cache.config_version');
-        if ($configVersion !== '2.12.0') {
+        if ($configVersion !== '3.0.0') {
             Log::warning(
-                'Published configuration version mismatch. Expected \'2.12.0\', got '
+                'Published configuration version mismatch. Expected \'3.0.0\', got '
                 .var_export($configVersion, true)
                 .'. Please re-publish your configuration file using: '
                 .'php artisan vendor:publish --tag=redis-model-cache-config --force'

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace SmmE\RedisModelCache\Support;
+namespace SMDev\RedisModelCache\Support;
 
 /**
  * Handles Redis pipeline execution and Lua script management.
@@ -13,16 +13,23 @@ namespace SmmE\RedisModelCache\Support;
  */
 final class PipelineExecutor
 {
+    private mixed $redis;
+
+    private Configuration $configuration;
+
     private ?string $luaAtomicStoreSha = null;
 
     /**
      * @param  \Closure(mixed $client, array<int, string> $keys, array<int, string> $args): void  $luaExecutor
      */
     public function __construct(
-        private readonly mixed $redis,
-        private readonly Configuration $configuration,
+        mixed $redis,
+        Configuration $configuration,
         private readonly \Closure $luaExecutor,
-    ) {}
+    ) {
+        $this->redis = $redis;
+        $this->configuration = $configuration;
+    }
 
     /**
      * Execute a pipeline in a client-agnostic way.
@@ -36,17 +43,17 @@ final class PipelineExecutor
     {
         // phpredis: pipeline() returns the same \Redis instance in pipeline mode; uses exec()
         if ($pipeline instanceof \Redis) {
-            return (array) $pipeline->exec();
+            return array_values((array) $pipeline->exec());
         }
 
         // Predis and test mocks: pipeline object with execute() or __call
         if (is_callable([$pipeline, 'execute'])) {
-            return (array) call_user_func([$pipeline, 'execute']);
+            return array_values((array) call_user_func([$pipeline, 'execute']));
         }
 
         // Last resort fallback for exec()-only clients
         if (is_callable([$pipeline, 'exec'])) {
-            return (array) call_user_func([$pipeline, 'exec']);
+            return array_values((array) call_user_func([$pipeline, 'exec']));
         }
 
         return [];
@@ -81,12 +88,13 @@ final class PipelineExecutor
      */
     public function primeAtomicStoreScript(string $scriptContent, callable $loadScript): void
     {
-        if ($this->luaAtomicStoreSha !== null) {
+        if (! $this->configuration->luaScriptingEnabled || $this->redis === null || $this->luaAtomicStoreSha !== null) {
             return;
         }
 
         try {
-            $this->luaAtomicStoreSha = $loadScript($scriptContent);
+            $sha = $loadScript($scriptContent);
+            $this->luaAtomicStoreSha = is_string($sha) ? $sha : null;
         } catch (\Exception $e) {
             $this->luaAtomicStoreSha = null;
         }

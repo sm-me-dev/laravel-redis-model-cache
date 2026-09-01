@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace SmmE\RedisModelCache\Support;
+namespace SMDev\RedisModelCache\Support;
 
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
@@ -16,12 +16,15 @@ use Illuminate\Database\Eloquent\Model;
  */
 final class ModelSerializer
 {
+    private readonly \Closure $serializer;
+
     /**
      * @param  \Closure(mixed): string  $serializer
      */
-    public function __construct(
-        private readonly \Closure $serializer,
-    ) {}
+    public function __construct(\Closure $serializer)
+    {
+        $this->serializer = $serializer;
+    }
 
     /**
      * Serializes a single model (attributes + nested relations).
@@ -37,21 +40,31 @@ final class ModelSerializer
         ];
     }
 
+    public function serializePayload(mixed $payload): string
+    {
+        return ($this->serializer)($payload);
+    }
+
     /**
      * Extract eager-loaded relations from a model.
      *
-     * @return array<string, array<int, mixed>|null>
+     * @return array<string, mixed>
      */
     public function extractRelations(Model $model): array
     {
+        /** @var array<string, mixed> $relations */
         $relations = [];
 
         foreach ($model->getRelations() as $name => $relation) {
+            $name = (string) $name;
+
             if ($relation instanceof Collection) {
                 // HasMany, MorphMany, BelongsToMany
-                $relations[$name] = $relation->map(function (Model $related): array {
+                /** @var array<int, mixed> $serialized */
+                $serialized = $relation->map(function (Model $related): array {
                     return $this->serializeModel($related);
                 })->toArray();
+                $relations[$name] = $serialized;
 
             } elseif ($relation instanceof Model) {
                 // HasOne, BelongsTo, MorphOne, MorphTo

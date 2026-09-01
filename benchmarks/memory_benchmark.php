@@ -15,7 +15,7 @@ declare(strict_types=1);
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Redis;
-use SmmE\RedisModelCache\RedisModelService;
+use SMDev\RedisModelCache\RedisModelService;
 
 require __DIR__.'/bootstrap.php';
 
