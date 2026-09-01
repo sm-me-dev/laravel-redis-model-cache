@@ -1,33 +1,66 @@
 name: Create Release
 
 on:
-  push:
-    tags:
-      - 'v*'
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  release:
+  resolve-tag:
+    if: github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - name: Checkout tested commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+
+      - name: Resolve release tag
+        id: tag
+        run: |
+          tested_commit="$(git rev-parse HEAD)"
+          tag="$(git tag --points-at "$tested_commit" --list 'v*' | sort -V | tail -n 1)"
+          test -n "$tag" || {
+            echo "No version tag points at tested commit $tested_commit."
+            exit 0
+          }
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+  release:
+    needs: resolve-tag
+    if: needs.resolve-tag.outputs.tag != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.resolve-tag.outputs.tag }}
+          fetch-depth: 0
 
-      - name: Generate release notes
+      - name: Extract changelog section
         run: |
-          echo "# Release ${{ github.ref_name }}" > RELEASE_NOTES.md
-          echo "" >> RELEASE_NOTES.md
-          PREV_TAG=$(git tag --sort=-creatordate | head -2 | tail -1)
-          if [ -n "$PREV_TAG" ]; then
-            git log --oneline --no-decorate "$PREV_TAG"..HEAD >> RELEASE_NOTES.md
-          else
-            git log --oneline --no-decorate HEAD~10..HEAD >> RELEASE_NOTES.md
-          fi
+          awk -v tag="${{ needs.resolve-tag.outputs.tag }}" '
+            $0 == "## [" tag "]" { found = 1 }
+            found && $0 ~ /^## \[/ && $0 != "## [" tag "]" { exit }
+            found { print }
+          ' CHANGELOG.md > RELEASE_NOTES.md
+          test -s RELEASE_NOTES.md || {
+            echo "No changelog section found for ${{ needs.resolve-tag.outputs.tag }}."
+            exit 1
+          }
 
       - name: Create Release
         uses: softprops/action-gh-release@v3
         with:
+          tag_name: ${{ needs.resolve-tag.outputs.tag }}
+          name: ${{ needs.resolve-tag.outputs.tag }}
           body_path: RELEASE_NOTES.md
-          generate_release_notes: true
+          generate_release_notes: false
