@@ -99,7 +99,7 @@
 
   <!-- Result -->
   <rect x="620" y="350" width="160" height="32" rx="8" fill="#E8F8E8" stroke="#27AE60" stroke-width="1.5" filter="url(#shadow)"/>
-  <text x="700" y="370" text-anchor="middle" font-size="11" font-weight="600" fill="#1E8449">Collection<Model></text>
+  <text x="700" y="370" text-anchor="middle" font-size="11" font-weight="600" fill="#1E8449">Collection&lt;Model&gt;</text>
 
   <!-- ===== WHEREIN ===== -->
   <rect x="50" y="420" width="180" height="36" rx="6" fill="#F0E6F6" stroke="#8E44AD" stroke-width="1.5" filter="url(#shadow)"/>

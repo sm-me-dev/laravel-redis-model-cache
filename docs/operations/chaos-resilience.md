@@ -69,7 +69,7 @@ All 8 chaos-resilience tests pass (8/8). The package demonstrates safe behavior 
 
 ## Monitoring Recommendations
 
-See [README.md — Enterprise Deployment](#enterprise-deployment) for monitoring configuration.
+See [the observability documentation](../observability.md) for monitoring configuration.
 
 ## Running the Tests
 

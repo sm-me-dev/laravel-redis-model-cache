@@ -156,7 +156,7 @@
   <text x="535" y="248" text-anchor="middle" font-size="9" fill="#E67E22">store() / delete() / updateAttributes()</text>
 
   <!-- Write ops back: store result -->
-  <rect x="795" y="410" width="180" height="44" rx=6 fill="url(#boxOrange)" stroke="#E67E22" stroke-width="1.2" filter="url(#shadow)"/>
+  <rect x="795" y="410" width="180" height="44" rx="6" fill="url(#boxOrange)" stroke="#E67E22" stroke-width="1.2" filter="url(#shadow)"/>
   <text x="885" y="433" text-anchor="middle" font-size="10" font-weight="500" fill="#D35400">Invalidation: bustVersion</text>
   <text x="885" y="448" text-anchor="middle" font-size="9" fill="#A04000">touchRedisModelCacheParents</text>
 

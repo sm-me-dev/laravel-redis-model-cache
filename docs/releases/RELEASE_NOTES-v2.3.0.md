@@ -34,4 +34,4 @@ Compatibility, correctness, and developer experience improvements ahead of broad
 
 ## Full Changelog
 
-See [CHANGELOG.md](CHANGELOG.md) for the complete list of changes.
+See [CHANGELOG.md](../../CHANGELOG.md) for the complete list of changes.

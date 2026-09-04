@@ -51,18 +51,18 @@ See the architecture documentation and diagrams:
 
 | Document | Audience |
 |----------|----------|
-| [`UPGRADE.md`](UPGRADE.md) | Migration guidance between major package versions |
-| [`STABILITY.md`](STABILITY.md) | Public namespace and compatibility commitment |
-| [`CHANGELOG.md`](CHANGELOG.md) | Release history and user-visible changes |
-| [`docs/static-analysis.md`](docs/static-analysis.md) | PHPStan policy and suppression boundaries |
-| [`docs/architecture.md`](docs/architecture.md) | Engineers — data flow, key layout, Redis ops, design decisions |
-| [`docs/query-limitations.md`](docs/query-limitations.md) | All queries — what works, what doesn't, why |
-| [`docs/invalidation.md`](docs/invalidation.md) | Engineers — lifecycle hooks, versioning, edge cases, parent touches |
-| [`docs/observability.md`](docs/observability.md) | Operators — events, metrics, debug, Telescope/Pulse |
-| [`docs/performance.md`](docs/performance.md) | Decision-makers — throughput, latency, memory |
-| [`docs/benchmarks/report.md`](docs/benchmarks/report.md) | Performance measurements and methodology |
-| [`docs/adr/`](docs/adr/) | Architecture Decision Records |
-| [`docs/diagrams/`](docs/diagrams/) | Architecture diagrams (SVG) |
+| [`UPGRADE.md`](../UPGRADE.md) | Migration guidance between major package versions |
+| [`STABILITY.md`](../STABILITY.md) | Public namespace and compatibility commitment |
+| [`CHANGELOG.md`](../CHANGELOG.md) | Release history and user-visible changes |
+| [`static-analysis.md`](static-analysis.md) | PHPStan policy and suppression boundaries |
+| [`architecture.md`](architecture.md) | Engineers — data flow, key layout, Redis ops, design decisions |
+| [`query-limitations.md`](query-limitations.md) | All queries — what works, what doesn't, why |
+| [`invalidation.md`](invalidation.md) | Engineers — lifecycle hooks, versioning, edge cases, parent touches |
+| [`observability.md`](observability.md) | Operators — events, metrics, debug, Telescope/Pulse |
+| [`performance.md`](performance.md) | Decision-makers — throughput, latency, memory |
+| [`benchmarks/report.md`](benchmarks/report.md) | Performance measurements and methodology |
+| [`adr/`](adr/) | Architecture Decision Records |
+| [`diagrams/`](diagrams/) | Architecture diagrams (SVG) |
 
 ## Quick Start
 
@@ -150,7 +150,7 @@ The fake supports `store`, `find`, `where`, and `delete`. Other operations
 throw `BadMethodCallException` so tests can stub only what they need.
 
 Development checks run PHPStan at its maximum configured level and Pint in
-test mode. See [the static-analysis policy](docs/static-analysis.md) for the
+test mode. See [the static-analysis policy](static-analysis.md) for the
 limited dynamic-runtime exceptions.
 
 ### Attribute-based config
@@ -369,7 +369,7 @@ The package replaces per-row Eloquent queries with batched Redis hash lookups. P
 | `store()` | O(K) where K = indexes + sorted | 1 (Lua) or pipeline |
 | `storeMany(N)` | O(N × K) | 2 (HMGET + pipeline) |
 
-> **Note:** These are asymptotic bounds. Real-world performance varies by hardware, Redis version, network latency, and data size. See [`docs/performance.md`](docs/performance.md) for detailed benchmarks and methodology.
+> **Note:** These are asymptotic bounds. Real-world performance varies by hardware, Redis version, network latency, and data size. See [`performance.md`](performance.md) for detailed benchmarks and methodology.
 
 ### Key design properties
 
@@ -726,20 +726,20 @@ If you find this package useful, consider supporting the developer:
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+MIT. See [LICENSE](../LICENSE).
 
 ## Changelog
 
-See [CHANGELOG.md](CHANGELOG.md) for release history.
+See [CHANGELOG.md](../CHANGELOG.md) for release history.
 
 ## Upgrading
 
-See [UPGRADE.md](UPGRADE.md) for version migration guidance and [STABILITY.md](STABILITY.md) for the public namespace commitment.
+See [UPGRADE.md](../UPGRADE.md) for version migration guidance and [STABILITY.md](../STABILITY.md) for the public namespace commitment.
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
+See [CONTRIBUTING.md](../CONTRIBUTING.md) for development setup and guidelines.
 
 ## Security
 
-See [SECURITY.md](SECURITY.md) for reporting vulnerabilities.
+See [SECURITY.md](../SECURITY.md) for reporting vulnerabilities.
