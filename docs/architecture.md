@@ -43,6 +43,21 @@
                                       └───────────────────┘
 ```
 
+## Performance model
+
+Cache writes from `HasRedisModelCache` are synchronous by default. Every
+`save()` on a cached model populates or updates Redis during the Eloquent
+`saved` event, and every `delete()` performs cache invalidation during the
+model deletion event. These Redis round trips therefore add latency to the
+request that performs the write.
+
+The optional `invalidation.strategy=async` configuration queues invalidation
+work in `InvalidateModelCacheJob`, but it does not make the save-time
+`store()` call asynchronous and does not provide write-behind cache
+population. Queue workers are required for that invalidation strategy to
+process queued jobs. An opt-in queued write-behind path for model saves is a
+separate future feature.
+
 ## Key Space
 
 Every model type gets its own key prefix. All keys use Redis cluster hash tags `{...}` so keys for the same model land on the same cluster node.

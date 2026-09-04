@@ -106,6 +106,7 @@ trait HasRedisModelCache
                 $model->loadMissing($with);
             }
 
+            // TODO(async-write-behind): Track an opt-in queued cache-write path for model saves.
             static::resolveRedisModelCacheService()->store($model);
             static::resolveInvalidationManager()->handle('saved', $model);
             static::touchRedisModelCacheParents($model);
