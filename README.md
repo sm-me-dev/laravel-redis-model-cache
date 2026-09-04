@@ -8,6 +8,10 @@ It does not support `!=`, `LIKE`, arbitrary `WHERE` clauses,
 `orderBy`/`groupBy`/`join`, or `all()`. See
 [the complete query limitations table](docs/query-limitations.md).
 
+[![Latest Version](https://img.shields.io/packagist/v/sm-me/laravel-redis-model-cache)](https://packagist.org/packages/sm-me/laravel-redis-model-cache)
+[![PHP Version](https://img.shields.io/packagist/php-v/sm-me/laravel-redis-model-cache)](https://packagist.org/packages/sm-me/laravel-redis-model-cache)
+[![License](https://img.shields.io/packagist/l/sm-me/laravel-redis-model-cache)](https://packagist.org/packages/sm-me/laravel-redis-model-cache)
+
 ## What this does not do automatically
 
 Use it when a model is read frequently, its common filters can be declared as
