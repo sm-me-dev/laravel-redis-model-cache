@@ -1,5 +1,9 @@
 # Laravel Redis Model Cache
 
+<p align="center">
+  <img src="assets/laravel-redis-model-cache-banner.svg" alt="Laravel Redis Model Cache — deterministic, index-aware caching for Eloquent models" width="100%">
+</p>
+
 Deterministic Redis caching for high-read Eloquent tables whose small set of
 filter fields is known up front. It replaces repeated database reads with
 indexed Redis lookups; it is **not** a general-purpose Eloquent query cache.
